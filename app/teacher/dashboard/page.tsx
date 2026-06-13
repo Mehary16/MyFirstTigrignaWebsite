@@ -2,10 +2,10 @@ import { redirect } from 'next/navigation';
 import TeacherLessonForm from '../../../components/TeacherLessonForm';
 import TeacherDocumentForm from '../../../components/TeacherDocumentForm';
 import TeacherSubmissionGrid from '../../../components/TeacherSubmissionGrid';
-import { createServerSupabaseClient } from '../../../lib/supabaseClient';
+import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
 export default async function TeacherDashboardPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: sessionData } = await supabase.auth.getSession();
 
   if (!sessionData.session) {

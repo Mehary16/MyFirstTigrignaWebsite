@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import HomeworkSubmissionForm from '../../../components/StudentHomeworkForm';
-import { createServerSupabaseClient } from '../../../lib/supabaseClient';
+import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
 function getVideoEmbedUrl(videoUrl: string) {
   try {
@@ -35,7 +35,7 @@ function getVideoEmbedUrl(videoUrl: string) {
 }
 
 export default async function StudentDashboardPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: sessionData } = await supabase.auth.getSession();
 
   if (!sessionData.session) {
