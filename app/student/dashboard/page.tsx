@@ -69,7 +69,7 @@ export default async function StudentDashboardPage() {
       <div className="rounded-[2rem] border border-amber-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-amber-700">Student Dashboard / የተማሪ ዳሽቦርድ</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-amber-700">Student Dashboard / ናይ ተማሃሮ ዳሽቦርድ</p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-950">Welcome, {displayName}</h1>
           </div>
           <div className="flex flex-wrap gap-3">

@@ -3,8 +3,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'ትምህሪት ቋንቋ ትግርኛ ፍረ ጥበብ',
-  description: 'A Tigrigna language learning portal for students and teachers.'
+  title: 'ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ',
+  description: 'A Tigrigna language learning portal for students, teachers and parents to learn and teach Tigrigna language.',
+  openGraph: {
+    description: 'ተምሃሮ፣ መምህራንን ወለድን ቋንቋ ትግርኛ ንምምሃርን ንምስትምሃርን ዝሕግዝ ፖርታል',
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -21,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
               <nav className="flex flex-wrap items-center gap-3 text-sm font-medium text-slate-700">
                 <Link href="/" className="rounded-full border border-slate-200 bg-white px-4 py-2 transition hover:border-slate-300 hover:bg-slate-50">Home</Link>
-                <Link href="/login" className="rounded-full bg-slate-950 px-4 py-2 text-white transition hover:bg-slate-800">Login / እተው</Link>
+                <Link href="/login" className="rounded-full bg-slate-950 px-4 py-2 text-white transition hover:bg-slate-800">Login / መእተዊ</Link>
               </nav>
             </div>
           </header>

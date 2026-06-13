@@ -81,7 +81,7 @@ export default function LoginPage() {
           });
         }
 
-        setMessage('መመዝገቢያው ተልኳል። ኢሜይልህ ከተረጋገጠ በኋላ ግባ።');
+        setMessage('መመዝገቢ መልእኽቲ ተሰዲዱ ኣሎ። ኢሜይልካ ምስ ተራጋገጸ እቶ።');
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -111,21 +111,21 @@ export default function LoginPage() {
   return (
     <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
       <section className="rounded-[2rem] border border-amber-100 bg-slate-950 p-8 text-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-        <p className="text-sm uppercase tracking-[0.3em] text-amber-300">ትምህሪት ቋንቋ ትግርኛ ፍረ ጥበብ</p>
-        <h1 className="mt-4 text-4xl font-semibold leading-tight">Login / ግባ</h1>
+        <p className="text-sm uppercase tracking-[0.3em] text-amber-300">ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ</p>
+        <h1 className="mt-4 text-4xl font-semibold leading-tight">Login / መእተዊ</h1>
         <p className="mt-4 max-w-xl text-white/75">Students enter lessons, documents, and homework. Teachers publish content, manage materials, and review submissions.</p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-amber-300">ማንጊት</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-amber-300">ብኽልተ ቋንቋታት ምእታውን ምዝገባን</p>
             <p className="mt-2 text-sm text-white/75">Bilingual login and signup</p>
           </div>
           <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-amber-300">ኣስተማሪ</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-amber-300">መምህር</p>
             <p className="mt-2 text-sm text-white/75">Teacher role by email or metadata</p>
           </div>
           <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-amber-300">ተማሪ</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-amber-300">ተማሃሮ</p>
             <p className="mt-2 text-sm text-white/75">Protected dashboard access</p>
           </div>
         </div>
@@ -175,7 +175,7 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700">Password / የይለፍ ቃል</label>
+          <label className="block text-sm font-medium text-slate-700">Password / መሕለፊ ቃል</label>
           <input
             type="password"
             value={password}
@@ -194,7 +194,7 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
         >
-          {loading ? 'Processing ...' : mode === 'signUp' ? 'Sign up / ምዝገባ' : 'Login / ግባ'}
+          {loading ? 'Processing ...' : mode === 'signUp' ? 'Sign up / መመዝገቢ' : 'Login / እተው'}
         </button>
         </form>
       </section>
