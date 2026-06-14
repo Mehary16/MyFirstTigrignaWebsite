@@ -29,7 +29,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="flex-1">{children}</main>
 
           <footer className="mt-12 border-t border-slate-200/80 pt-4 text-sm text-slate-500">
-            <p>ቤት ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ መም መሓሪ ኣይንኣለም</p>
+            <p>ቤት ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ መምህር መሓሪ ኣይንኣለም</p>
+            <p>መምህር መሓሪ ኣይንኣለም</p>
             <p className="mt-1">
               ኢሜል:{' '}
               <a href="mailto:mehary.aynealem1@gmail.com" className="text-slate-700 underline-offset-2 hover:underline">
