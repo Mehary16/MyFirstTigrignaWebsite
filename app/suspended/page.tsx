@@ -9,7 +9,7 @@ export default function SuspendedPage() {
         Your student account has been suspended by your teacher. You cannot access lessons, materials, or homework until
         your account is reactivated.
       </p>
-      <p className="mt-2 text-slate-600">ኣካውንትካ ብመምህርኩም ተዓጽዩ ኣሎ። ንኽትኣይድ ኣብ መደብኩም ተራኺብካ ሓገዝ ሓትት።</p>
+      <p className="mt-2 text-slate-600">ኣካውንትኹም ብመምህርኩም ተዓጽዩ ኣሎ።  ዳግማይ ኣገልግሎት ንምርካብ ሓገዝ ሓተቱ።</p>
       <div className="mt-8 flex justify-center">
         <LogoutButton className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" />
       </div>
