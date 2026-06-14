@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
 import HomeworkSubmissionForm from '../../../components/StudentHomeworkForm';
+import LogoutButton from '../../../components/LogoutButton';
+import { isStudentSuspended } from '../../../lib/auth';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
 function getVideoEmbedUrl(videoUrl: string) {
@@ -52,9 +54,13 @@ export default async function StudentDashboardPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, role')
+    .select('full_name, role, is_active')
     .eq('id', user.id)
     .maybeSingle();
+
+  if (isStudentSuspended(profile)) {
+    redirect('/suspended');
+  }
 
   const [{ data: lessons }, { data: documents }, { data: submissions }] = await Promise.all([
     supabase.from('lessons').select('id, title, description, video_url, category, external_link').order('created_at', { ascending: false }),
@@ -72,9 +78,10 @@ export default async function StudentDashboardPage() {
             <p className="text-sm uppercase tracking-[0.25em] text-amber-700">Student Dashboard / ናይ ተማሃሮ ዳሽቦርድ</p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-950">Welcome, {displayName}</h1>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <p className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{userEmail}</p>
             <p className="rounded-full bg-amber-100 px-4 py-2 text-sm text-amber-800">{profile?.role ?? 'Student'}</p>
+            <LogoutButton />
           </div>
         </div>
       </div>

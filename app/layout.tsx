@@ -1,6 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import AuthNav from '../components/AuthNav';
 
 export const metadata: Metadata = {
   title: 'ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ',
@@ -22,11 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <h1 className="mt-1 text-2xl font-semibold text-slate-950">Tigrigna Learning Portal</h1>
                 <p className="mt-1 max-w-xl text-sm text-slate-600">A bilingual space for lessons, reading materials, and homework submissions.</p>
               </div>
-              <nav className="flex flex-wrap items-center gap-3 text-sm font-medium text-slate-700">
-                <Link href="/" className="rounded-full border border-slate-200 bg-white px-4 py-2 transition hover:border-slate-300 hover:bg-slate-50">Home</Link>
-                <Link href="/login" className="rounded-full bg-slate-950 px-4 py-2 text-white transition hover:bg-slate-800">Login / መእተዊ</Link>
-              </nav>
-            </div>
+              <AuthNav />            </div>
           </header>
 
           <main className="flex-1">{children}</main>

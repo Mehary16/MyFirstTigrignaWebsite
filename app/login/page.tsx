@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '../../lib/supabaseClient';
 
@@ -12,9 +12,13 @@ async function resolveDashboardPath(supabase: ReturnType<typeof createBrowserSup
     return '/teacher/dashboard';
   }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle();
+  const { data: profile } = await supabase.from('profiles').select('role, is_active').eq('id', userId).maybeSingle();
   if (profile?.role === 'Teacher') {
     return '/teacher/dashboard';
+  }
+
+  if (profile?.is_active === false) {
+    return '/suspended';
   }
 
   return '/student/dashboard';
@@ -22,7 +26,7 @@ async function resolveDashboardPath(supabase: ReturnType<typeof createBrowserSup
 
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createBrowserSupabaseClient();
+  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -47,7 +51,7 @@ export default function LoginPage() {
     checkSession();
   }, [router, supabase]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
     event.preventDefault();
     setError(null);
     setMessage(null);
@@ -73,12 +77,16 @@ export default function LoginPage() {
           return;
         }
 
-        if (data.user) {
-          await supabase.from('profiles').upsert({
+        // Profile is created by a Supabase trigger; upsert here only as a fallback when a session exists.
+        if (data.session && data.user) {
+          const { error: profileError } = await supabase.from('profiles').upsert({
             id: data.user.id,
             full_name: fullName,
             role
           });
+          if (profileError) {
+            console.error('Profile upsert failed:', profileError.message);
+          }
         }
 
         setMessage('መመዝገቢ መልእኽቲ ተሰዲዱ ኣሎ። ኢሜይልካ ምስ ተራጋገጸ እቶ።');
@@ -102,6 +110,15 @@ export default function LoginPage() {
           );
           router.replace(path);
         }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Something went wrong.';
+      if (message === 'Failed to fetch') {
+        setError(
+          'Could not reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart the dev server.'
+        );
+      } else {
+        setError(message);
       }
     } finally {
       setLoading(false);
@@ -156,7 +173,7 @@ export default function LoginPage() {
             <input
               type="text"
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              onChange={(event) => setFullName(event.currentTarget.value)}
               required
               className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 text-slate-900 outline-none transition focus:border-slate-500"
             />
@@ -168,7 +185,7 @@ export default function LoginPage() {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(event) => setEmail(event.currentTarget.value)}
             required
             className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 text-slate-900 outline-none transition focus:border-slate-500"
           />
@@ -179,7 +196,7 @@ export default function LoginPage() {
           <input
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(event) => setPassword(event.currentTarget.value)}
             required
             minLength={8}
             className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 text-slate-900 outline-none transition focus:border-slate-500"

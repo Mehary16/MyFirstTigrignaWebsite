@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
 
 export default function TeacherLessonForm() {
@@ -14,7 +14,7 @@ export default function TeacherLessonForm() {
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
     event.preventDefault();
     setStatus(null);
     setLoading(true);

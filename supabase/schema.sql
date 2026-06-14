@@ -4,6 +4,9 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   role text not null default 'Student' check (role in ('Teacher', 'Student')),
   full_name text not null,
+  is_active boolean not null default true,
+  suspended_reason text,
+  suspended_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -51,16 +54,24 @@ create policy "profiles manage own" on public.profiles
     select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
   ));
 
-create policy "lessons read authenticated" on public.lessons
-  for select using (auth.role() = 'authenticated');
+create policy "lessons read active users" on public.lessons
+  for select using (exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+    and (p.role = 'Teacher' or (p.role = 'Student' and p.is_active = true))
+  ));
 
 create policy "lessons write teacher" on public.lessons
   for insert with check (exists (
     select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
   ));
 
-create policy "documents read authenticated" on public.documents
-  for select using (auth.role() = 'authenticated');
+create policy "documents read active users" on public.documents
+  for select using (exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+    and (p.role = 'Teacher' or (p.role = 'Student' and p.is_active = true))
+  ));
 
 create policy "documents write teacher" on public.documents
   for insert with check (exists (
@@ -72,5 +83,40 @@ create policy "submissions read own or teacher" on public.submissions
     select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
   ));
 
-create policy "submissions insert own" on public.submissions
-  for insert with check (auth.uid() = student_id);
+create policy "submissions insert active own" on public.submissions
+  for insert with check (
+    auth.uid() = student_id
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'Student' and p.is_active = true
+    )
+  );
+
+-- Auto-create a profile row when a new user signs up (avoids RLS issues on first login).
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, full_name, role, is_active)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+    case
+      when lower(coalesce(new.raw_user_meta_data->>'role', '')) = 'teacher' then 'Teacher'
+      else 'Student'
+    end,
+    true
+  )
+  on conflict (id) do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();

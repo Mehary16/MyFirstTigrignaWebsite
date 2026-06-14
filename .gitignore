@@ -1,5 +1,7 @@
 .next
 node_modules
+.env.local
+.env*.local
 .vscode
 Untitled-1.html
 node_modules/
