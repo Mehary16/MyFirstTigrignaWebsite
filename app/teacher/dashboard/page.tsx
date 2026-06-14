@@ -6,7 +6,9 @@ import TeacherStudentList, { type StudentListItem } from '../../../components/Te
 import TeacherGradeManager, { type GradeRow } from '../../../components/TeacherGradeManager';
 import TeacherParentLinkForm from '../../../components/TeacherParentLinkForm';
 import LogoutButton from '../../../components/LogoutButton';
-import { isTeacherProfile } from '../../../lib/auth';
+import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
+import { isTeacherProfile, ensureTeacherProfileRole } from '../../../lib/auth';
+import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
 export default async function TeacherDashboardPage() {
@@ -30,15 +32,28 @@ export default async function TeacherDashboardPage() {
     redirect('/student/dashboard');
   }
 
-  const [{ data: students, count: studentCount }, { data: submissionRows }, { data: gradeRows }] = await Promise.all([
+  await ensureTeacherProfileRole(supabase, user.id, userEmail, adminEmail, profile?.role);
+
+  const [studentsResult, submissionsResult, gradesResult, documentsResult] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, full_name, created_at, is_active, suspended_reason', { count: 'exact' })
       .eq('role', 'Student')
       .order('created_at', { ascending: false }),
     supabase.from('submissions').select('student_id'),
-    supabase.from('grades').select('id, student_id, title, grade, feedback, created_at').order('created_at', { ascending: false }).limit(50)
+    supabase.from('grades').select('id, student_id, title, grade, feedback, created_at').order('created_at', { ascending: false }).limit(50),
+    supabase.from('documents').select('id, title, file_url, external_link, created_at').order('created_at', { ascending: false })
   ]);
+
+  const students = studentsResult.data;
+  const studentCount = studentsResult.count;
+  const submissionRows = submissionsResult.data;
+  const gradeRows = gradesResult.data;
+  const documents = documentsResult.data;
+
+  const setupMessage = [submissionsResult.error, gradesResult.error, documentsResult.error]
+    .filter(Boolean)
+    .map((error) => formatDatabaseError(error!.message))[0] ?? null;
 
   const submissionCountByStudent = (submissionRows ?? []).reduce<Record<string, number>>((acc, row) => {
     acc[row.student_id] = (acc[row.student_id] ?? 0) + 1;
@@ -66,14 +81,17 @@ export default async function TeacherDashboardPage() {
 
   return (
     <section className="space-y-8">
+      <DatabaseSetupAlert message={setupMessage} />
+
       <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm shadow-slate-200/50">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-sm text-slate-500">Teacher Dashboard</p>
+            <p className="text-sm uppercase tracking-[0.2em] text-amber-700">Teacher Dashboard / ናይ መምህር ዳሽቦርድ</p>
             <h1 className="text-3xl font-semibold text-slate-900">ሓለዋ ዳሽቦርድ</h1>
             <p className="mt-1 text-sm text-slate-600">Welcome, {displayName}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <p className="rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-800">Teacher</p>
             <p className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{userEmail}</p>
             <LogoutButton />
           </div>
@@ -105,8 +123,36 @@ export default async function TeacherDashboardPage() {
 
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
             <h2 className="text-2xl font-semibold text-slate-900">Upload Reading Material</h2>
-            <p className="mt-2 text-slate-600">Upload PDFs directly to Supabase storage and link them for students.</p>
+            <p className="mt-2 text-slate-600">Upload PDFs for students to download from their dashboard.</p>
             <div className="mt-6"><TeacherDocumentForm /></div>
+
+            {documents?.length ? (
+              <div className="mt-8 border-t border-slate-200 pt-6">
+                <h3 className="text-lg font-semibold text-slate-900">Uploaded documents</h3>
+                <ul className="mt-4 space-y-3">
+                  {documents.map((doc) => (
+                    <li key={doc.id} className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900">{doc.title}</p>
+                        <p className="text-sm text-slate-500">{new Date(doc.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {doc.file_url && (
+                          <a href={doc.file_url} target="_blank" rel="noreferrer" className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
+                            Download PDF
+                          </a>
+                        )}
+                        {doc.external_link && (
+                          <a href={doc.external_link} target="_blank" rel="noreferrer" className="rounded-full border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">
+                            External link
+                          </a>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </section>
         </div>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
+import { formatDatabaseError } from '../lib/supabaseErrors';
 import { getSubmissionViewLabel, type SubmissionType } from '../lib/submissionMedia';
 
 type SubmissionRow = {
@@ -33,16 +34,20 @@ export default function TeacherSubmissionGrid() {
   useEffect(() => {
     const loadSubmissions = async () => {
       setLoading(true);
+      setError(null);
+
       const { data, error: fetchError } = await supabase
         .from('submissions')
         .select('id, video_url, submission_type, file_name, notes, created_at, profiles(full_name)')
         .order('created_at', { ascending: false });
 
       if (fetchError) {
-        setError(fetchError.message);
+        setError(formatDatabaseError(fetchError.message));
+        setSubmissions([]);
       } else {
         setSubmissions((data ?? []) as SubmissionRow[]);
       }
+
       setLoading(false);
     };
 
@@ -51,17 +56,22 @@ export default function TeacherSubmissionGrid() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold text-slate-900">Student submissions</h2>
-          <p className="mt-2 text-slate-600">Review homework links, clips, images, and documents.</p>
-        </div>
+      <div>
+        <h2 className="text-2xl font-semibold text-slate-900">Student homework / ናይ ተማሃሮ ስራሕ ቤት</h2>
+        <p className="mt-2 text-slate-600">Homework submitted by your students appears here.</p>
       </div>
 
-      {loading && <p className="text-slate-600">Loading submissions...</p>}
-      {error && <p className="text-red-600">{error}</p>}
+      {loading && <p className="text-slate-600">Loading student homework...</p>}
 
-      {!loading && !submissions.length && <p className="text-slate-600">No submissions yet.</p>}
+      {error && (
+        <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+
+      {!loading && !error && !submissions.length && (
+        <p className="text-slate-600">No student homework submitted yet.</p>
+      )}
 
       <div className="grid gap-4">
         {submissions.map((submission) => {

@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 export type ProfileRow = {
   full_name: string;
   role: string;
@@ -15,4 +17,18 @@ export function isTeacherProfile(profile: Pick<ProfileRow, 'role'> | null | unde
 
 export function isStudentSuspended(profile: Pick<ProfileRow, 'is_active'> | null | undefined) {
   return profile?.is_active === false;
+}
+
+export async function ensureTeacherProfileRole(
+  supabase: SupabaseClient,
+  userId: string,
+  email: string | undefined,
+  adminEmail: string,
+  currentRole?: string | null
+) {
+  if (currentRole === 'Teacher' || !isTeacherEmail(email, adminEmail)) {
+    return;
+  }
+
+  await supabase.from('profiles').update({ role: 'Teacher', email: email?.toLowerCase() ?? null }).eq('id', userId);
 }

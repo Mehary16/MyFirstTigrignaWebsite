@@ -2,72 +2,64 @@
 
 import { useMemo, useState, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
-import { createBrowserSupabaseClient } from '../lib/supabaseClient';
+
+type StatusType = 'success' | 'error' | null;
 
 export default function TeacherDocumentForm() {
   const router = useRouter();
-  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [title, setTitle] = useState('');
   const [externalLink, setExternalLink] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [statusType, setStatusType] = useState<StatusType>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
     event.preventDefault();
     setStatus(null);
+    setStatusType(null);
     setLoading(true);
 
     try {
       if (!title.trim()) {
-        setStatus('Please provide a document title.');
+        setStatusType('error');
+        setStatus('Document upload failed: Please provide a document title.');
         return;
       }
 
       if (!file && !externalLink.trim()) {
-        setStatus('Upload a PDF or provide an external link.');
+        setStatusType('error');
+        setStatus('Document upload failed: Upload a PDF or provide an external link.');
         return;
       }
 
-      let fileUrl = '';
+      const body = new FormData();
+      body.append('title', title.trim());
+      body.append('externalLink', externalLink.trim());
+      if (file) body.append('file', file);
 
-      if (file) {
-        const body = new FormData();
-        body.append('file', file);
+      const response = await fetch('/api/documents/publish', {
+        method: 'POST',
+        body
+      });
 
-        const response = await fetch('/api/documents/upload', {
-          method: 'POST',
-          body
-        });
+      const payload = (await response.json()) as { message?: string; error?: string };
 
-        const payload = (await response.json()) as { fileUrl?: string; error?: string };
-
-        if (!response.ok || !payload.fileUrl) {
-          setStatus(payload.error ? `Upload failed: ${payload.error}` : 'Upload failed.');
-          return;
-        }
-
-        fileUrl = payload.fileUrl;
-      }
-
-      const { error } = await supabase.from('documents').insert([
-        {
-          title: title.trim(),
-          file_url: fileUrl || null,
-          external_link: externalLink.trim() || null
-        }
-      ]);
-
-      if (error) {
-        setStatus(`Document save failed: ${error.message}`);
+      if (!response.ok || payload.error) {
+        setStatusType('error');
+        setStatus(`Document upload failed: ${payload.error ?? 'Unknown error.'}`);
         return;
       }
 
       setTitle('');
       setExternalLink('');
       setFile(null);
-      setStatus('Document uploaded successfully.');
+      setStatusType('success');
+      setStatus(payload.message ?? 'Document successfully uploaded.');
       router.refresh();
+    } catch (err) {
+      setStatusType('error');
+      setStatus(`Document upload failed: ${err instanceof Error ? err.message : 'Network error.'}`);
     } finally {
       setLoading(false);
     }
@@ -107,7 +99,14 @@ export default function TeacherDocumentForm() {
       </div>
 
       {status && (
-        <p className={`text-sm ${status.includes('successfully') ? 'text-emerald-700' : 'text-red-600'}`}>{status}</p>
+        <p
+          role="alert"
+          className={`rounded-2xl px-4 py-3 text-sm ${
+            statusType === 'success' ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'
+          }`}
+        >
+          {status}
+        </p>
       )}
 
       <button

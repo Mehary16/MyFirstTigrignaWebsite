@@ -1,0 +1,254 @@
+-- ============================================================
+-- RUN THIS ENTIRE FILE ONCE in Supabase → SQL Editor
+-- Fixes: missing submissions/documents tables, bucket errors
+-- ============================================================
+
+create extension if not exists "pgcrypto";
+
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  role text not null default 'Student' check (role in ('Teacher', 'Student', 'Parent')),
+  full_name text not null,
+  email text,
+  is_active boolean not null default true,
+  suspended_reason text,
+  suspended_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+alter table public.profiles add column if not exists email text;
+alter table public.profiles add column if not exists is_active boolean not null default true;
+alter table public.profiles add column if not exists suspended_reason text;
+alter table public.profiles add column if not exists suspended_at timestamptz;
+
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check
+  check (role in ('Teacher', 'Student', 'Parent'));
+
+create table if not exists public.lessons (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  video_url text not null,
+  description text,
+  category text,
+  external_link text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.documents (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  file_url text,
+  external_link text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.submissions (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null references public.profiles(id) on delete cascade,
+  video_url text,
+  submission_type text not null default 'link' check (submission_type in ('link', 'video', 'image', 'document')),
+  file_name text,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.submissions add column if not exists submission_type text not null default 'link';
+alter table public.submissions add column if not exists file_name text;
+alter table public.submissions alter column video_url drop not null;
+
+create table if not exists public.parent_student_links (
+  id uuid primary key default gen_random_uuid(),
+  parent_id uuid not null references public.profiles(id) on delete cascade,
+  student_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (parent_id, student_id)
+);
+
+create table if not exists public.grades (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null references public.profiles(id) on delete cascade,
+  teacher_id uuid not null references public.profiles(id) on delete cascade,
+  title text not null,
+  grade text not null,
+  feedback text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+alter table public.lessons enable row level security;
+alter table public.documents enable row level security;
+alter table public.submissions enable row level security;
+alter table public.parent_student_links enable row level security;
+alter table public.grades enable row level security;
+
+drop policy if exists "profiles read own" on public.profiles;
+create policy "profiles read own" on public.profiles
+  for select using (auth.uid() = id or exists (
+    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
+  ));
+
+drop policy if exists "profiles read linked students" on public.profiles;
+create policy "profiles read linked students" on public.profiles
+  for select using (exists (
+    select 1 from public.parent_student_links psl
+    where psl.parent_id = auth.uid() and psl.student_id = profiles.id
+  ));
+
+drop policy if exists "profiles manage own" on public.profiles;
+create policy "profiles manage own" on public.profiles
+  for all using (auth.uid() = id or exists (
+    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
+  ))
+  with check (auth.uid() = id or exists (
+    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
+  ));
+
+drop policy if exists "lessons read active users" on public.lessons;
+create policy "lessons read active users" on public.lessons
+  for select using (exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+    and (p.role = 'Teacher' or (p.role = 'Student' and p.is_active = true))
+  ));
+
+drop policy if exists "lessons write teacher" on public.lessons;
+create policy "lessons write teacher" on public.lessons
+  for insert with check (exists (
+    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
+  ));
+
+drop policy if exists "documents read active users" on public.documents;
+create policy "documents read active users" on public.documents
+  for select using (exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+    and (p.role = 'Teacher' or (p.role = 'Student' and p.is_active = true))
+  ));
+
+drop policy if exists "documents write teacher" on public.documents;
+create policy "documents write teacher" on public.documents
+  for insert with check (exists (
+    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
+  ));
+
+drop policy if exists "submissions read own or teacher" on public.submissions;
+create policy "submissions read own or teacher" on public.submissions
+  for select using (auth.uid() = student_id or exists (
+    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
+  ));
+
+drop policy if exists "submissions read linked parent" on public.submissions;
+create policy "submissions read linked parent" on public.submissions
+  for select using (exists (
+    select 1 from public.parent_student_links psl
+    where psl.parent_id = auth.uid() and psl.student_id = submissions.student_id
+  ));
+
+drop policy if exists "submissions insert active own" on public.submissions;
+create policy "submissions insert active own" on public.submissions
+  for insert with check (
+    auth.uid() = student_id
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'Student' and p.is_active = true
+    )
+  );
+
+drop policy if exists "parent links read" on public.parent_student_links;
+create policy "parent links read" on public.parent_student_links
+  for select using (
+    auth.uid() = parent_id or auth.uid() = student_id
+    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher')
+  );
+
+drop policy if exists "parent links manage teacher" on public.parent_student_links;
+create policy "parent links manage teacher" on public.parent_student_links
+  for all using (exists (
+    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
+  ))
+  with check (exists (
+    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
+  ));
+
+drop policy if exists "grades read" on public.grades;
+create policy "grades read" on public.grades
+  for select using (
+    auth.uid() = student_id
+    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher')
+    or exists (
+      select 1 from public.parent_student_links psl
+      where psl.parent_id = auth.uid() and psl.student_id = grades.student_id
+    )
+  );
+
+drop policy if exists "grades manage teacher" on public.grades;
+create policy "grades manage teacher" on public.grades
+  for all using (exists (
+    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
+  ))
+  with check (exists (
+    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
+  ));
+
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare resolved_role text;
+begin
+  resolved_role := case
+    when lower(coalesce(new.raw_user_meta_data->>'role', '')) = 'teacher' then 'Teacher'
+    when lower(coalesce(new.raw_user_meta_data->>'role', '')) = 'parent' then 'Parent'
+    else 'Student'
+  end;
+  insert into public.profiles (id, full_name, role, is_active, email)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+    resolved_role, true, new.email
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('student-submissions', 'student-submissions', true, 52428800)
+on conflict (id) do update set public = excluded.public, file_size_limit = excluded.file_size_limit;
+
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('lesson-materials', 'lesson-materials', true, 15728640)
+on conflict (id) do update set public = excluded.public, file_size_limit = excluded.file_size_limit;
+
+drop policy if exists "student submissions public read" on storage.objects;
+create policy "student submissions public read"
+  on storage.objects for select using (bucket_id = 'student-submissions');
+
+drop policy if exists "active students upload submissions" on storage.objects;
+create policy "active students upload submissions"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'student-submissions'
+    and (storage.foldername(name))[1] = auth.uid()::text
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'Student' and p.is_active = true
+    )
+  );
+
+drop policy if exists "teachers upload lesson materials" on storage.objects;
+create policy "teachers upload lesson materials"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'lesson-materials'
+    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher')
+  );
+
+drop policy if exists "lesson materials public read" on storage.objects;
+create policy "lesson materials public read"
+  on storage.objects for select using (bucket_id = 'lesson-materials');
