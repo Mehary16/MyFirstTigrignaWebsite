@@ -1,4 +1,3 @@
-import { STORAGE_BUCKETS } from './storageBuckets';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type SubmissionType = 'link' | 'video' | 'image' | 'document';
@@ -81,8 +80,8 @@ export async function validateVideoDuration(file: File) {
 }
 
 export async function uploadStudentSubmission(
-  supabase: SupabaseClient,
-  studentId: string,
+  _supabase: SupabaseClient,
+  _studentId: string,
   file: File,
   submissionType: Exclude<SubmissionType, 'link'>
 ) {
@@ -95,27 +94,23 @@ export async function uploadStudentSubmission(
     await validateVideoDuration(file);
   }
 
-  const safeName = file.name.replace(/[^\w.\-]+/g, '_');
-  const filePath = `${studentId}/${Date.now()}-${safeName}`;
+  const body = new FormData();
+  body.append('file', file);
+  body.append('submissionType', submissionType);
 
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from(STORAGE_BUCKETS.studentSubmissions)
-    .upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: false,
-      contentType: file.type || 'application/octet-stream'
-    });
+  const response = await fetch('/api/submissions/upload', {
+    method: 'POST',
+    body
+  });
 
-  if (uploadError) {
-    throw new Error(uploadError.message);
+  const payload = (await response.json()) as { mediaUrl?: string; fileName?: string; error?: string };
+
+  if (!response.ok || !payload.mediaUrl) {
+    throw new Error(payload.error ?? 'Upload failed.');
   }
 
-  const { data: publicData } = supabase.storage
-    .from(STORAGE_BUCKETS.studentSubmissions)
-    .getPublicUrl(uploadData.path);
-
   return {
-    mediaUrl: publicData.publicUrl,
-    fileName: file.name
+    mediaUrl: payload.mediaUrl,
+    fileName: payload.fileName ?? file.name
   };
 }

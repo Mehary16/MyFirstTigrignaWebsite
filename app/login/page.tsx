@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '../../lib/supabaseClient';
+import { dashboardPathForRole } from '../../lib/routes';
 
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
 
@@ -17,11 +18,15 @@ async function resolveDashboardPath(supabase: ReturnType<typeof createBrowserSup
     return '/teacher/dashboard';
   }
 
+  if (profile?.role === 'Parent') {
+    return '/parent/dashboard';
+  }
+
   if (profile?.is_active === false) {
     return '/suspended';
   }
 
-  return '/student/dashboard';
+  return dashboardPathForRole(profile?.role);
 }
 
 export default function LoginPage() {
@@ -31,6 +36,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
+  const [accountType, setAccountType] = useState<'Student' | 'Parent'>('Student');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,7 +65,7 @@ export default function LoginPage() {
 
     try {
       if (mode === 'signUp') {
-        const role = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'Teacher' : 'Student';
+        const role = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'Teacher' : accountType;
 
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
@@ -82,7 +88,8 @@ export default function LoginPage() {
           const { error: profileError } = await supabase.from('profiles').upsert({
             id: data.user.id,
             full_name: fullName,
-            role
+            role,
+            email: email.trim().toLowerCase()
           });
           if (profileError) {
             console.error('Profile upsert failed:', profileError.message);
@@ -133,15 +140,15 @@ export default function LoginPage() {
         <p className="mt-4 max-w-xl text-white/75">Students enter lessons, documents, and homework. Teachers publish content, manage materials, and review submissions.</p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+          <div className="cursor-default select-none rounded-3xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-amber-300">ብኽልተ ቋንቋታት ምእታውን ምዝገባን</p>
             <p className="mt-2 text-sm text-white/75">Bilingual login and signup</p>
           </div>
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+          <div className="cursor-default select-none rounded-3xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-amber-300">መምህር</p>
             <p className="mt-2 text-sm text-white/75">Teacher role by email or metadata</p>
           </div>
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+          <div className="cursor-default select-none rounded-3xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-amber-300">ተማሃሮ</p>
             <p className="mt-2 text-sm text-white/75">Protected dashboard access</p>
           </div>
@@ -168,6 +175,24 @@ export default function LoginPage() {
 
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
         {mode === 'signUp' && (
+          <>
+          <div>
+            <p className="block text-sm font-medium text-slate-700">Account type</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(['Student', 'Parent'] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setAccountType(type)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                    accountType === type ? 'bg-slate-950 text-white' : 'border border-slate-300 text-slate-700'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-slate-700">Full name / ስም</label>
             <input
@@ -178,6 +203,7 @@ export default function LoginPage() {
               className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 text-slate-900 outline-none transition focus:border-slate-500"
             />
           </div>
+          </>
         )}
 
         <div>

@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import HomeworkSubmissionForm from '../../../components/StudentHomeworkForm';
-import LogoutButton from '../../../components/LogoutButton';
 import { isStudentSuspended } from '../../../lib/auth';
 import { getSubmissionViewLabel, type SubmissionType } from '../../../lib/submissionMedia';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
@@ -47,11 +46,8 @@ export default async function StudentDashboardPage() {
 
   const user = sessionData.session.user;
   const userEmail = user.email ?? '';
-  const isTeacher = userEmail.toLowerCase() === (process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com').toLowerCase();
-
-  if (isTeacher) {
-    redirect('/teacher/dashboard');
-  }
+  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
+  const isTeacher = userEmail.toLowerCase() === adminEmail.toLowerCase();
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -59,14 +55,23 @@ export default async function StudentDashboardPage() {
     .eq('id', user.id)
     .maybeSingle();
 
+  if (isTeacher || profile?.role === 'Teacher') {
+    redirect('/teacher/dashboard');
+  }
+
+  if (profile?.role === 'Parent') {
+    redirect('/parent/dashboard');
+  }
+
   if (isStudentSuspended(profile)) {
     redirect('/suspended');
   }
 
-  const [{ data: lessons }, { data: documents }, { data: submissions }] = await Promise.all([
+  const [{ data: lessons }, { data: documents }, { data: submissions }, { data: grades }] = await Promise.all([
     supabase.from('lessons').select('id, title, description, video_url, category, external_link').order('created_at', { ascending: false }),
     supabase.from('documents').select('id, title, file_url, external_link').order('created_at', { ascending: false }),
-    supabase.from('submissions').select('id, video_url, submission_type, file_name, notes, created_at').eq('student_id', user.id).order('created_at', { ascending: false })
+    supabase.from('submissions').select('id, video_url, submission_type, file_name, notes, created_at').eq('student_id', user.id).order('created_at', { ascending: false }),
+    supabase.from('grades').select('id, title, grade, feedback, created_at').eq('student_id', user.id).order('created_at', { ascending: false })
   ]);
 
   const displayName = profile?.full_name || user.user_metadata?.full_name || 'Student';
@@ -82,7 +87,6 @@ export default async function StudentDashboardPage() {
           <div className="flex flex-wrap items-center gap-3">
             <p className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{userEmail}</p>
             <p className="rounded-full bg-amber-100 px-4 py-2 text-sm text-amber-800">{profile?.role ?? 'Student'}</p>
-            <LogoutButton />
           </div>
         </div>
       </div>
@@ -172,6 +176,40 @@ export default async function StudentDashboardPage() {
           </div>
         </section>
       </div>
+
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
+        <h2 className="text-2xl font-semibold text-slate-950">Your Grades</h2>
+        <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left font-semibold text-slate-700">Assignment</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-700">Grade</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-700">Feedback</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-700">Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {grades?.length ? (
+                grades.map((grade) => (
+                  <tr key={grade.id}>
+                    <td className="px-4 py-3 text-slate-900">{grade.title}</td>
+                    <td className="px-4 py-3 font-semibold text-amber-800">{grade.grade}</td>
+                    <td className="px-4 py-3 text-slate-600">{grade.feedback ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-500">{new Date(grade.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
+                    No grades posted yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
         <h2 className="text-2xl font-semibold text-slate-950">Your Submissions</h2>

@@ -1,0 +1,191 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useMemo, useState, type ComponentProps } from 'react';
+import { createBrowserSupabaseClient } from '../lib/supabaseClient';
+
+export type GradeRow = {
+  id: string;
+  student_id: string;
+  title: string;
+  grade: string;
+  feedback: string | null;
+  created_at: string;
+  profiles: { full_name: string } | { full_name: string }[] | null;
+};
+
+export type StudentOption = {
+  id: string;
+  full_name: string;
+};
+
+type TeacherGradeManagerProps = {
+  students: StudentOption[];
+  initialGrades: GradeRow[];
+};
+
+function studentNameFromGrade(grade: GradeRow) {
+  if (!grade.profiles) return 'Student';
+  if (Array.isArray(grade.profiles)) return grade.profiles[0]?.full_name ?? 'Student';
+  return grade.profiles.full_name;
+}
+
+export default function TeacherGradeManager({ students, initialGrades }: TeacherGradeManagerProps) {
+  const router = useRouter();
+  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
+  const [grades, setGrades] = useState(initialGrades);
+  const [studentId, setStudentId] = useState(students[0]?.id ?? '');
+  const [title, setTitle] = useState('');
+  const [gradeValue, setGradeValue] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [status, setStatus] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
+    event.preventDefault();
+    setStatus(null);
+
+    if (!studentId || !title.trim() || !gradeValue.trim()) {
+      setStatus('Student, assignment title, and grade are required.');
+      return;
+    }
+
+    setLoading(true);
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setStatus('You must be logged in as a teacher.');
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('grades')
+      .insert({
+        student_id: studentId,
+        teacher_id: user.id,
+        title: title.trim(),
+        grade: gradeValue.trim(),
+        feedback: feedback.trim() || null
+      })
+      .select('id, student_id, title, grade, feedback, created_at')
+      .single();
+
+    setLoading(false);
+
+    if (error) {
+      setStatus(error.message);
+      return;
+    }
+
+    const studentName = students.find((student) => student.id === studentId)?.full_name ?? 'Student';
+    setGrades((current) => [
+      {
+        ...(data as GradeRow),
+        profiles: { full_name: studentName }
+      },
+      ...current
+    ]);
+    setTitle('');
+    setGradeValue('');
+    setFeedback('');
+    setStatus('Grade saved.');
+    router.refresh();
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-semibold text-slate-900">Student grades / ናይ ተማሃሮ ደረጃ</h2>
+        <p className="mt-2 text-slate-600">Record grades by student name so parents can track performance.</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-slate-700">Student</label>
+          <select
+            value={studentId}
+            onChange={(event) => setStudentId(event.currentTarget.value)}
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white p-3 outline-none"
+          >
+            {students.map((student) => (
+              <option key={student.id} value={student.id}>
+                {student.full_name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Assignment / lesson</label>
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.currentTarget.value)}
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white p-3 outline-none"
+            placeholder="Homework 1, Reading test..."
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Grade</label>
+          <input
+            value={gradeValue}
+            onChange={(event) => setGradeValue(event.currentTarget.value)}
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white p-3 outline-none"
+            placeholder="A, 95%, Pass..."
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-slate-700">Feedback (optional)</label>
+          <textarea
+            rows={3}
+            value={feedback}
+            onChange={(event) => setFeedback(event.currentTarget.value)}
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white p-3 outline-none"
+          />
+        </div>
+        <div className="md:col-span-2">
+          <button
+            type="submit"
+            disabled={loading || !students.length}
+            className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400"
+          >
+            {loading ? 'Saving...' : 'Save grade'}
+          </button>
+          {status && <p className="mt-2 text-sm text-slate-600">{status}</p>}
+        </div>
+      </form>
+
+      <div className="overflow-x-auto rounded-2xl border border-slate-200">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">Student</th>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">Assignment</th>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">Grade</th>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {grades.length ? (
+              grades.map((grade) => (
+                <tr key={grade.id}>
+                  <td className="px-4 py-3 font-medium text-slate-900">{studentNameFromGrade(grade)}</td>
+                  <td className="px-4 py-3 text-slate-600">{grade.title}</td>
+                  <td className="px-4 py-3 font-semibold text-amber-800">{grade.grade}</td>
+                  <td className="px-4 py-3 text-slate-500">{new Date(grade.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
+                  No grades recorded yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

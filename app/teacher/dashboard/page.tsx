@@ -3,6 +3,8 @@ import TeacherLessonForm from '../../../components/TeacherLessonForm';
 import TeacherDocumentForm from '../../../components/TeacherDocumentForm';
 import TeacherSubmissionGrid from '../../../components/TeacherSubmissionGrid';
 import TeacherStudentList, { type StudentListItem } from '../../../components/TeacherStudentList';
+import TeacherGradeManager, { type GradeRow } from '../../../components/TeacherGradeManager';
+import TeacherParentLinkForm from '../../../components/TeacherParentLinkForm';
 import LogoutButton from '../../../components/LogoutButton';
 import { isTeacherProfile } from '../../../lib/auth';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
@@ -20,17 +22,22 @@ export default async function TeacherDashboardPage() {
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
   const { data: profile } = await supabase.from('profiles').select('full_name, role').eq('id', user.id).maybeSingle();
 
+  if (profile?.role === 'Parent') {
+    redirect('/parent/dashboard');
+  }
+
   if (!isTeacherProfile(profile, userEmail, adminEmail)) {
     redirect('/student/dashboard');
   }
 
-  const [{ data: students, count: studentCount }, { data: submissionRows }] = await Promise.all([
+  const [{ data: students, count: studentCount }, { data: submissionRows }, { data: gradeRows }] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, full_name, created_at, is_active, suspended_reason', { count: 'exact' })
       .eq('role', 'Student')
       .order('created_at', { ascending: false }),
-    supabase.from('submissions').select('student_id')
+    supabase.from('submissions').select('student_id'),
+    supabase.from('grades').select('id, student_id, title, grade, feedback, created_at').order('created_at', { ascending: false }).limit(50)
   ]);
 
   const submissionCountByStudent = (submissionRows ?? []).reduce<Record<string, number>>((acc, row) => {
@@ -45,6 +52,14 @@ export default async function TeacherDashboardPage() {
     is_active: student.is_active ?? true,
     suspended_reason: student.suspended_reason,
     submission_count: submissionCountByStudent[student.id] ?? 0
+  }));
+
+  const studentOptions = studentList.map(({ id, full_name }) => ({ id, full_name }));
+  const studentNameById = Object.fromEntries(studentOptions.map((student) => [student.id, student.full_name]));
+
+  const grades: GradeRow[] = (gradeRows ?? []).map((grade) => ({
+    ...grade,
+    profiles: { full_name: studentNameById[grade.student_id] ?? 'Student' }
   }));
 
   const displayName = profile?.full_name || user.user_metadata?.full_name || 'Teacher';
@@ -63,11 +78,21 @@ export default async function TeacherDashboardPage() {
             <LogoutButton />
           </div>
         </div>
-        <p className="mt-3 max-w-2xl text-slate-600">Create lessons, upload PDFs, review student submissions, and manage registered students.</p>
+        <p className="mt-3 max-w-2xl text-slate-600">
+          Create lessons, upload PDFs, review submissions, manage students, assign grades, and link parents.
+        </p>
       </div>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
         <TeacherStudentList students={studentList} totalCount={studentCount ?? studentList.length} />
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
+        <TeacherGradeManager students={studentOptions} initialGrades={grades} />
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
+        <TeacherParentLinkForm students={studentOptions} />
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">

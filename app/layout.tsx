@@ -22,7 +22,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <h1 className="mt-1 text-2xl font-semibold text-slate-950">Tigrigna Learning Portal</h1>
                 <p className="mt-1 max-w-xl text-sm text-slate-600">A bilingual space for lessons, reading materials, and homework submissions.</p>
               </div>
-              <AuthNav />            </div>
+              <AuthNav />
+            </div>
           </header>
 
           <main className="flex-1">{children}</main>

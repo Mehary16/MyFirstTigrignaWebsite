@@ -54,7 +54,9 @@ export async function middleware(request: NextRequest) {
 
     if (!profile || profile.role !== 'Student' || profile.is_active !== false) {
       const url = request.nextUrl.clone();
-      url.pathname = profile?.role === 'Teacher' ? '/teacher/dashboard' : '/student/dashboard';
+      if (profile?.role === 'Teacher') url.pathname = '/teacher/dashboard';
+      else if (profile?.role === 'Parent') url.pathname = '/parent/dashboard';
+      else url.pathname = '/student/dashboard';
       return NextResponse.redirect(url);
     }
   }

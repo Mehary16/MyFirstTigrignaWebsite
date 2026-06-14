@@ -194,7 +194,7 @@ export default function StudentHomeworkForm({ studentId }: StudentHomeworkFormPr
       )}
 
       <div>
-        <label className="block text-sm font-medium text-slate-700">Notes / ማስታወሻ</label>
+        <label className="block text-sm font-medium text-slate-700">Notes / ተወሳኺ ሓበሬታ</label>
         <textarea
           rows={4}
           value={notes}
