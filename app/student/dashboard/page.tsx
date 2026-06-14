@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import HomeworkSubmissionForm from '../../../components/StudentHomeworkForm';
+import LogoutButton from '../../../components/LogoutButton';
 import { isStudentSuspended } from '../../../lib/auth';
 import { getSubmissionViewLabel, type SubmissionType } from '../../../lib/submissionMedia';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
@@ -87,6 +88,7 @@ export default async function StudentDashboardPage() {
           <div className="flex flex-wrap items-center gap-3">
             <p className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{userEmail}</p>
             <p className="rounded-full bg-amber-100 px-4 py-2 text-sm text-amber-800">{profile?.role ?? 'Student'}</p>
+            <LogoutButton />
           </div>
         </div>
       </div>
