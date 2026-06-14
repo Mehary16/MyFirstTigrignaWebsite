@@ -26,8 +26,8 @@ export default async function HomePage() {
   }
 
   return (
-    <section className="-mx-4 -mt-2 space-y-8 rounded-[2rem] bg-gradient-to-b from-blue-600 via-blue-500 to-blue-700 px-4 py-10 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-      <div className="rounded-3xl border border-blue-200/30 bg-white/95 p-8 shadow-lg shadow-blue-900/20 backdrop-blur">
+    <section className="space-y-8">
+      <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm shadow-slate-200/50">
         <h2 className="text-3xl font-semibold text-slate-900">Welcome to ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ</h2>
         <p className="mt-4 max-w-2xl text-slate-600">
           A safe learning environment for students aged 6-17 to practice Tigrigna through videos, reading materials, and

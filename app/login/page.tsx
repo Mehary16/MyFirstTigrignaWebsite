@@ -134,14 +134,14 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      <section className="rounded-[2rem] border border-blue-200 bg-gradient-to-br from-blue-700 to-blue-900 p-8 text-white shadow-[0_24px_80px_rgba(30,64,175,0.25)]">
-        <p className="text-sm uppercase tracking-[0.3em] text-blue-200">ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ</p>
+      <section className="rounded-[2rem] border border-amber-100 bg-slate-950 p-8 text-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+        <p className="text-sm uppercase tracking-[0.3em] text-amber-300">ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ</p>
         <h1 className="mt-4 text-4xl font-semibold leading-tight">Login / መእተዊ</h1>
-        <p className="mt-4 max-w-xl text-blue-50">
+        <p className="mt-4 max-w-xl text-white/75">
           Welcome to the Tigrigna learning portal. Sign in or create an account to access your dashboard.
         </p>
 
-        <ul className="mt-8 space-y-3 text-sm text-blue-50">
+        <ul className="mt-8 space-y-3 text-sm text-white/75">
           <li>
             <strong className="text-white">Students</strong> — lessons, homework, and grades
           </li>
