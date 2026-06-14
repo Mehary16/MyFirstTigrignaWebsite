@@ -83,114 +83,135 @@ alter table public.submissions enable row level security;
 alter table public.parent_student_links enable row level security;
 alter table public.grades enable row level security;
 
+-- Security-definer helpers avoid infinite recursion when policies read profiles.
+create or replace function public.is_teacher()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'Teacher'
+  );
+$$;
+
+create or replace function public.is_active_student()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'Student' and is_active = true
+  );
+$$;
+
+create or replace function public.is_teacher_or_active_student()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid()
+    and (role = 'Teacher' or (role = 'Student' and is_active = true))
+  );
+$$;
+
+create or replace function public.is_parent_of_student(target_student_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.parent_student_links
+    where parent_id = auth.uid() and student_id = target_student_id
+  );
+$$;
+
+grant execute on function public.is_teacher() to authenticated;
+grant execute on function public.is_active_student() to authenticated;
+grant execute on function public.is_teacher_or_active_student() to authenticated;
+grant execute on function public.is_parent_of_student(uuid) to authenticated;
+
 drop policy if exists "profiles read own" on public.profiles;
 create policy "profiles read own" on public.profiles
-  for select using (auth.uid() = id or exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
-  ));
+  for select using (
+    auth.uid() = id
+    or public.is_teacher()
+    or public.is_parent_of_student(id)
+  );
 
 drop policy if exists "profiles read linked students" on public.profiles;
-create policy "profiles read linked students" on public.profiles
-  for select using (exists (
-    select 1 from public.parent_student_links psl
-    where psl.parent_id = auth.uid() and psl.student_id = profiles.id
-  ));
 
 drop policy if exists "profiles manage own" on public.profiles;
 create policy "profiles manage own" on public.profiles
-  for all using (auth.uid() = id or exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
-  ))
-  with check (auth.uid() = id or exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
-  ));
+  for all using (auth.uid() = id or public.is_teacher())
+  with check (auth.uid() = id or public.is_teacher());
 
 drop policy if exists "lessons read active users" on public.lessons;
 create policy "lessons read active users" on public.lessons
-  for select using (exists (
-    select 1 from public.profiles p
-    where p.id = auth.uid()
-    and (p.role = 'Teacher' or (p.role = 'Student' and p.is_active = true))
-  ));
+  for select using (public.is_teacher_or_active_student());
 
 drop policy if exists "lessons write teacher" on public.lessons;
 create policy "lessons write teacher" on public.lessons
-  for insert with check (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
-  ));
+  for insert with check (public.is_teacher());
 
 drop policy if exists "documents read active users" on public.documents;
 create policy "documents read active users" on public.documents
-  for select using (exists (
-    select 1 from public.profiles p
-    where p.id = auth.uid()
-    and (p.role = 'Teacher' or (p.role = 'Student' and p.is_active = true))
-  ));
+  for select using (public.is_teacher_or_active_student());
 
 drop policy if exists "documents write teacher" on public.documents;
 create policy "documents write teacher" on public.documents
-  for insert with check (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
-  ));
+  for insert with check (public.is_teacher());
 
 drop policy if exists "submissions read own or teacher" on public.submissions;
 create policy "submissions read own or teacher" on public.submissions
-  for select using (auth.uid() = student_id or exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
-  ));
+  for select using (
+    auth.uid() = student_id
+    or public.is_teacher()
+    or public.is_parent_of_student(student_id)
+  );
 
 drop policy if exists "submissions read linked parent" on public.submissions;
-create policy "submissions read linked parent" on public.submissions
-  for select using (exists (
-    select 1 from public.parent_student_links psl
-    where psl.parent_id = auth.uid() and psl.student_id = submissions.student_id
-  ));
 
 drop policy if exists "submissions insert active own" on public.submissions;
 create policy "submissions insert active own" on public.submissions
-  for insert with check (
-    auth.uid() = student_id
-    and exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'Student' and p.is_active = true
-    )
-  );
+  for insert with check (auth.uid() = student_id and public.is_active_student());
 
 drop policy if exists "parent links read" on public.parent_student_links;
 create policy "parent links read" on public.parent_student_links
   for select using (
-    auth.uid() = parent_id or auth.uid() = student_id
-    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher')
+    auth.uid() = parent_id
+    or auth.uid() = student_id
+    or public.is_teacher()
   );
 
 drop policy if exists "parent links manage teacher" on public.parent_student_links;
 create policy "parent links manage teacher" on public.parent_student_links
-  for all using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
-  ))
-  with check (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
-  ));
+  for all using (public.is_teacher())
+  with check (public.is_teacher());
 
 drop policy if exists "grades read" on public.grades;
 create policy "grades read" on public.grades
   for select using (
     auth.uid() = student_id
-    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher')
-    or exists (
-      select 1 from public.parent_student_links psl
-      where psl.parent_id = auth.uid() and psl.student_id = grades.student_id
-    )
+    or public.is_teacher()
+    or public.is_parent_of_student(student_id)
   );
 
 drop policy if exists "grades manage teacher" on public.grades;
 create policy "grades manage teacher" on public.grades
-  for all using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
-  ))
-  with check (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher'
-  ));
+  for all using (public.is_teacher())
+  with check (public.is_teacher());
 
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
@@ -235,19 +256,13 @@ create policy "active students upload submissions"
   with check (
     bucket_id = 'student-submissions'
     and (storage.foldername(name))[1] = auth.uid()::text
-    and exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'Student' and p.is_active = true
-    )
+    and public.is_active_student()
   );
 
 drop policy if exists "teachers upload lesson materials" on storage.objects;
 create policy "teachers upload lesson materials"
   on storage.objects for insert to authenticated
-  with check (
-    bucket_id = 'lesson-materials'
-    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'Teacher')
-  );
+  with check (bucket_id = 'lesson-materials' and public.is_teacher());
 
 drop policy if exists "lesson materials public read" on storage.objects;
 create policy "lesson materials public read"

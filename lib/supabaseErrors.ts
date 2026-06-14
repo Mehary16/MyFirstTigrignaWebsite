@@ -10,5 +10,9 @@ export function formatDatabaseError(message: string) {
     return 'Storage bucket is missing. Run supabase/RUN_THIS_FIRST.sql in the Supabase SQL Editor, then try again.';
   }
 
+  if (message.includes('infinite recursion detected')) {
+    return 'Database security policies need a fix. Run supabase/FIX_RLS_RECURSION.sql in the Supabase SQL Editor, then refresh this page.';
+  }
+
   return message;
 }
