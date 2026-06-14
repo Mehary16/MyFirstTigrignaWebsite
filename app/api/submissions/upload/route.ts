@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureStudentSubmissionsBucket } from '../../../../lib/ensureStorageBucket';
+import { ensureStudentSubmissionsBucket, BUCKET_SETUP_MESSAGE } from '../../../../lib/ensureStorageBucket';
 import { STORAGE_BUCKETS } from '../../../../lib/storageBuckets';
 import {
   SUBMISSION_MAX_BYTES,
@@ -63,9 +63,7 @@ export async function POST(request: Request) {
     });
 
   if (uploadError) {
-    const message = uploadError.message.includes('Bucket not found')
-      ? 'Storage is not set up yet. Ask your teacher to run supabase/SETUP.sql in the Supabase SQL Editor, or add SUPABASE_SERVICE_ROLE_KEY to enable auto-setup.'
-      : uploadError.message;
+    const message = uploadError.message.includes('Bucket not found') ? BUCKET_SETUP_MESSAGE : uploadError.message;
 
     return NextResponse.json({ error: message }, { status: 500 });
   }
