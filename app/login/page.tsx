@@ -134,25 +134,24 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      <section className="rounded-[2rem] border border-amber-100 bg-slate-950 p-8 text-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-        <p className="text-sm uppercase tracking-[0.3em] text-amber-300">ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ</p>
+      <section className="rounded-[2rem] border border-blue-200 bg-gradient-to-br from-blue-700 to-blue-900 p-8 text-white shadow-[0_24px_80px_rgba(30,64,175,0.25)]">
+        <p className="text-sm uppercase tracking-[0.3em] text-blue-200">ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ</p>
         <h1 className="mt-4 text-4xl font-semibold leading-tight">Login / መእተዊ</h1>
-        <p className="mt-4 max-w-xl text-white/75">Students enter lessons, documents, and homework. Teachers publish content, manage materials, and review submissions.</p>
+        <p className="mt-4 max-w-xl text-blue-50">
+          Welcome to the Tigrigna learning portal. Sign in or create an account to access your dashboard.
+        </p>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          <div className="cursor-default select-none rounded-3xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-amber-300">ብኽልተ ቋንቋታት ምእታውን ምዝገባን</p>
-            <p className="mt-2 text-sm text-white/75">Bilingual login and signup</p>
-          </div>
-          <div className="cursor-default select-none rounded-3xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-amber-300">መምህር</p>
-            <p className="mt-2 text-sm text-white/75">Teacher role by email or metadata</p>
-          </div>
-          <div className="cursor-default select-none rounded-3xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-amber-300">ተማሃሮ</p>
-            <p className="mt-2 text-sm text-white/75">Protected dashboard access</p>
-          </div>
-        </div>
+        <ul className="mt-8 space-y-3 text-sm text-blue-50">
+          <li>
+            <strong className="text-white">Students</strong> — lessons, homework, and grades
+          </li>
+          <li>
+            <strong className="text-white">Teachers</strong> — publish content and manage the class
+          </li>
+          <li>
+            <strong className="text-white">Parents</strong> — view your child&apos;s progress and grades
+          </li>
+        </ul>
       </section>
 
       <section className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">

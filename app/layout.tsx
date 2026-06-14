@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ti">
-      <body className="min-h-screen bg-[linear-gradient(180deg,#f7f1e3_0%,#f8fafc_40%,#eef4ff_100%)] text-slate-900 antialiased">
+      <body className="min-h-screen bg-gradient-to-b from-blue-50 via-blue-100/80 to-blue-200/60 text-slate-900 antialiased">
         <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8">
           <header className="mb-8 rounded-[2rem] border border-amber-100/80 bg-white/85 px-5 py-4 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
