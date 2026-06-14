@@ -4,6 +4,7 @@ import { useMemo, useState, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
 import { uploadLessonMaterialPdf } from '../lib/lessonMaterials';
 import { formatDatabaseError } from '../lib/supabaseErrors';
+import { prepareTeacherAccount } from '../lib/teacherUpload';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
 
 type StatusType = 'success' | 'error' | null;
@@ -46,6 +47,8 @@ export default function TeacherDocumentForm() {
         setStatus('Document upload failed: You must be logged in to upload materials.');
         return;
       }
+
+      await prepareTeacherAccount(supabase, user);
 
       let fileUrl = '';
 
