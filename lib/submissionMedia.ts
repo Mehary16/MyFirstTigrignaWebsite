@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { readJsonResponse } from './readJsonResponse';
 
 export type SubmissionType = 'link' | 'video' | 'image' | 'document';
 
@@ -103,7 +104,7 @@ export async function uploadStudentSubmission(
     body
   });
 
-  const payload = (await response.json()) as { mediaUrl?: string; fileName?: string; error?: string };
+  const payload = await readJsonResponse<{ mediaUrl?: string; fileName?: string; error?: string }>(response);
 
   if (!response.ok || !payload.mediaUrl) {
     throw new Error(payload.error ?? 'Upload failed.');

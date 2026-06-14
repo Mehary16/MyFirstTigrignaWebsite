@@ -2,11 +2,15 @@
 
 import { useMemo, useState, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
+import { uploadLessonMaterialPdf } from '../lib/lessonMaterials';
+import { formatDatabaseError } from '../lib/supabaseErrors';
+import { createBrowserSupabaseClient } from '../lib/supabaseClient';
 
 type StatusType = 'success' | 'error' | null;
 
 export default function TeacherDocumentForm() {
   const router = useRouter();
+  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [title, setTitle] = useState('');
   const [externalLink, setExternalLink] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -33,21 +37,33 @@ export default function TeacherDocumentForm() {
         return;
       }
 
-      const body = new FormData();
-      body.append('title', title.trim());
-      body.append('externalLink', externalLink.trim());
-      if (file) body.append('file', file);
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
 
-      const response = await fetch('/api/documents/publish', {
-        method: 'POST',
-        body
-      });
-
-      const payload = (await response.json()) as { message?: string; error?: string };
-
-      if (!response.ok || payload.error) {
+      if (!user) {
         setStatusType('error');
-        setStatus(`Document upload failed: ${payload.error ?? 'Unknown error.'}`);
+        setStatus('Document upload failed: You must be logged in to upload materials.');
+        return;
+      }
+
+      let fileUrl = '';
+
+      if (file) {
+        fileUrl = await uploadLessonMaterialPdf(supabase, user.id, file);
+      }
+
+      const { error: insertError } = await supabase.from('documents').insert([
+        {
+          title: title.trim(),
+          file_url: fileUrl || null,
+          external_link: externalLink.trim() || null
+        }
+      ]);
+
+      if (insertError) {
+        setStatusType('error');
+        setStatus(`Document upload failed: ${formatDatabaseError(insertError.message)}`);
         return;
       }
 
@@ -55,7 +71,7 @@ export default function TeacherDocumentForm() {
       setExternalLink('');
       setFile(null);
       setStatusType('success');
-      setStatus(payload.message ?? 'Document successfully uploaded.');
+      setStatus('Document successfully uploaded.');
       router.refresh();
     } catch (err) {
       setStatusType('error');
