@@ -31,7 +31,9 @@ create table if not exists public.documents (
 create table if not exists public.submissions (
   id uuid primary key default gen_random_uuid(),
   student_id uuid not null references public.profiles(id) on delete cascade,
-  video_url text not null,
+  video_url text,
+  submission_type text not null default 'link' check (submission_type in ('link', 'video', 'image', 'document')),
+  file_name text,
   notes text,
   created_at timestamptz not null default now()
 );
@@ -120,3 +122,74 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'student-submissions',
+  'student-submissions',
+  true,
+  52428800,
+  array['video/mp4', 'video/webm', 'video/quicktime', 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+)
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'lesson-materials',
+  'lesson-materials',
+  true,
+  15728640,
+  array['application/pdf']
+)
+on conflict (id) do nothing;
+
+create policy "student submissions public read"
+  on storage.objects for select
+  using (bucket_id = 'student-submissions');
+
+create policy "active students upload submissions"
+  on storage.objects for insert
+  to authenticated
+  with check (
+    bucket_id = 'student-submissions'
+    and (storage.foldername(name))[1] = auth.uid()::text
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'Student' and p.is_active = true
+    )
+  );
+
+create policy "students update own submissions"
+  on storage.objects for update
+  to authenticated
+  using (
+    bucket_id = 'student-submissions'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  )
+  with check (
+    bucket_id = 'student-submissions'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "students delete own submissions"
+  on storage.objects for delete
+  to authenticated
+  using (
+    bucket_id = 'student-submissions'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "teachers upload lesson materials"
+  on storage.objects for insert
+  to authenticated
+  with check (
+    bucket_id = 'lesson-materials'
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'Teacher'
+    )
+  );
+
+create policy "lesson materials public read"
+  on storage.objects for select
+  using (bucket_id = 'lesson-materials');

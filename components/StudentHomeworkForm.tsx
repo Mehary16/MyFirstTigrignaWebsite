@@ -1,20 +1,64 @@
 'use client';
 
-import { useState, type ComponentProps } from 'react';
+import { useMemo, useState, type ComponentProps } from 'react';
+import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
-import { STORAGE_BUCKETS } from '../lib/storageBuckets';
+import {
+  SUBMISSION_ACCEPT,
+  SUBMISSION_MAX_BYTES,
+  SUBMISSION_TYPE_LABELS,
+  VIDEO_TOO_LONG_MESSAGE,
+  formatFileSize,
+  inferSubmissionTypeFromFile,
+  uploadStudentSubmission,
+  validateVideoDuration,
+  type SubmissionType
+} from '../lib/submissionMedia';
 
 interface StudentHomeworkFormProps {
   studentId: string;
 }
 
 export default function StudentHomeworkForm({ studentId }: StudentHomeworkFormProps) {
-  const supabase = createBrowserSupabaseClient();
-  const [videoUrl, setVideoUrl] = useState('');
+  const router = useRouter();
+  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
+  const [submissionType, setSubmissionType] = useState<SubmissionType>('video');
+  const [mediaUrl, setMediaUrl] = useState('');
   const [notes, setNotes] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleTypeChange = (nextType: SubmissionType) => {
+    setSubmissionType(nextType);
+    setMediaUrl('');
+    setFile(null);
+    setStatus(null);
+  };
+
+  const handleFileChange = async (event: { currentTarget: HTMLInputElement }) => {
+    const selected = event.currentTarget.files?.[0] ?? null;
+    setStatus(null);
+
+    if (!selected) {
+      setFile(null);
+      return;
+    }
+
+    if (submissionType === 'video') {
+      try {
+        await validateVideoDuration(selected);
+        setFile(selected);
+      } catch (err) {
+        setFile(null);
+        event.currentTarget.value = '';
+        setStatus(err instanceof Error ? err.message : VIDEO_TOO_LONG_MESSAGE);
+      }
+      return;
+    }
+
+    setFile(selected);
+  };
 
   const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
     event.preventDefault();
@@ -22,35 +66,54 @@ export default function StudentHomeworkForm({ studentId }: StudentHomeworkFormPr
     setLoading(true);
 
     try {
-      let storedUrl = videoUrl;
+      let storedUrl = mediaUrl.trim();
+      let resolvedType = submissionType;
+      let fileName: string | null = null;
 
-      if (file) {
-        const fileName = `${studentId}-${Date.now()}-${file.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from(STORAGE_BUCKETS.studentSubmissions)
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: file.type || 'video/mp4'
-          });
-
-        if (uploadError) {
-          setStatus(`Upload failed: ${uploadError.message}`);
+      if (submissionType === 'link') {
+        if (!storedUrl) {
+          setStatus('Please paste a video or media link.');
+          return;
+        }
+      } else {
+        if (!file) {
+          setStatus(`Please choose a ${SUBMISSION_TYPE_LABELS[submissionType].toLowerCase()} to upload.`);
           return;
         }
 
-        const { data: publicData } = await supabase.storage
-          .from(STORAGE_BUCKETS.studentSubmissions)
-          .getPublicUrl(uploadData.path);
+        const detectedType = inferSubmissionTypeFromFile(file);
+        if (detectedType !== submissionType) {
+          setStatus(`Please upload a file that matches "${SUBMISSION_TYPE_LABELS[submissionType]}".`);
+          return;
+        }
 
-        storedUrl = publicData.publicUrl;
+        if (file.size > SUBMISSION_MAX_BYTES[submissionType]) {
+          setStatus(`File is too large. Maximum size is ${formatFileSize(SUBMISSION_MAX_BYTES[submissionType])}.`);
+          return;
+        }
+
+        if (submissionType === 'video') {
+          try {
+            await validateVideoDuration(file);
+          } catch (err) {
+            setStatus(err instanceof Error ? err.message : VIDEO_TOO_LONG_MESSAGE);
+            return;
+          }
+        }
+
+        const uploadResult = await uploadStudentSubmission(supabase, studentId, file, submissionType);
+        storedUrl = uploadResult.mediaUrl;
+        fileName = uploadResult.fileName;
+        resolvedType = submissionType;
       }
 
       const { error: submissionError } = await supabase.from('submissions').insert([
         {
           student_id: studentId,
           video_url: storedUrl,
-          notes
+          submission_type: resolvedType,
+          file_name: fileName,
+          notes: notes.trim() || null
         }
       ]);
 
@@ -59,10 +122,14 @@ export default function StudentHomeworkForm({ studentId }: StudentHomeworkFormPr
         return;
       }
 
-      setVideoUrl('');
+      setMediaUrl('');
       setNotes('');
       setFile(null);
       setStatus('Homework submitted successfully!');
+      router.refresh();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Something went wrong.';
+      setStatus(message.startsWith('Upload failed') || message.includes('Bucket') ? `Upload failed: ${message}` : message);
     } finally {
       setLoading(false);
     }
@@ -71,33 +138,69 @@ export default function StudentHomeworkForm({ studentId }: StudentHomeworkFormPr
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div>
-        <label className="block text-sm font-medium text-slate-700">Video URL</label>
-        <input
-          type="url"
-          placeholder="https://youtube.com/..."
-          value={videoUrl}
-          onChange={(event) => setVideoUrl(event.target.value)}
-          className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 outline-none transition focus:border-slate-500"
-        />
+        <p className="block text-sm font-medium text-slate-700">Submission type / ዓይነት ስራሕ ቤት</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {(Object.keys(SUBMISSION_TYPE_LABELS) as SubmissionType[]).map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => handleTypeChange(type)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                submissionType === type
+                  ? 'bg-slate-950 text-white'
+                  : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              {SUBMISSION_TYPE_LABELS[type]}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700">Upload short clip</label>
-        <input
-          type="file"
-          accept="video/*"
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 text-slate-700 outline-none"
-        />
-      </div>
+      {submissionType === 'link' ? (
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Video or media link</label>
+          <input
+            type="url"
+            placeholder="https://youtube.com/... or other link"
+            value={mediaUrl}
+            onChange={(event) => setMediaUrl(event.currentTarget.value)}
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 outline-none transition focus:border-slate-500"
+          />
+        </div>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium text-slate-700">
+            Upload {SUBMISSION_TYPE_LABELS[submissionType].toLowerCase()}
+          </label>
+          <input
+            type="file"
+            accept={SUBMISSION_ACCEPT[submissionType]}
+            onChange={handleFileChange}
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 text-slate-700 outline-none"
+          />
+          <p className="mt-2 text-xs text-slate-500">
+            Max size: {formatFileSize(SUBMISSION_MAX_BYTES[submissionType])}.
+            {submissionType === 'video' && ' MP4, WebM, or MOV. Maximum length: 10 minutes.'}
+            {submissionType === 'image' && ' JPG, PNG, WebP, or GIF.'}
+            {submissionType === 'document' && ' PDF or Word document.'}
+          </p>
+          {file && (
+            <p className="mt-1 text-xs text-slate-600">
+              Selected: {file.name} ({formatFileSize(file.size)})
+            </p>
+          )}
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-slate-700">Notes / ማስታወሻ</label>
         <textarea
           rows={4}
           value={notes}
-          onChange={(event) => setNotes(event.target.value)}
+          onChange={(event) => setNotes(event.currentTarget.value)}
           className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 outline-none transition focus:border-slate-500"
+          placeholder="Optional message for your teacher"
         />
       </div>
 
@@ -109,7 +212,9 @@ export default function StudentHomeworkForm({ studentId }: StudentHomeworkFormPr
         {loading ? 'Submitting...' : 'Submit Homework'}
       </button>
 
-      {status && <p className="text-sm text-slate-600">{status}</p>}
+      {status && (
+        <p className={`text-sm ${status.includes('successfully') ? 'text-emerald-700' : 'text-red-600'}`}>{status}</p>
+      )}
     </form>
   );
 }

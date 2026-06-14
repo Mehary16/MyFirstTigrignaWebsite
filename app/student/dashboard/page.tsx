@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import HomeworkSubmissionForm from '../../../components/StudentHomeworkForm';
 import LogoutButton from '../../../components/LogoutButton';
 import { isStudentSuspended } from '../../../lib/auth';
+import { getSubmissionViewLabel, type SubmissionType } from '../../../lib/submissionMedia';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
 function getVideoEmbedUrl(videoUrl: string) {
@@ -65,7 +66,7 @@ export default async function StudentDashboardPage() {
   const [{ data: lessons }, { data: documents }, { data: submissions }] = await Promise.all([
     supabase.from('lessons').select('id, title, description, video_url, category, external_link').order('created_at', { ascending: false }),
     supabase.from('documents').select('id, title, file_url, external_link').order('created_at', { ascending: false }),
-    supabase.from('submissions').select('id, video_url, notes, created_at').eq('student_id', user.id).order('created_at', { ascending: false })
+    supabase.from('submissions').select('id, video_url, submission_type, file_name, notes, created_at').eq('student_id', user.id).order('created_at', { ascending: false })
   ]);
 
   const displayName = profile?.full_name || user.user_metadata?.full_name || 'Student';
@@ -165,7 +166,7 @@ export default async function StudentDashboardPage() {
 
         <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
           <h2 className="text-2xl font-semibold text-slate-950">Homework Submission</h2>
-          <p className="mt-2 text-slate-600">Submit your practice videos using a link or upload a short clip directly.</p>
+          <p className="mt-2 text-slate-600">Submit a video link, short clip, image, or document for your teacher to review.</p>
           <div className="mt-6">
             <HomeworkSubmissionForm studentId={user.id} />
           </div>
@@ -181,11 +182,24 @@ export default async function StudentDashboardPage() {
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-semibold text-slate-900">{new Date(submission.created_at).toLocaleDateString()}</p>
-                    <p className="text-sm text-slate-600">{submission.notes}</p>
+                    <p className="text-xs font-medium uppercase tracking-[0.15em] text-amber-700">
+                      {(submission.submission_type as SubmissionType) || 'link'}
+                      {submission.file_name ? ` · ${submission.file_name}` : ''}
+                    </p>
+                    {submission.notes && <p className="mt-1 text-sm text-slate-600">{submission.notes}</p>}
                   </div>
-                  <a href={submission.video_url} target="_blank" rel="noreferrer" className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
-                    View Submission
-                  </a>
+                  {submission.video_url ? (
+                    <a
+                      href={submission.video_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                    >
+                      {getSubmissionViewLabel((submission.submission_type as SubmissionType) || 'link')}
+                    </a>
+                  ) : (
+                    <span className="text-sm text-slate-500">No file attached</span>
+                  )}
                 </div>
               </article>
             ))
