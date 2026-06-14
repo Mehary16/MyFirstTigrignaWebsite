@@ -95,6 +95,15 @@ drop policy if exists "documents write teacher" on public.documents;
 create policy "documents write teacher" on public.documents
   for insert with check (public.is_teacher());
 
+drop policy if exists "documents update teacher" on public.documents;
+create policy "documents update teacher" on public.documents
+  for update using (public.is_teacher())
+  with check (public.is_teacher());
+
+drop policy if exists "documents delete teacher" on public.documents;
+create policy "documents delete teacher" on public.documents
+  for delete using (public.is_teacher());
+
 -- submissions
 drop policy if exists "submissions read own or teacher" on public.submissions;
 create policy "submissions read own or teacher" on public.submissions
@@ -151,4 +160,9 @@ create policy "active students upload submissions"
 drop policy if exists "teachers upload lesson materials" on storage.objects;
 create policy "teachers upload lesson materials"
   on storage.objects for insert to authenticated
+  with check (bucket_id = 'lesson-materials' and public.is_teacher());
+
+drop policy if exists "teachers delete lesson materials" on storage.objects;
+create policy "teachers delete lesson materials"
+  on storage.objects for delete to authenticated
   with check (bucket_id = 'lesson-materials' and public.is_teacher());

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import TeacherLessonForm from '../../../components/TeacherLessonForm';
 import TeacherDocumentForm from '../../../components/TeacherDocumentForm';
+import TeacherDocumentList from '../../../components/TeacherDocumentList';
 import TeacherSubmissionGrid from '../../../components/TeacherSubmissionGrid';
 import TeacherStudentList, { type StudentListItem } from '../../../components/TeacherStudentList';
 import TeacherGradeManager, { type GradeRow } from '../../../components/TeacherGradeManager';
@@ -125,34 +126,7 @@ export default async function TeacherDashboardPage() {
             <h2 className="text-2xl font-semibold text-slate-900">Upload Reading Material</h2>
             <p className="mt-2 text-slate-600">Upload PDFs for students to download from their dashboard.</p>
             <div className="mt-6"><TeacherDocumentForm /></div>
-
-            {documents?.length ? (
-              <div className="mt-8 border-t border-slate-200 pt-6">
-                <h3 className="text-lg font-semibold text-slate-900">Uploaded documents</h3>
-                <ul className="mt-4 space-y-3">
-                  {documents.map((doc) => (
-                    <li key={doc.id} className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="font-medium text-slate-900">{doc.title}</p>
-                        <p className="text-sm text-slate-500">{new Date(doc.created_at).toLocaleDateString()}</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {doc.file_url && (
-                          <a href={doc.file_url} target="_blank" rel="noreferrer" className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
-                            Download PDF
-                          </a>
-                        )}
-                        {doc.external_link && (
-                          <a href={doc.external_link} target="_blank" rel="noreferrer" className="rounded-full border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">
-                            External link
-                          </a>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+            <TeacherDocumentList initialDocuments={documents ?? []} />
           </section>
         </div>
 

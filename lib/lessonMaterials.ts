@@ -4,6 +4,13 @@ import { STORAGE_BUCKETS } from './storageBuckets';
 
 export const MAX_LESSON_PDF_BYTES = 15 * 1024 * 1024;
 
+export function getLessonMaterialPathFromPublicUrl(publicUrl: string) {
+  const marker = `/storage/v1/object/public/${STORAGE_BUCKETS.lessonMaterials}/`;
+  const index = publicUrl.indexOf(marker);
+  if (index === -1) return null;
+  return decodeURIComponent(publicUrl.slice(index + marker.length));
+}
+
 export async function uploadLessonMaterialPdf(supabase: SupabaseClient, userId: string, file: File) {
   if (file.size > MAX_LESSON_PDF_BYTES) {
     throw new Error('PDF is too large. Maximum size is 15 MB.');
@@ -32,4 +39,16 @@ export async function uploadLessonMaterialPdf(supabase: SupabaseClient, userId: 
 
   const { data: publicData } = supabase.storage.from(STORAGE_BUCKETS.lessonMaterials).getPublicUrl(data.path);
   return publicData.publicUrl;
+}
+
+export async function deleteLessonMaterialFile(supabase: SupabaseClient, fileUrl: string | null) {
+  if (!fileUrl) return;
+
+  const filePath = getLessonMaterialPathFromPublicUrl(fileUrl);
+  if (!filePath) return;
+
+  const { error } = await supabase.storage.from(STORAGE_BUCKETS.lessonMaterials).remove([filePath]);
+  if (error) {
+    throw new Error(formatDatabaseError(error.message));
+  }
 }
