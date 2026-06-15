@@ -2,9 +2,11 @@ export function formatDatabaseError(message: string) {
   if (
     message.includes('Could not find the table') ||
     (message.includes('relation') && message.includes('does not exist')) ||
-    message.includes('material_category')
+    message.includes('material_category') ||
+    message.includes("'file_name' column") ||
+    (message.includes('Could not find the') && message.includes('documents'))
   ) {
-    return 'Database needs an update. Run supabase/FIX_MATERIAL_TYPES.sql in the Supabase SQL Editor, then try again.';
+    return 'Database needs an update. Run supabase/FIX_MATERIAL_TYPES.sql in the Supabase SQL Editor, then refresh and try again.';
   }
 
   if (message.includes('Bucket not found')) {
