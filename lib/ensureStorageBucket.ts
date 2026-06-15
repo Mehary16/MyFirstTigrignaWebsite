@@ -1,3 +1,5 @@
+import { LESSON_MATERIALS_BUCKET_BYTES } from './teacherMaterials';
+import { MAX_FREE_FILE_BYTES } from './uploadLimits';
 import { STORAGE_BUCKETS } from './storageBuckets';
 import { createAdminSupabaseClient } from './supabaseAdmin';
 
@@ -35,14 +37,14 @@ async function ensureBucket({ id, fileSizeLimit }: BucketConfig) {
 export async function ensureStudentSubmissionsBucket() {
   return ensureBucket({
     id: STORAGE_BUCKETS.studentSubmissions,
-    fileSizeLimit: 52428800
+    fileSizeLimit: MAX_FREE_FILE_BYTES
   });
 }
 
 export async function ensureLessonMaterialsBucket() {
   return ensureBucket({
     id: STORAGE_BUCKETS.lessonMaterials,
-    fileSizeLimit: 15728640
+    fileSizeLimit: LESSON_MATERIALS_BUCKET_BYTES
   });
 }
 

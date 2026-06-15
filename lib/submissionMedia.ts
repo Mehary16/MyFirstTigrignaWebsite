@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { readJsonResponse } from './readJsonResponse';
+import { MAX_FREE_FILE_BYTES } from './uploadLimits';
 
 export type SubmissionType = 'link' | 'video' | 'image' | 'document';
 
@@ -17,9 +18,9 @@ export const SUBMISSION_ACCEPT: Record<Exclude<SubmissionType, 'link'>, string> 
 };
 
 export const SUBMISSION_MAX_BYTES: Record<Exclude<SubmissionType, 'link'>, number> = {
-  video: 50 * 1024 * 1024,
-  image: 10 * 1024 * 1024,
-  document: 15 * 1024 * 1024
+  video: MAX_FREE_FILE_BYTES,
+  image: MAX_FREE_FILE_BYTES,
+  document: MAX_FREE_FILE_BYTES
 };
 
 export const MAX_VIDEO_DURATION_SECONDS = 10 * 60;

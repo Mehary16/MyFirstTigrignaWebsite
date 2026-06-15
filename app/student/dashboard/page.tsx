@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import HomeworkSubmissionForm from '../../../components/StudentHomeworkForm';
 import LogoutButton from '../../../components/LogoutButton';
+import StudentMaterialSection, { splitStudentMaterials } from '../../../components/StudentMaterialSection';
 import { isStudentSuspended } from '../../../lib/auth';
 import { getSubmissionViewLabel, type SubmissionType } from '../../../lib/submissionMedia';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
@@ -70,12 +71,16 @@ export default async function StudentDashboardPage() {
 
   const [{ data: lessons }, { data: documents }, { data: submissions }, { data: grades }] = await Promise.all([
     supabase.from('lessons').select('id, title, description, video_url, category, external_link').order('created_at', { ascending: false }),
-    supabase.from('documents').select('id, title, file_url, external_link').order('created_at', { ascending: false }),
+    supabase
+      .from('documents')
+      .select('id, title, file_url, external_link, material_category, file_name, created_at')
+      .order('created_at', { ascending: false }),
     supabase.from('submissions').select('id, video_url, submission_type, file_name, notes, created_at').eq('student_id', user.id).order('created_at', { ascending: false }),
     supabase.from('grades').select('id, title, grade, feedback, created_at').eq('student_id', user.id).order('created_at', { ascending: false })
   ]);
 
   const displayName = profile?.full_name || user.user_metadata?.full_name || 'Student';
+  const { documents: documentMaterials, media: mediaMaterials } = splitStudentMaterials(documents ?? []);
 
   return (
     <section className="space-y-8">
@@ -137,37 +142,19 @@ export default async function StudentDashboardPage() {
             </div>
           </section>
 
-          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
-            <h2 className="text-2xl font-semibold text-slate-950">Reading Materials</h2>
-            <div className="mt-5 grid gap-4">
-              {documents?.length ? (
-                documents.map((doc) => (
-                  <article key={doc.id} className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-950">{doc.title}</h3>
-                        <p className="text-sm text-slate-500">PDF materials and extra links from your teacher.</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {doc.file_url && (
-                          <a href={doc.file_url} target="_blank" rel="noreferrer" className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
-                            Download PDF
-                          </a>
-                        )}
-                        {doc.external_link && (
-                          <a href={doc.external_link} target="_blank" rel="noreferrer" className="rounded-full border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">
-                            Open Link
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <p className="text-slate-600">No reading materials uploaded yet.</p>
-              )}
-            </div>
-          </section>
+          <StudentMaterialSection
+            title="Documents & Files"
+            description="PDFs, Word, Excel, PowerPoint, images, and other files from your teacher."
+            emptyMessage="No documents uploaded yet."
+            materials={documentMaterials}
+          />
+
+          <StudentMaterialSection
+            title="Video & Audio"
+            description="Lesson recordings, clips, and audio materials from your teacher."
+            emptyMessage="No video or audio uploaded yet."
+            materials={mediaMaterials}
+          />
         </div>
 
         <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">

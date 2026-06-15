@@ -40,8 +40,16 @@ create table if not exists public.documents (
   title text not null,
   file_url text,
   external_link text,
+  material_category text not null default 'document' check (material_category in ('document', 'media')),
+  file_name text,
   created_at timestamptz not null default now()
 );
+
+alter table public.documents add column if not exists material_category text not null default 'document';
+alter table public.documents add column if not exists file_name text;
+alter table public.documents drop constraint if exists documents_material_category_check;
+alter table public.documents add constraint documents_material_category_check
+  check (material_category in ('document', 'media'));
 
 create table if not exists public.submissions (
   id uuid primary key default gen_random_uuid(),
@@ -252,7 +260,7 @@ values ('student-submissions', 'student-submissions', true, 52428800)
 on conflict (id) do update set public = excluded.public, file_size_limit = excluded.file_size_limit;
 
 insert into storage.buckets (id, name, public, file_size_limit)
-values ('lesson-materials', 'lesson-materials', true, 15728640)
+values ('lesson-materials', 'lesson-materials', true, 52428800)
 on conflict (id) do update set public = excluded.public, file_size_limit = excluded.file_size_limit;
 
 drop policy if exists "student submissions public read" on storage.objects;

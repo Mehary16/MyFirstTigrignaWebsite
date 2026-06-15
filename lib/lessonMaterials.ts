@@ -1,8 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  type MaterialCategory,
+  validateMaterialFile
+} from './teacherMaterials';
 import { formatDatabaseError } from './supabaseErrors';
 import { STORAGE_BUCKETS } from './storageBuckets';
-
-export const MAX_LESSON_PDF_BYTES = 15 * 1024 * 1024;
 
 export function getLessonMaterialPathFromPublicUrl(publicUrl: string) {
   const marker = `/storage/v1/object/public/${STORAGE_BUCKETS.lessonMaterials}/`;
@@ -11,23 +13,22 @@ export function getLessonMaterialPathFromPublicUrl(publicUrl: string) {
   return decodeURIComponent(publicUrl.slice(index + marker.length));
 }
 
-export async function uploadLessonMaterialPdf(supabase: SupabaseClient, userId: string, file: File) {
-  if (file.size > MAX_LESSON_PDF_BYTES) {
-    throw new Error('PDF is too large. Maximum size is 15 MB.');
-  }
-
-  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-  if (!isPdf) {
-    throw new Error('Please upload a PDF file.');
-  }
+export async function uploadLessonMaterial(
+  supabase: SupabaseClient,
+  userId: string,
+  file: File,
+  category: MaterialCategory
+) {
+  validateMaterialFile(file, category);
 
   const safeName = file.name.replace(/[^\w.\-]+/g, '_');
-  const filePath = `${userId}/${Date.now()}-${safeName}`;
+  const folder = category === 'media' ? 'media' : 'documents';
+  const filePath = `${userId}/${folder}/${Date.now()}-${safeName}`;
 
   const { data, error } = await supabase.storage.from(STORAGE_BUCKETS.lessonMaterials).upload(filePath, file, {
     cacheControl: '3600',
     upsert: false,
-    contentType: file.type || 'application/pdf'
+    contentType: file.type || 'application/octet-stream'
   });
 
   if (error) {
@@ -51,4 +52,9 @@ export async function deleteLessonMaterialFile(supabase: SupabaseClient, fileUrl
   if (error) {
     throw new Error(formatDatabaseError(error.message));
   }
+}
+
+/** @deprecated Use uploadLessonMaterial with category "document" */
+export async function uploadLessonMaterialPdf(supabase: SupabaseClient, userId: string, file: File) {
+  return uploadLessonMaterial(supabase, userId, file, 'document');
 }

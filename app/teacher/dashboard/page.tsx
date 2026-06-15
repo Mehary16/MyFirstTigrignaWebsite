@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
 import TeacherLessonForm from '../../../components/TeacherLessonForm';
-import TeacherDocumentForm from '../../../components/TeacherDocumentForm';
-import TeacherDocumentList from '../../../components/TeacherDocumentList';
+import TeacherMaterialForm from '../../../components/TeacherMaterialForm';
+import TeacherMaterialList from '../../../components/TeacherMaterialList';
+import type { MaterialRow } from '../../../lib/teacherMaterials';
 import TeacherSubmissionGrid from '../../../components/TeacherSubmissionGrid';
 import TeacherStudentList, { type StudentListItem } from '../../../components/TeacherStudentList';
 import TeacherGradeManager, { type GradeRow } from '../../../components/TeacherGradeManager';
@@ -43,14 +44,17 @@ export default async function TeacherDashboardPage() {
       .order('created_at', { ascending: false }),
     supabase.from('submissions').select('student_id'),
     supabase.from('grades').select('id, student_id, title, grade, feedback, created_at').order('created_at', { ascending: false }).limit(50),
-    supabase.from('documents').select('id, title, file_url, external_link, created_at').order('created_at', { ascending: false })
+    supabase
+      .from('documents')
+      .select('id, title, file_url, external_link, material_category, file_name, created_at')
+      .order('created_at', { ascending: false })
   ]);
 
   const students = studentsResult.data;
   const studentCount = studentsResult.count;
   const submissionRows = submissionsResult.data;
   const gradeRows = gradesResult.data;
-  const documents = documentsResult.data;
+  const documents = (documentsResult.data ?? []) as MaterialRow[];
 
   const setupMessage = [submissionsResult.error, gradesResult.error, documentsResult.error]
     .filter(Boolean)
@@ -98,7 +102,7 @@ export default async function TeacherDashboardPage() {
           </div>
         </div>
         <p className="mt-3 max-w-2xl text-slate-600">
-          Create lessons, upload PDFs, review submissions, manage students, assign grades, and link parents.
+          Create lessons, upload documents and media, review submissions, manage students, assign grades, and link parents.
         </p>
       </div>
 
@@ -123,10 +127,25 @@ export default async function TeacherDashboardPage() {
           </section>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
-            <h2 className="text-2xl font-semibold text-slate-900">Upload Reading Material</h2>
-            <p className="mt-2 text-slate-600">Upload PDFs for students to download from their dashboard.</p>
-            <div className="mt-6"><TeacherDocumentForm /></div>
-            <TeacherDocumentList initialDocuments={documents ?? []} />
+            <h2 className="text-2xl font-semibold text-slate-900">Upload Documents</h2>
+            <p className="mt-2 text-slate-600">
+              Share PDFs, Word, Excel, PowerPoint, images, and other files with students.
+            </p>
+            <div className="mt-6">
+              <TeacherMaterialForm category="document" />
+            </div>
+            <TeacherMaterialList category="document" initialMaterials={documents} />
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
+            <h2 className="text-2xl font-semibold text-slate-900">Upload Video / Audio</h2>
+            <p className="mt-2 text-slate-600">
+              Share lesson recordings, pronunciation clips, or audio materials with students.
+            </p>
+            <div className="mt-6">
+              <TeacherMaterialForm category="media" />
+            </div>
+            <TeacherMaterialList category="media" initialMaterials={documents} />
           </section>
         </div>
 

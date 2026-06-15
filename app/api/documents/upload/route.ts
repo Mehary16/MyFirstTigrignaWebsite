@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { BUCKET_SETUP_MESSAGE, ensureLessonMaterialsBucket } from '../../../../lib/ensureStorageBucket';
 import { isTeacherProfile } from '../../../../lib/auth';
 import { STORAGE_BUCKETS } from '../../../../lib/storageBuckets';
+import { MAX_DOCUMENT_BYTES } from '../../../../lib/teacherMaterials';
+import { formatUploadLimit } from '../../../../lib/uploadLimits';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
-
-const MAX_PDF_BYTES = 15 * 1024 * 1024;
 
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
@@ -30,8 +30,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No PDF file was provided.' }, { status: 400 });
   }
 
-  if (file.size > MAX_PDF_BYTES) {
-    return NextResponse.json({ error: 'PDF is too large. Maximum size is 15 MB.' }, { status: 400 });
+  if (file.size > MAX_DOCUMENT_BYTES) {
+    return NextResponse.json(
+      { error: `File is too large. Maximum size is ${formatUploadLimit(MAX_DOCUMENT_BYTES)}.` },
+      { status: 400 }
+    );
   }
 
   const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');

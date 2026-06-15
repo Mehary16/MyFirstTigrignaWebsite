@@ -4,8 +4,8 @@ import { isTeacherProfile, ensureTeacherProfileRole } from '../../../../lib/auth
 import { formatDatabaseError } from '../../../../lib/supabaseErrors';
 import { STORAGE_BUCKETS } from '../../../../lib/storageBuckets';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
-
-const MAX_PDF_BYTES = 15 * 1024 * 1024;
+import { MAX_DOCUMENT_BYTES } from '../../../../lib/teacherMaterials';
+import { formatUploadLimit } from '../../../../lib/uploadLimits';
 
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
@@ -42,8 +42,11 @@ export async function POST(request: Request) {
   let fileUrl = '';
 
   if (file instanceof File) {
-    if (file.size > MAX_PDF_BYTES) {
-      return NextResponse.json({ error: 'PDF is too large. Maximum size is 15 MB.' }, { status: 400 });
+    if (file.size > MAX_DOCUMENT_BYTES) {
+      return NextResponse.json(
+        { error: `File is too large. Maximum size is ${formatUploadLimit(MAX_DOCUMENT_BYTES)}.` },
+        { status: 400 }
+      );
     }
 
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');

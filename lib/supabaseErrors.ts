@@ -1,9 +1,10 @@
 export function formatDatabaseError(message: string) {
   if (
     message.includes('Could not find the table') ||
-    (message.includes('relation') && message.includes('does not exist'))
+    (message.includes('relation') && message.includes('does not exist')) ||
+    message.includes('material_category')
   ) {
-    return 'Database tables are missing. Run supabase/RUN_THIS_FIRST.sql in the Supabase SQL Editor, then try again.';
+    return 'Database needs an update. Run supabase/FIX_MATERIAL_TYPES.sql in the Supabase SQL Editor, then try again.';
   }
 
   if (message.includes('Bucket not found')) {
