@@ -32,21 +32,26 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (user && pathname.startsWith('/student')) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, is_active')
-      .eq('id', user.id)
-      .maybeSingle();
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, is_active')
+        .eq('id', user.id)
+        .maybeSingle();
 
-    if (profile?.role === 'Student' && profile.is_active === false && pathname !== '/suspended') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/suspended';
-      return NextResponse.redirect(url);
+      if (profile?.role === 'Student' && profile.is_active === false && pathname !== '/suspended') {
+        const url = request.nextUrl.clone();
+        url.pathname = '/suspended';
+        return NextResponse.redirect(url);
+      }
+    } catch {
+      return supabaseResponse;
     }
   }
 
   if (user && pathname === '/suspended') {
-    const { data: profile } = await supabase
+    try {
+      const { data: profile } = await supabase
       .from('profiles')
       .select('role, is_active')
       .eq('id', user.id)
@@ -58,6 +63,9 @@ export async function middleware(request: NextRequest) {
       else if (profile?.role === 'Parent') url.pathname = '/parent/dashboard';
       else url.pathname = '/student/dashboard';
       return NextResponse.redirect(url);
+    }
+    } catch {
+      return supabaseResponse;
     }
   }
 

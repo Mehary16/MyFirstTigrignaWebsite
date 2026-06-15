@@ -2,7 +2,13 @@ import { redirect } from 'next/navigation';
 import HomeworkSubmissionForm from '../../../components/StudentHomeworkForm';
 import LogoutButton from '../../../components/LogoutButton';
 import StudentMaterialSection, { splitStudentMaterials } from '../../../components/StudentMaterialSection';
+import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
 import { isStudentSuspended } from '../../../lib/auth';
+import {
+  fetchDocumentsForDisplay,
+  fetchStudentSubmissions,
+  firstQueryError
+} from '../../../lib/safeQueries';
 import { getSubmissionViewLabel, type SubmissionType } from '../../../lib/submissionMedia';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
@@ -40,22 +46,48 @@ function getVideoEmbedUrl(videoUrl: string) {
 
 export default async function StudentDashboardPage() {
   const supabase = await createServerSupabaseClient();
-  const { data: sessionData } = await supabase.auth.getSession();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
-  if (!sessionData.session) {
+  if (!user) {
     redirect('/login');
   }
 
-  const user = sessionData.session.user;
   const userEmail = user.email ?? '';
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
   const isTeacher = userEmail.toLowerCase() === adminEmail.toLowerCase();
 
-  const { data: profile } = await supabase
+  const { data: initialProfile, error: profileError } = await supabase
     .from('profiles')
     .select('full_name, role, is_active')
     .eq('id', user.id)
     .maybeSingle();
+
+  if (profileError) {
+    throw new Error(profileError.message);
+  }
+
+  let profile = initialProfile;
+
+  if (!profile) {
+    const role = (user.user_metadata?.role as string | undefined)?.toLowerCase() === 'parent' ? 'Parent' : 'Student';
+    await supabase.from('profiles').upsert({
+      id: user.id,
+      full_name: (user.user_metadata?.full_name as string | undefined) ?? userEmail.split('@')[0] ?? 'Student',
+      role,
+      email: userEmail.toLowerCase(),
+      is_active: true
+    });
+
+    const { data: createdProfile } = await supabase
+      .from('profiles')
+      .select('full_name, role, is_active')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    profile = createdProfile;
+  }
 
   if (isTeacher || profile?.role === 'Teacher') {
     redirect('/teacher/dashboard');
@@ -69,21 +101,30 @@ export default async function StudentDashboardPage() {
     redirect('/suspended');
   }
 
-  const [{ data: lessons }, { data: documents }, { data: submissions }, { data: grades }] = await Promise.all([
+  const [lessonsResult, documentsResult, submissionsResult, gradesResult] = await Promise.all([
     supabase.from('lessons').select('id, title, description, video_url, category, external_link').order('created_at', { ascending: false }),
-    supabase
-      .from('documents')
-      .select('id, title, file_url, external_link, material_category, file_name, created_at')
-      .order('created_at', { ascending: false }),
-    supabase.from('submissions').select('id, video_url, submission_type, file_name, notes, created_at').eq('student_id', user.id).order('created_at', { ascending: false }),
+    fetchDocumentsForDisplay(supabase),
+    fetchStudentSubmissions(supabase, user.id),
     supabase.from('grades').select('id, title, grade, feedback, created_at').eq('student_id', user.id).order('created_at', { ascending: false })
   ]);
 
+  const lessons = lessonsResult.data;
+  const submissions = submissionsResult.data;
+  const grades = gradesResult.data;
+  const setupMessage = firstQueryError([
+    lessonsResult.error,
+    documentsResult.error,
+    submissionsResult.error,
+    gradesResult.error
+  ]);
+
   const displayName = profile?.full_name || user.user_metadata?.full_name || 'Student';
-  const { documents: documentMaterials, media: mediaMaterials } = splitStudentMaterials(documents ?? []);
+  const { documents: documentMaterials, media: mediaMaterials } = splitStudentMaterials(documentsResult.data);
 
   return (
     <section className="space-y-8">
+      <DatabaseSetupAlert message={setupMessage} />
+
       <div className="rounded-[2rem] border border-amber-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>

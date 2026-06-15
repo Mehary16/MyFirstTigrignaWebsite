@@ -109,6 +109,30 @@ export default function LoginPage() {
 
         const { data: userData } = await supabase.auth.getUser();
         if (userData.user) {
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', userData.user.id)
+            .maybeSingle();
+
+          if (!existingProfile) {
+            const metaRole = (userData.user.user_metadata?.role as string | undefined)?.toLowerCase();
+            const role =
+              userData.user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()
+                ? 'Teacher'
+                : metaRole === 'parent'
+                  ? 'Parent'
+                  : 'Student';
+
+            await supabase.from('profiles').upsert({
+              id: userData.user.id,
+              full_name: (userData.user.user_metadata?.full_name as string | undefined) ?? userData.user.email?.split('@')[0] ?? 'Student',
+              role,
+              email: userData.user.email?.trim().toLowerCase(),
+              is_active: true
+            });
+          }
+
           const path = await resolveDashboardPath(
             supabase,
             userData.user.id,
