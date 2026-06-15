@@ -9,6 +9,10 @@ export function formatDatabaseError(message: string) {
     return 'Database needs an update. Run supabase/FIX_MATERIAL_TYPES.sql in the Supabase SQL Editor, then refresh and try again.';
   }
 
+  if (message.includes('infinite recursion') || (message.includes('profiles') && message.includes('policy'))) {
+    return 'Database security policies need a fix. Run supabase/FIX_RLS_RECURSION.sql in the Supabase SQL Editor, then refresh this page.';
+  }
+
   if (message.includes('Bucket not found')) {
     return 'Storage bucket is missing. Run supabase/RUN_THIS_FIRST.sql in the Supabase SQL Editor, then try again.';
   }

@@ -64,15 +64,11 @@ export default async function StudentDashboardPage() {
     .eq('id', user.id)
     .maybeSingle();
 
-  if (profileError) {
-    throw new Error(profileError.message);
-  }
-
   let profile = initialProfile;
 
-  if (!profile) {
+  if (!profile && !profileError) {
     const role = (user.user_metadata?.role as string | undefined)?.toLowerCase() === 'parent' ? 'Parent' : 'Student';
-    await supabase.from('profiles').upsert({
+    const { error: upsertError } = await supabase.from('profiles').upsert({
       id: user.id,
       full_name: (user.user_metadata?.full_name as string | undefined) ?? userEmail.split('@')[0] ?? 'Student',
       role,
@@ -80,13 +76,15 @@ export default async function StudentDashboardPage() {
       is_active: true
     });
 
-    const { data: createdProfile } = await supabase
-      .from('profiles')
-      .select('full_name, role, is_active')
-      .eq('id', user.id)
-      .maybeSingle();
+    if (!upsertError) {
+      const { data: createdProfile } = await supabase
+        .from('profiles')
+        .select('full_name, role, is_active')
+        .eq('id', user.id)
+        .maybeSingle();
 
-    profile = createdProfile;
+      profile = createdProfile;
+    }
   }
 
   if (isTeacher || profile?.role === 'Teacher') {
@@ -112,6 +110,7 @@ export default async function StudentDashboardPage() {
   const submissions = submissionsResult.data;
   const grades = gradesResult.data;
   const setupMessage = firstQueryError([
+    profileError,
     lessonsResult.error,
     documentsResult.error,
     submissionsResult.error,
