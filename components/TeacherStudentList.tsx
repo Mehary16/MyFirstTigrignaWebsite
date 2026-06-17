@@ -61,6 +61,38 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
     router.refresh();
   };
 
+  const deleteStudent = async (student: StudentListItem) => {
+    const confirmed = window.confirm(
+      `Delete ${student.full_name}? This removes their profile, submissions, and grades. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setBusyId(student.id);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/students/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: student.id })
+      });
+
+      const payload = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok || payload.error) {
+        setError(payload.error ?? 'Could not delete student.');
+        return;
+      }
+
+      setStudents((current) => current.filter((item) => item.id !== student.id));
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not delete student.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -115,25 +147,35 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    {student.is_active ? (
+                    <div className="flex flex-wrap gap-2">
+                      {student.is_active ? (
+                        <button
+                          type="button"
+                          disabled={busyId === student.id}
+                          onClick={() => updateStudentStatus(student.id, true)}
+                          className="rounded-full border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {busyId === student.id ? 'Saving...' : 'Suspend'}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={busyId === student.id}
+                          onClick={() => updateStudentStatus(student.id, false)}
+                          className="rounded-full border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {busyId === student.id ? 'Saving...' : 'Activate'}
+                        </button>
+                      )}
                       <button
                         type="button"
                         disabled={busyId === student.id}
-                        onClick={() => updateStudentStatus(student.id, true)}
-                        className="rounded-full border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => deleteStudent(student)}
+                        className="rounded-full border border-slate-300 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {busyId === student.id ? 'Saving...' : 'Suspend'}
+                        {busyId === student.id ? 'Working...' : 'Delete'}
                       </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={busyId === student.id}
-                        onClick={() => updateStudentStatus(student.id, false)}
-                        className="rounded-full border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {busyId === student.id ? 'Saving...' : 'Activate'}
-                      </button>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))}
