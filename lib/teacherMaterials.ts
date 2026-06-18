@@ -128,3 +128,30 @@ export function getMaterialDownloadLabel(material: Pick<MaterialRow, 'material_c
 export function normalizeMaterialCategory(value: string | null | undefined): MaterialCategory {
   return value === 'media' ? 'media' : 'document';
 }
+
+export function splitStudentMaterials(
+  rows: Array<{
+    id: string;
+    title: string;
+    file_url: string | null;
+    external_link: string | null;
+    material_category?: string | null;
+    file_name?: string | null;
+    created_at?: string;
+  }>
+) {
+  const materials: MaterialRow[] = rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    file_url: row.file_url,
+    external_link: row.external_link,
+    material_category: normalizeMaterialCategory(row.material_category),
+    file_name: row.file_name ?? null,
+    created_at: row.created_at ?? new Date().toISOString()
+  }));
+
+  return {
+    documents: materials.filter((item) => item.material_category === 'document'),
+    media: materials.filter((item) => item.material_category === 'media')
+  };
+}

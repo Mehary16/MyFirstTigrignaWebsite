@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
 import HomeworkSubmissionForm from '../../../components/StudentHomeworkForm';
 import LogoutButton from '../../../components/LogoutButton';
-import StudentMaterialSection, { splitStudentMaterials } from '../../../components/StudentMaterialSection';
+import StudentMaterialSection from '../../../components/StudentMaterialSection';
+import { splitStudentMaterials } from '../../../lib/teacherMaterials';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
 import { isStudentSuspended } from '../../../lib/auth';
 import {
