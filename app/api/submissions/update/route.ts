@@ -1,27 +1,13 @@
 import { NextResponse } from 'next/server';
 import { deleteStudentSubmissionFile } from '../../../../lib/submissionMedia';
+import { getAuthenticatedStudentContext, getOwnedSubmission } from '../../../../lib/studentSubmissionsApi';
 import { formatDatabaseError } from '../../../../lib/supabaseErrors';
-import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
 
 export async function POST(request: Request) {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const auth = await getAuthenticatedStudentContext();
+  if ('error' in auth && auth.error) return auth.error;
 
-  if (!user) {
-    return NextResponse.json({ error: 'You must be logged in.' }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, is_active')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (profile?.role !== 'Student' || profile.is_active === false) {
-    return NextResponse.json({ error: 'Only active students can edit homework.' }, { status: 403 });
-  }
+  const { db, user } = auth;
 
   const body = (await request.json()) as {
     id?: string;
@@ -36,16 +22,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Submission id is required.' }, { status: 400 });
   }
 
-  const { data: existing } = await supabase
-    .from('submissions')
-    .select('id, student_id, video_url, submission_type, file_name')
-    .eq('id', id)
-    .maybeSingle();
+  const owned = await getOwnedSubmission(db, id, user);
+  if ('error' in owned && owned.error) return owned.error;
 
-  if (!existing || existing.student_id !== user.id) {
-    return NextResponse.json({ error: 'Submission not found.' }, { status: 404 });
-  }
-
+  const existing = owned.existing!;
   const submissionType = existing.submission_type ?? 'link';
   const mediaUrl = body.mediaUrl?.trim() || null;
   const notes = body.notes?.trim() || null;
@@ -60,7 +40,7 @@ export async function POST(request: Request) {
 
   if (body.removeOldFile && mediaUrl && existing.video_url && existing.video_url !== mediaUrl) {
     try {
-      await deleteStudentSubmissionFile(supabase, existing.video_url);
+      await deleteStudentSubmissionFile(db, existing.video_url);
     } catch (err) {
       return NextResponse.json(
         { error: err instanceof Error ? err.message : 'Could not remove the previous file.' },
@@ -69,7 +49,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('submissions')
     .update({
       notes,

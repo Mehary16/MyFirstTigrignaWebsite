@@ -1,27 +1,13 @@
 import { NextResponse } from 'next/server';
 import { deleteStudentSubmissionFile } from '../../../../lib/submissionMedia';
+import { getAuthenticatedStudentContext, getOwnedSubmission } from '../../../../lib/studentSubmissionsApi';
 import { formatDatabaseError } from '../../../../lib/supabaseErrors';
-import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
 
 export async function POST(request: Request) {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const auth = await getAuthenticatedStudentContext();
+  if ('error' in auth && auth.error) return auth.error;
 
-  if (!user) {
-    return NextResponse.json({ error: 'You must be logged in.' }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, is_active')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (profile?.role !== 'Student' || profile.is_active === false) {
-    return NextResponse.json({ error: 'Only active students can delete homework.' }, { status: 403 });
-  }
+  const { db, user } = auth;
 
   const body = (await request.json()) as { id?: string };
   const id = body.id?.trim();
@@ -30,18 +16,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Submission id is required.' }, { status: 400 });
   }
 
-  const { data: existing } = await supabase
-    .from('submissions')
-    .select('id, student_id, video_url')
-    .eq('id', id)
-    .maybeSingle();
+  const owned = await getOwnedSubmission(db, id, user);
+  if ('error' in owned && owned.error) return owned.error;
 
-  if (!existing || existing.student_id !== user.id) {
-    return NextResponse.json({ error: 'Submission not found.' }, { status: 404 });
-  }
+  const existing = owned.existing!;
 
   try {
-    await deleteStudentSubmissionFile(supabase, existing.video_url);
+    await deleteStudentSubmissionFile(db, existing.video_url);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Could not remove the uploaded file.' },
@@ -49,10 +30,25 @@ export async function POST(request: Request) {
     );
   }
 
-  const { error } = await supabase.from('submissions').delete().eq('id', id).eq('student_id', user.id);
+  const { data, error } = await db
+    .from('submissions')
+    .delete()
+    .eq('id', id)
+    .eq('student_id', user.id)
+    .select('id');
 
   if (error) {
     return NextResponse.json({ error: formatDatabaseError(error.message) }, { status: 500 });
+  }
+
+  if (!data?.length) {
+    return NextResponse.json(
+      {
+        error:
+          'Could not delete homework. Run supabase/FIX_SUBMISSIONS_MANAGE.sql in the Supabase SQL Editor, then try again.'
+      },
+      { status: 403 }
+    );
   }
 
   return NextResponse.json({ success: true });
