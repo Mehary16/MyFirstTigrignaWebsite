@@ -22,9 +22,7 @@ export default function StudentDashboardError({
         <code className="rounded bg-red-100 px-1">FIX_MATERIAL_TYPES.sql</code>, then{' '}
         <code className="rounded bg-red-100 px-1">FIX_STUDENT_PROFILES.sql</code>.
       </p>
-      {process.env.NODE_ENV === 'development' && (
-        <p className="mt-3 rounded bg-red-100/80 px-3 py-2 font-mono text-xs text-red-900">{error.message}</p>
-      )}
+      <p className="mt-3 rounded bg-red-100/80 px-3 py-2 font-mono text-xs text-red-900">{error.message}</p>
       <button
         type="button"
         onClick={reset}

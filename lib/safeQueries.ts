@@ -76,7 +76,63 @@ export async function fetchStudentSubmissions(supabase: SupabaseClient, studentI
   return { data: [], error: full.error };
 }
 
+export async function fetchLessonsForDisplay(supabase: SupabaseClient) {
+  const full = await supabase
+    .from('lessons')
+    .select('id, title, description, video_url, category, external_link, created_at')
+    .order('created_at', { ascending: false });
+
+  if (!full.error) {
+    return { data: full.data ?? [], error: null as QueryError };
+  }
+
+  if (
+    isMissingColumnError(full.error.message, 'category') ||
+    isMissingColumnError(full.error.message, 'external_link')
+  ) {
+    const basic = await supabase
+      .from('lessons')
+      .select('id, title, description, video_url, created_at')
+      .order('created_at', { ascending: false });
+
+    if (basic.error) {
+      return { data: [], error: basic.error };
+    }
+
+    return {
+      data: (basic.data ?? []).map((row) => ({
+        ...row,
+        category: null,
+        external_link: null
+      })),
+      error: null as QueryError
+    };
+  }
+
+  return { data: [], error: full.error };
+}
+
+export async function fetchStudentGrades(supabase: SupabaseClient, studentId: string) {
+  const result = await supabase
+    .from('grades')
+    .select('id, title, grade, feedback, created_at')
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false });
+
+  if (!result.error) {
+    return { data: result.data ?? [], error: null as QueryError };
+  }
+
+  if (isMissingColumnError(result.error.message, 'grades') || result.error.message.includes('does not exist')) {
+    return { data: [], error: result.error };
+  }
+
+  return { data: [], error: result.error };
+}
+
 export function firstQueryError(errors: Array<QueryError | undefined>) {
   const hit = errors.find(Boolean);
-  return hit ? formatDatabaseError(hit.message) : null;
+  if (!hit) return null;
+  const message = typeof hit.message === 'string' ? hit.message : 'An unexpected database error occurred.';
+  return formatDatabaseError(message);
 }

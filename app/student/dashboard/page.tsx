@@ -6,13 +6,18 @@ import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
 import { isStudentSuspended } from '../../../lib/auth';
 import {
   fetchDocumentsForDisplay,
+  fetchLessonsForDisplay,
+  fetchStudentGrades,
   fetchStudentSubmissions,
   firstQueryError
 } from '../../../lib/safeQueries';
+import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { getSubmissionViewLabel, type SubmissionType } from '../../../lib/submissionMedia';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
-function getVideoEmbedUrl(videoUrl: string) {
+function getVideoEmbedUrl(videoUrl: string | null | undefined) {
+  if (!videoUrl?.trim()) return null;
+
   try {
     const url = new URL(videoUrl);
 
@@ -45,80 +50,81 @@ function getVideoEmbedUrl(videoUrl: string) {
 }
 
 export default async function StudentDashboardPage() {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect('/login');
-  }
-
-  const userEmail = user.email ?? '';
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
-  const isTeacher = userEmail.toLowerCase() === adminEmail.toLowerCase();
-
-  const { data: initialProfile, error: profileError } = await supabase
-    .from('profiles')
-    .select('full_name, role, is_active')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  let profile = initialProfile;
-
-  if (!profile && !profileError) {
-    const role = (user.user_metadata?.role as string | undefined)?.toLowerCase() === 'parent' ? 'Parent' : 'Student';
-    const { error: upsertError } = await supabase.from('profiles').upsert({
-      id: user.id,
-      full_name: (user.user_metadata?.full_name as string | undefined) ?? userEmail.split('@')[0] ?? 'Student',
-      role,
-      email: userEmail.toLowerCase(),
-      is_active: true
-    });
-
-    if (!upsertError) {
-      const { data: createdProfile } = await supabase
-        .from('profiles')
-        .select('full_name, role, is_active')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      profile = createdProfile;
+    if (!user) {
+      redirect('/login');
     }
-  }
 
-  if (isTeacher || profile?.role === 'Teacher') {
-    redirect('/teacher/dashboard');
-  }
+    const userEmail = user.email ?? '';
+    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
+    const isTeacher = userEmail.toLowerCase() === adminEmail.toLowerCase();
 
-  if (profile?.role === 'Parent') {
-    redirect('/parent/dashboard');
-  }
+    const { data: initialProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('full_name, role, is_active')
+      .eq('id', user.id)
+      .maybeSingle();
 
-  if (isStudentSuspended(profile)) {
-    redirect('/suspended');
-  }
+    let profile = initialProfile;
 
-  const [lessonsResult, documentsResult, submissionsResult, gradesResult] = await Promise.all([
-    supabase.from('lessons').select('id, title, description, video_url, category, external_link').order('created_at', { ascending: false }),
-    fetchDocumentsForDisplay(supabase),
-    fetchStudentSubmissions(supabase, user.id),
-    supabase.from('grades').select('id, title, grade, feedback, created_at').eq('student_id', user.id).order('created_at', { ascending: false })
-  ]);
+    if (!profile && !profileError) {
+      const role = (user.user_metadata?.role as string | undefined)?.toLowerCase() === 'parent' ? 'Parent' : 'Student';
+      const { error: upsertError } = await supabase.from('profiles').upsert({
+        id: user.id,
+        full_name: (user.user_metadata?.full_name as string | undefined) ?? userEmail.split('@')[0] ?? 'Student',
+        role,
+        email: userEmail.toLowerCase(),
+        is_active: true
+      });
 
-  const lessons = lessonsResult.data;
-  const submissions = submissionsResult.data;
-  const grades = gradesResult.data;
-  const setupMessage = firstQueryError([
-    profileError,
-    lessonsResult.error,
-    documentsResult.error,
-    submissionsResult.error,
-    gradesResult.error
-  ]);
+      if (!upsertError) {
+        const { data: createdProfile } = await supabase
+          .from('profiles')
+          .select('full_name, role, is_active')
+          .eq('id', user.id)
+          .maybeSingle();
 
-  const displayName = profile?.full_name || user.user_metadata?.full_name || 'Student';
-  const { documents: documentMaterials, media: mediaMaterials } = splitStudentMaterials(documentsResult.data);
+        profile = createdProfile;
+      }
+    }
+
+    if (isTeacher || profile?.role === 'Teacher') {
+      redirect('/teacher/dashboard');
+    }
+
+    if (profile?.role === 'Parent') {
+      redirect('/parent/dashboard');
+    }
+
+    if (isStudentSuspended(profile)) {
+      redirect('/suspended');
+    }
+
+    const [lessonsResult, documentsResult, submissionsResult, gradesResult] = await Promise.all([
+      fetchLessonsForDisplay(supabase),
+      fetchDocumentsForDisplay(supabase),
+      fetchStudentSubmissions(supabase, user.id),
+      fetchStudentGrades(supabase, user.id)
+    ]);
+
+    const lessons = lessonsResult.data;
+    const submissions = submissionsResult.data;
+    const grades = gradesResult.data;
+    const setupMessage = firstQueryError([
+      profileError,
+      lessonsResult.error,
+      documentsResult.error,
+      submissionsResult.error,
+      gradesResult.error
+    ]);
+
+    const displayName = profile?.full_name || user.user_metadata?.full_name || 'Student';
+    const { documents: documentMaterials, media: mediaMaterials } = splitStudentMaterials(documentsResult.data ?? []);
 
   return (
     <section className="space-y-8">
@@ -276,5 +282,23 @@ export default async function StudentDashboardPage() {
         </div>
       </section>
     </section>
-  );
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Student dashboard could not load.';
+    return (
+      <section className="space-y-6">
+        <DatabaseSetupAlert message={formatDatabaseError(message)} />
+        <div className="rounded-3xl border border-red-200 bg-red-50 p-8">
+          <h1 className="text-2xl font-semibold text-red-900">Student dashboard could not load</h1>
+          <p className="mt-3 text-sm text-red-800">
+            This is usually a database setup issue. Run these SQL files in Supabase SQL Editor, in order:{' '}
+            <code className="rounded bg-red-100 px-1">FIX_RLS_RECURSION.sql</code>,{' '}
+            <code className="rounded bg-red-100 px-1">FIX_MATERIAL_TYPES.sql</code>, then{' '}
+            <code className="rounded bg-red-100 px-1">FIX_STUDENT_PROFILES.sql</code>.
+          </p>
+          <p className="mt-3 rounded bg-red-100/80 px-3 py-2 font-mono text-xs text-red-900">{message}</p>
+        </div>
+      </section>
+    );
+  }
 }

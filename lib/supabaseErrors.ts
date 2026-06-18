@@ -1,4 +1,8 @@
-export function formatDatabaseError(message: string) {
+export function formatDatabaseError(message: string | null | undefined) {
+  if (!message) {
+    return 'An unexpected database error occurred. Check your Supabase connection and try again.';
+  }
+
   if (
     message.includes('Could not find the table') ||
     (message.includes('relation') && message.includes('does not exist')) ||
