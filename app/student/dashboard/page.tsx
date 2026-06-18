@@ -138,9 +138,9 @@ export default async function StudentDashboardPage() {
             <h1 className="mt-2 text-3xl font-semibold text-slate-950">Welcome, {displayName}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <p className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{userEmail}</p>
-            <p className="rounded-full bg-amber-100 px-4 py-2 text-sm text-amber-800">{profile?.role ?? 'Student'}</p>
-            <LogoutButton />
+            <p className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{displayName}</p>
+            <p className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700">{profile?.role ?? 'Student'}</p>
+            <LogoutButton className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700" />
           </div>
         </div>
       </div>
