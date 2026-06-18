@@ -162,7 +162,10 @@ export default function LoginPage() {
     <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
       <section className="rounded-[2rem] border border-amber-100 bg-slate-950 p-8 text-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
         <p className="text-sm uppercase tracking-[0.3em] text-amber-300">ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ</p>
-        <h1 className="mt-4 text-4xl font-semibold leading-tight">Login / መእተዊ</h1>
+        <h1 className="mt-4 space-y-1">
+          <span className="block text-4xl font-semibold leading-tight">Welcome</span>
+          <span className="block text-3xl font-medium leading-tight text-white/90">እንቋዕ ብሰላም መጻእኩም</span>
+        </h1>
         <p className="mt-4 max-w-xl text-white/75">
           Welcome to the Tigrigna learning portal. Sign in or create an account to access your dashboard.
         </p>
@@ -194,7 +197,7 @@ export default function LoginPage() {
             className={`rounded-full px-5 py-2 text-sm font-semibold ${mode === 'signUp' ? 'bg-slate-950 text-white' : 'border border-slate-300 text-slate-700'}`}
             onClick={() => setMode('signUp')}
           >
-            Sign up / ምዝገባ
+            Sign up / ተመዝገቡ
           </button>
         </div>
 
@@ -272,7 +275,7 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
         >
-          {loading ? 'Processing ...' : mode === 'signUp' ? 'Sign up / መመዝገቢ' : 'Login / እተው'}
+          {loading ? 'Processing ...' : mode === 'signUp' ? 'Sign up / ተመዝገቡ' : 'Login / እተው'}
         </button>
         </form>
       </section>
