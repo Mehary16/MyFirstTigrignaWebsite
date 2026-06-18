@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ComponentProps } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '../../lib/supabaseClient';
 import { dashboardPathForRole } from '../../lib/routes';
@@ -250,15 +251,15 @@ export default function LoginPage() {
               onChange={(event) => setPassword(event.currentTarget.value)}
               required
               minLength={8}
-              className="w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 pr-24 text-slate-900 outline-none transition focus:border-slate-500"
+              className="w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 pr-12 text-slate-900 outline-none transition focus:border-slate-500"
             />
             <button
               type="button"
               onClick={() => setShowPassword((current) => !current)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-200"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+              aria-label={showPassword ? 'Hide password / መሕለፊ ቃል ሕብእ' : 'Show password / መሕለፊ ቃል ረኣይ'}
             >
-              {showPassword ? 'Hide' : 'Show'}
+              {showPassword ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
             </button>
           </div>
         </div>
