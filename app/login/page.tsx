@@ -8,6 +8,11 @@ import { dashboardPathForRole } from '../../lib/routes';
 
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
 
+const ACCOUNT_TYPE_LABELS = {
+  Student: 'ተማሃሮ',
+  Parent: 'ወለዲ'
+} as const;
+
 async function resolveDashboardPath(supabase: ReturnType<typeof createBrowserSupabaseClient>, userId: string, email: string | undefined, metadataRole?: string) {
   const lowerEmail = email?.toLowerCase() ?? '';
   if (lowerEmail === ADMIN_EMAIL.toLowerCase() || metadataRole?.toLowerCase() === 'teacher') {
@@ -190,7 +195,10 @@ export default function LoginPage() {
             className={`rounded-full px-5 py-2 text-sm font-semibold ${mode === 'signIn' ? 'bg-slate-950 text-white' : 'border border-slate-300 text-slate-700'}`}
             onClick={() => setMode('signIn')}
           >
-            Login
+            <span className="flex flex-col items-center leading-tight">
+              <span>Login</span>
+              <span className="text-[11px] font-medium opacity-90">እተዉ</span>
+            </span>
           </button>
           <button
             type="button"
@@ -216,7 +224,10 @@ export default function LoginPage() {
                     accountType === type ? 'bg-slate-950 text-white' : 'border border-slate-300 text-slate-700'
                   }`}
                 >
-                  {type}
+                  <span className="flex flex-col items-center leading-tight">
+                    <span>{type}</span>
+                    <span className="text-[11px] font-medium opacity-90">{ACCOUNT_TYPE_LABELS[type]}</span>
+                  </span>
                 </button>
               ))}
             </div>
@@ -275,7 +286,7 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
         >
-          {loading ? 'Processing ...' : mode === 'signUp' ? 'Sign up / ተመዝገቡ' : 'Login / እተው'}
+          {loading ? 'Processing ...' : mode === 'signUp' ? 'Sign up / ተመዝገቡ' : 'Login / እተዉ'}
         </button>
         </form>
       </section>
