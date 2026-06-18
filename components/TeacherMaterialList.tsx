@@ -57,66 +57,80 @@ export default function TeacherMaterialList({ category, initialMaterials }: Teac
   const [editExternalLink, setEditExternalLink] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [editFeedback, setEditFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const materialsSignature = useMemo(
+    () =>
+      filteredMaterials
+        .map((item) => `${item.id}|${item.title}|${item.external_link ?? ''}|${item.file_url ?? ''}`)
+        .join(';'),
+    [filteredMaterials]
+  );
 
   useEffect(() => {
     setMaterials(filteredMaterials);
-  }, [filteredMaterials]);
+  }, [materialsSignature, filteredMaterials]);
 
   const startEdit = (material: MaterialRow) => {
     setEditingId(material.id);
     setEditTitle(material.title);
     setEditExternalLink(material.external_link ?? '');
     setStatus(null);
+    setEditFeedback(null);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditTitle('');
     setEditExternalLink('');
+    setEditFeedback(null);
   };
 
   const handleSave = async (materialId: string) => {
     if (!editTitle.trim()) {
-      setStatus('Title is required.');
+      setEditFeedback({ type: 'error', message: 'Title is required.' });
       return;
     }
 
     setBusyId(materialId);
     setStatus(null);
+    setEditFeedback(null);
 
     try {
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setStatus('You must be logged in as a teacher.');
-        return;
-      }
-
-      await prepareTeacherAccount(supabase, user);
-
-      const { data, error } = await supabase
-        .from('documents')
-        .update({
+      const response = await fetch('/api/documents/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: materialId,
           title: editTitle.trim(),
-          external_link: editExternalLink.trim() || null
+          externalLink: editExternalLink.trim() || null
         })
-        .eq('id', materialId)
-        .select('id, title, file_url, external_link, material_category, file_name, created_at')
-        .single();
+      });
 
-      if (error) {
-        setStatus(formatDatabaseError(error.message));
+      const payload = (await response.json()) as {
+        error?: string;
+        material?: MaterialRow;
+      };
+
+      if (!response.ok || payload.error || !payload.material) {
+        setEditFeedback({
+          type: 'error',
+          message: payload.error ?? 'Could not save changes.'
+        });
         return;
       }
 
-      setMaterials((current) => current.map((item) => (item.id === materialId ? (data as MaterialRow) : item)));
+      const updated = payload.material;
+
+      setMaterials((items) => items.map((item) => (item.id === materialId ? updated : item)));
       cancelEdit();
       setStatus('Updated successfully.');
       router.refresh();
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : 'Could not update item.');
+      setEditFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Could not update item.'
+      });
     } finally {
       setBusyId(null);
     }
@@ -199,12 +213,22 @@ export default function TeacherMaterialList({ category, initialMaterials }: Teac
                   <div>
                     <label className="block text-sm font-medium text-slate-700">External link (optional)</label>
                     <input
-                      type="url"
                       value={editExternalLink}
                       onChange={(event) => setEditExternalLink(event.currentTarget.value)}
                       className="mt-2 w-full rounded-2xl border border-slate-300 bg-white p-3 outline-none focus:border-slate-500"
+                      placeholder="https://youtube.com/..."
                     />
                   </div>
+                  {editFeedback && (
+                    <p
+                      role="alert"
+                      className={`rounded-2xl px-4 py-3 text-sm ${
+                        editFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'
+                      }`}
+                    >
+                      {editFeedback.message}
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
