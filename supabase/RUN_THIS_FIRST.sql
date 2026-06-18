@@ -204,6 +204,15 @@ drop policy if exists "submissions insert active own" on public.submissions;
 create policy "submissions insert active own" on public.submissions
   for insert with check (auth.uid() = student_id and public.is_active_student());
 
+drop policy if exists "submissions update own" on public.submissions;
+create policy "submissions update own" on public.submissions
+  for update using (auth.uid() = student_id and public.is_active_student())
+  with check (auth.uid() = student_id and public.is_active_student());
+
+drop policy if exists "submissions delete own" on public.submissions;
+create policy "submissions delete own" on public.submissions
+  for delete using (auth.uid() = student_id and public.is_active_student());
+
 drop policy if exists "parent links read" on public.parent_student_links;
 create policy "parent links read" on public.parent_student_links
   for select using (

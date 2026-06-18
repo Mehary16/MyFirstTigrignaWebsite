@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { readJsonResponse } from './readJsonResponse';
+import { STORAGE_BUCKETS } from './storageBuckets';
+import { formatDatabaseError } from './supabaseErrors';
 import { MAX_FREE_FILE_BYTES } from './uploadLimits';
 
 export type SubmissionType = 'link' | 'video' | 'image' | 'document';
@@ -115,4 +117,24 @@ export async function uploadStudentSubmission(
     mediaUrl: payload.mediaUrl,
     fileName: payload.fileName ?? file.name
   };
+}
+
+export function getSubmissionStoragePathFromPublicUrl(publicUrl: string | null | undefined) {
+  if (!publicUrl) return null;
+
+  const marker = `/storage/v1/object/public/${STORAGE_BUCKETS.studentSubmissions}/`;
+  const index = publicUrl.indexOf(marker);
+  if (index === -1) return null;
+
+  return decodeURIComponent(publicUrl.slice(index + marker.length));
+}
+
+export async function deleteStudentSubmissionFile(supabase: SupabaseClient, publicUrl: string | null | undefined) {
+  const filePath = getSubmissionStoragePathFromPublicUrl(publicUrl);
+  if (!filePath) return;
+
+  const { error } = await supabase.storage.from(STORAGE_BUCKETS.studentSubmissions).remove([filePath]);
+  if (error) {
+    throw new Error(formatDatabaseError(error.message));
+  }
 }

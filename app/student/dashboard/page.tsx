@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import HomeworkSubmissionForm from '../../../components/StudentHomeworkForm';
+import StudentSubmissionList from '../../../components/StudentSubmissionList';
 import LogoutButton from '../../../components/LogoutButton';
 import StudentMaterialSection from '../../../components/StudentMaterialSection';
 import { splitStudentMaterials } from '../../../lib/teacherMaterials';
@@ -13,7 +14,6 @@ import {
   firstQueryError
 } from '../../../lib/safeQueries';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
-import { getSubmissionViewLabel, type SubmissionType } from '../../../lib/submissionMedia';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
 function getVideoEmbedUrl(videoUrl: string | null | undefined) {
@@ -249,37 +249,9 @@ export default async function StudentDashboardPage() {
 
       <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
         <h2 className="text-2xl font-semibold text-slate-950">Your Submissions</h2>
-        <div className="mt-5 grid gap-4">
-          {submissions?.length ? (
-            submissions.map((submission) => (
-              <article key={submission.id} className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-semibold text-slate-900">{new Date(submission.created_at).toLocaleDateString()}</p>
-                    <p className="text-xs font-medium uppercase tracking-[0.15em] text-amber-700">
-                      {(submission.submission_type as SubmissionType) || 'link'}
-                      {submission.file_name ? ` · ${submission.file_name}` : ''}
-                    </p>
-                    {submission.notes && <p className="mt-1 text-sm text-slate-600">{submission.notes}</p>}
-                  </div>
-                  {submission.video_url ? (
-                    <a
-                      href={submission.video_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                    >
-                      {getSubmissionViewLabel((submission.submission_type as SubmissionType) || 'link')}
-                    </a>
-                  ) : (
-                    <span className="text-sm text-slate-500">No file attached</span>
-                  )}
-                </div>
-              </article>
-            ))
-          ) : (
-            <p className="text-slate-600">You have not submitted any homework yet.</p>
-          )}
+        <p className="mt-2 text-slate-600">Edit or delete homework you have already submitted.</p>
+        <div className="mt-5">
+          <StudentSubmissionList studentId={user.id} initialSubmissions={submissions ?? []} />
         </div>
       </section>
     </section>
