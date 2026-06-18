@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteLessonMaterialFile } from '../lib/lessonMaterials';
 import {
@@ -47,14 +47,20 @@ function MaterialPreview({ material }: { material: MaterialRow }) {
 export default function TeacherMaterialList({ category, initialMaterials }: TeacherMaterialListProps) {
   const router = useRouter();
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
-  const [materials, setMaterials] = useState(
-    initialMaterials.filter((item) => normalizeMaterialCategory(item.material_category) === category)
+  const filteredMaterials = useMemo(
+    () => initialMaterials.filter((item) => normalizeMaterialCategory(item.material_category) === category),
+    [initialMaterials, category]
   );
+  const [materials, setMaterials] = useState(filteredMaterials);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editExternalLink, setEditExternalLink] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMaterials(filteredMaterials);
+  }, [filteredMaterials]);
 
   const startEdit = (material: MaterialRow) => {
     setEditingId(material.id);

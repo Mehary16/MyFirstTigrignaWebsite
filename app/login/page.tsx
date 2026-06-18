@@ -8,10 +8,85 @@ import { dashboardPathForRole } from '../../lib/routes';
 
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
 
-const ACCOUNT_TYPE_LABELS = {
-  Student: 'ተማሃሮ',
-  Parent: 'ወለዲ'
-} as const;
+type LoginLocale = 'en' | 'ti';
+
+const LOGIN_COPY: Record<
+  LoginLocale,
+  {
+    tagline: string;
+    welcomeTitle: string;
+    welcomeBody: string;
+    roleStudents: string;
+    roleTeachers: string;
+    roleParents: string;
+    login: string;
+    signUp: string;
+    accountType: string;
+    student: string;
+    parent: string;
+    fullName: string;
+    email: string;
+    password: string;
+    showPassword: string;
+    hidePassword: string;
+    processing: string;
+    signUpSuccess: string;
+    supabaseConfigError: string;
+    languageEn: string;
+    languageTi: string;
+  }
+> = {
+  en: {
+    tagline: 'Tigrigna language learning portal',
+    welcomeTitle: 'Welcome',
+    welcomeBody: 'Welcome to the Tigrigna learning portal. Sign in or create an account to access your dashboard.',
+    roleStudents: 'Students — lessons, homework, and grades',
+    roleTeachers: 'Teachers — publish content and manage the class',
+    roleParents: 'Parents — view your child\'s progress and grades',
+    login: 'Login',
+    signUp: 'Sign up',
+    accountType: 'Account type',
+    student: 'Student',
+    parent: 'Parent',
+    fullName: 'Full name',
+    email: 'Email',
+    password: 'Password',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
+    processing: 'Processing...',
+    signUpSuccess: 'Sign-up message sent. Check your email to confirm your account.',
+    supabaseConfigError:
+      'Could not reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart the dev server.',
+    languageEn: 'EN',
+    languageTi: 'ትግ'
+  },
+  ti: {
+    tagline: 'ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ',
+    welcomeTitle: 'እንቋዕ ብሰላም መጻእኩም',
+    welcomeBody: 'ናብ መድረኽ ትምህርቲ ትግርኛ እንኳዕ በደህና መጻእኩም። ንዳሽቦርድኩም ንምእታው እተዉ ወይ ተመዝገቡ።',
+    roleStudents: 'ተማሃሮ — ትምህርቲ፣ ዕዮ ገዛ ምርካብ፣ ነጥብታት',
+    roleTeachers: 'መማህራን — ትምህርቲ ምቕራብን ክፍሊ ምምሕዳርን',
+    roleParents: 'ወለዲ — ዕቤት ቆልዖምን ነጥብታትን ምርኣይ',
+    login: 'እተዉ',
+    signUp: 'ተመዝገቡ',
+    accountType: 'ዓይነት ሕሳብ',
+    student: 'ተማሃሮ',
+    parent: 'ወለዲ',
+    fullName: 'ስም',
+    email: 'ኢሜይል',
+    password: 'መሕለፊ ቃል',
+    showPassword: 'መሕለፊ ቃል ረኣይ',
+    hidePassword: 'መሕለፊ ቃል ሕብእ',
+    processing: 'ይሰርሕ ኣሎ...',
+    signUpSuccess: 'መመዝገቢ መልእኽቲ ተሰዲዱ ኣሎ። ኢሜይልኩም ምስ ተራጋገጸ እተዉ።',
+    supabaseConfigError:
+      'Supabase ዝደለኽምዎ ክንረክቦ ኣይከኣልናን። NEXT_PUBLIC_SUPABASE_URLን NEXT_PUBLIC_SUPABASE_ANON_KEYን ኣብ .env.local ኣረጋግጹ፣ ድሕሪኡ dev server ዳግም ጽቀጡ።',
+    languageEn: 'EN',
+    languageTi: 'ትግ'
+  }
+};
+
+const LOCALE_STORAGE_KEY = 'login-locale';
 
 async function resolveDashboardPath(supabase: ReturnType<typeof createBrowserSupabaseClient>, userId: string, email: string | undefined, metadataRole?: string) {
   const lowerEmail = email?.toLowerCase() ?? '';
@@ -47,6 +122,21 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [locale, setLocale] = useState<LoginLocale>('en');
+
+  const copy = LOGIN_COPY[locale];
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+    if (stored === 'en' || stored === 'ti') {
+      setLocale(stored);
+    }
+  }, []);
+
+  const switchLocale = (next: LoginLocale) => {
+    setLocale(next);
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, next);
+  };
 
   useEffect(() => {
     const checkSession = async () => {
@@ -103,7 +193,7 @@ export default function LoginPage() {
           }
         }
 
-        setMessage('መመዝገቢ መልእኽቲ ተሰዲዱ ኣሎ። ኢሜይልካ ምስ ተራጋገጸ እቶ።');
+        setMessage(copy.signUpSuccess);
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -152,9 +242,7 @@ export default function LoginPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Something went wrong.';
       if (message === 'Failed to fetch') {
-        setError(
-          'Could not reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart the dev server.'
-        );
+        setError(copy.supabaseConfigError);
       } else {
         setError(message);
       }
@@ -166,46 +254,64 @@ export default function LoginPage() {
   return (
     <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
       <section className="rounded-[2rem] border border-amber-100 bg-slate-950 p-8 text-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-        <p className="text-sm uppercase tracking-[0.3em] text-amber-300">ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ</p>
-        <h1 className="mt-4 space-y-1">
-          <span className="block text-4xl font-semibold leading-tight">Welcome</span>
-          <span className="block text-3xl font-medium leading-tight text-white/90">እንቋዕ ብሰላም መጻእኩም</span>
-        </h1>
-        <p className="mt-4 max-w-xl text-white/75">
-          Welcome to the Tigrigna learning portal. Sign in or create an account to access your dashboard.
-        </p>
+        <p className="text-sm uppercase tracking-[0.3em] text-amber-300">{copy.tagline}</p>
+        <h1 className="mt-4 text-4xl font-semibold leading-tight">{copy.welcomeTitle}</h1>
+        <p className="mt-4 max-w-xl text-white/75">{copy.welcomeBody}</p>
 
         <ul className="mt-8 space-y-3 text-sm text-white/75">
-          <li>
-            <strong className="text-white">Students</strong> — lessons, homework, and grades
-          </li>
-          <li>
-            <strong className="text-white">Teachers</strong> — publish content and manage the class
-          </li>
-          <li>
-            <strong className="text-white">Parents</strong> — view your child&apos;s progress and grades
-          </li>
+          <li>{copy.roleStudents}</li>
+          <li>{copy.roleTeachers}</li>
+          <li>{copy.roleParents}</li>
         </ul>
       </section>
 
-      <section className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-        <div className="flex gap-3">
+      <section className="relative rounded-[2rem] border border-slate-200 bg-white p-8 pt-14 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:pt-8">
+        <div className="absolute right-8 top-8">
+          <div
+            className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-0.5 text-xs font-semibold"
+            role="group"
+            aria-label="Language"
+          >
+            <button
+              type="button"
+              onClick={() => switchLocale('en')}
+              className={`rounded-full px-3 py-1 transition ${
+                locale === 'en' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:text-slate-900'
+              }`}
+              aria-pressed={locale === 'en'}
+            >
+              {copy.languageEn}
+            </button>
+            <span className="px-0.5 text-slate-300" aria-hidden>
+              |
+            </span>
+            <button
+              type="button"
+              onClick={() => switchLocale('ti')}
+              className={`rounded-full px-3 py-1 transition ${
+                locale === 'ti' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:text-slate-900'
+              }`}
+              aria-pressed={locale === 'ti'}
+            >
+              {copy.languageTi}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-3 pr-28">
           <button
             type="button"
             className={`rounded-full px-5 py-2 text-sm font-semibold ${mode === 'signIn' ? 'bg-slate-950 text-white' : 'border border-slate-300 text-slate-700'}`}
             onClick={() => setMode('signIn')}
           >
-            <span className="flex flex-col items-center leading-tight">
-              <span>Login</span>
-              <span className="text-[11px] font-medium opacity-90">እተዉ</span>
-            </span>
+            {copy.login}
           </button>
           <button
             type="button"
             className={`rounded-full px-5 py-2 text-sm font-semibold ${mode === 'signUp' ? 'bg-slate-950 text-white' : 'border border-slate-300 text-slate-700'}`}
             onClick={() => setMode('signUp')}
           >
-            Sign up / ተመዝገቡ
+            {copy.signUp}
           </button>
         </div>
 
@@ -213,7 +319,7 @@ export default function LoginPage() {
         {mode === 'signUp' && (
           <>
           <div>
-            <p className="block text-sm font-medium text-slate-700">Account type</p>
+            <p className="block text-sm font-medium text-slate-700">{copy.accountType}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {(['Student', 'Parent'] as const).map((type) => (
                 <button
@@ -224,16 +330,13 @@ export default function LoginPage() {
                     accountType === type ? 'bg-slate-950 text-white' : 'border border-slate-300 text-slate-700'
                   }`}
                 >
-                  <span className="flex flex-col items-center leading-tight">
-                    <span>{type}</span>
-                    <span className="text-[11px] font-medium opacity-90">{ACCOUNT_TYPE_LABELS[type]}</span>
-                  </span>
+                  {type === 'Student' ? copy.student : copy.parent}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700">Full name / ስም</label>
+            <label className="block text-sm font-medium text-slate-700">{copy.fullName}</label>
             <input
               type="text"
               value={fullName}
@@ -246,7 +349,7 @@ export default function LoginPage() {
         )}
 
         <div>
-          <label className="block text-sm font-medium text-slate-700">Email / ኢሜይል</label>
+          <label className="block text-sm font-medium text-slate-700">{copy.email}</label>
           <input
             type="email"
             value={email}
@@ -257,7 +360,7 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700">Password / መሕለፊ ቃል</label>
+          <label className="block text-sm font-medium text-slate-700">{copy.password}</label>
           <div className="relative mt-2">
             <input
               type={showPassword ? 'text' : 'password'}
@@ -271,7 +374,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => setShowPassword((current) => !current)}
               className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
-              aria-label={showPassword ? 'Hide password / መሕለፊ ቃል ሕብእ' : 'Show password / መሕለፊ ቃል ረኣይ'}
+              aria-label={showPassword ? copy.hidePassword : copy.showPassword}
             >
               {showPassword ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
             </button>
@@ -286,7 +389,7 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
         >
-          {loading ? 'Processing ...' : mode === 'signUp' ? 'Sign up / ተመዝገቡ' : 'Login / እተዉ'}
+          {loading ? copy.processing : mode === 'signUp' ? copy.signUp : copy.login}
         </button>
         </form>
       </section>
