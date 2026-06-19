@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState, type ComponentProps } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '../../lib/supabaseClient';
-import { dashboardPathForRole } from '../../lib/routes';
+import { ensureUserProfile, resolveDashboardPath } from '../../lib/resolveDashboard';
+import { getEmailConfirmRedirectUrl } from '../../lib/siteUrl';
 
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
 
@@ -31,6 +32,7 @@ const LOGIN_COPY: Record<
     hidePassword: string;
     processing: string;
     signUpSuccess: string;
+    emailConfirmFailed: string;
     supabaseConfigError: string;
     languageEn: string;
     languageTi: string;
@@ -54,7 +56,8 @@ const LOGIN_COPY: Record<
     showPassword: 'Show password',
     hidePassword: 'Hide password',
     processing: 'Processing...',
-    signUpSuccess: 'Sign-up message sent. Check your email to confirm your account.',
+    signUpSuccess: 'Account created. Check your email and click the confirmation link to continue.',
+    emailConfirmFailed: 'Email confirmation failed or expired. Please sign up again or log in.',
     supabaseConfigError:
       'Could not reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart the dev server.',
     languageEn: 'EN',
@@ -78,7 +81,8 @@ const LOGIN_COPY: Record<
     showPassword: 'መሕለፊ ቃል ረኣይ',
     hidePassword: 'መሕለፊ ቃል ሕብእ',
     processing: 'ይሰርሕ ኣሎ...',
-    signUpSuccess: 'መመዝገቢ መልእኽቲ ተሰዲዱ ኣሎ። ኢሜይልኩም ምስ ተራጋገጸ እተዉ።',
+    signUpSuccess: 'ሕሳብ ተፈጢሩ። ኢሜይልኩም ተመልክቶ ኣሎ። ኣብቲ ምርግጋፅ ሊንክ ጠዊቕኩም ቀጽሉ።',
+    emailConfirmFailed: 'ኢሜይል ምርግጋጽ ኣይተኻእለን። ዳግም ተመዝገቡ ወይ እተዉ።',
     supabaseConfigError:
       'Supabase ዝደለኽምዎ ክንረክቦ ኣይከኣልናን። NEXT_PUBLIC_SUPABASE_URLን NEXT_PUBLIC_SUPABASE_ANON_KEYን ኣብ .env.local ኣረጋግጹ፣ ድሕሪኡ dev server ዳግም ጽቀጡ።',
     languageEn: 'EN',
@@ -87,28 +91,6 @@ const LOGIN_COPY: Record<
 };
 
 const LOCALE_STORAGE_KEY = 'login-locale';
-
-async function resolveDashboardPath(supabase: ReturnType<typeof createBrowserSupabaseClient>, userId: string, email: string | undefined, metadataRole?: string) {
-  const lowerEmail = email?.toLowerCase() ?? '';
-  if (lowerEmail === ADMIN_EMAIL.toLowerCase() || metadataRole?.toLowerCase() === 'teacher') {
-    return '/teacher/dashboard';
-  }
-
-  const { data: profile } = await supabase.from('profiles').select('role, is_active').eq('id', userId).maybeSingle();
-  if (profile?.role === 'Teacher') {
-    return '/teacher/dashboard';
-  }
-
-  if (profile?.role === 'Parent') {
-    return '/parent/dashboard';
-  }
-
-  if (profile?.is_active === false) {
-    return '/suspended';
-  }
-
-  return dashboardPathForRole(profile?.role);
-}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -132,6 +114,14 @@ export default function LoginPage() {
       setLocale(stored);
     }
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'email-confirmation-failed') {
+      setError(copy.emailConfirmFailed);
+      window.history.replaceState({}, '', '/login');
+    }
+  }, [copy.emailConfirmFailed]);
 
   const switchLocale = (next: LoginLocale) => {
     setLocale(next);
@@ -168,6 +158,7 @@ export default function LoginPage() {
           email,
           password,
           options: {
+            emailRedirectTo: getEmailConfirmRedirectUrl(),
             data: {
               full_name: fullName,
               role
@@ -206,29 +197,7 @@ export default function LoginPage() {
 
         const { data: userData } = await supabase.auth.getUser();
         if (userData.user) {
-          const { data: existingProfile } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', userData.user.id)
-            .maybeSingle();
-
-          if (!existingProfile) {
-            const metaRole = (userData.user.user_metadata?.role as string | undefined)?.toLowerCase();
-            const role =
-              userData.user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()
-                ? 'Teacher'
-                : metaRole === 'parent'
-                  ? 'Parent'
-                  : 'Student';
-
-            await supabase.from('profiles').upsert({
-              id: userData.user.id,
-              full_name: (userData.user.user_metadata?.full_name as string | undefined) ?? userData.user.email?.split('@')[0] ?? 'Student',
-              role,
-              email: userData.user.email?.trim().toLowerCase(),
-              is_active: true
-            });
-          }
+          await ensureUserProfile(supabase, userData.user);
 
           const path = await resolveDashboardPath(
             supabase,
