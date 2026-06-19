@@ -40,6 +40,75 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [excelBusy, setExcelBusy] = useState<'export' | 'import' | null>(null);
+
+  const handleExportExcel = async () => {
+    setExcelBusy('export');
+    setStatus(null);
+
+    try {
+      const response = await fetch('/api/grades/export');
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        setStatus(payload.error ?? 'Could not export grades.');
+        return;
+      }
+
+      const blob = await response.blob();
+      const stamp = new Date().toISOString().slice(0, 10);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `student-grades-${stamp}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setStatus('Grades exported to Excel.');
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : 'Could not export grades.');
+    } finally {
+      setExcelBusy(null);
+    }
+  };
+
+  const handleImportExcel = async (event: { currentTarget: HTMLInputElement }) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    if (!file) return;
+
+    setExcelBusy('import');
+    setStatus(null);
+
+    try {
+      const body = new FormData();
+      body.append('file', file);
+
+      const response = await fetch('/api/grades/import', {
+        method: 'POST',
+        body
+      });
+
+      const payload = (await response.json()) as {
+        error?: string;
+        created?: number;
+        updated?: number;
+        errors?: string[];
+      };
+
+      if (!response.ok || payload.error) {
+        setStatus(payload.error ?? 'Could not import grades.');
+        return;
+      }
+
+      const summary = `Import complete: ${payload.updated ?? 0} updated, ${payload.created ?? 0} added.`;
+      const detail = payload.errors?.length ? ` ${payload.errors.slice(0, 3).join(' ')}` : '';
+      setStatus(summary + detail);
+      router.refresh();
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : 'Could not import grades.');
+    } finally {
+      setExcelBusy(null);
+    }
+  };
 
   const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
     event.preventDefault();
@@ -99,7 +168,33 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Student grades / ናይ ተማሃሮ ደረጃ</h2>
-        <p className="mt-2 text-slate-600">Record grades by student name so parents can track performance.</p>
+        <p className="mt-2 text-slate-600">
+          Record grades by student name, export to Excel to edit in bulk, then import the file back.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            type="button"
+            disabled={excelBusy !== null}
+            onClick={handleExportExcel}
+            className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-emerald-400"
+          >
+            {excelBusy === 'export' ? 'Exporting...' : 'Export to Excel'}
+          </button>
+          <label className="inline-flex cursor-pointer items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            {excelBusy === 'import' ? 'Importing...' : 'Import from Excel'}
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              disabled={excelBusy !== null}
+              onChange={handleImportExcel}
+              className="hidden"
+            />
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          Keep the <strong>Grade ID</strong> column when editing existing rows. Leave Grade ID empty to add new grades.
+          Use <strong>Student Name</strong> or <strong>Student ID</strong> for each row.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
@@ -163,6 +258,7 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
               <th className="px-4 py-3 text-left font-semibold text-slate-700">Student</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-700">Assignment</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-700">Grade</th>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">Feedback</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-700">Date</th>
             </tr>
           </thead>
@@ -173,12 +269,13 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
                   <td className="px-4 py-3 font-medium text-slate-900">{studentNameFromGrade(grade)}</td>
                   <td className="px-4 py-3 text-slate-600">{grade.title}</td>
                   <td className="px-4 py-3 font-semibold text-amber-800">{grade.grade}</td>
+                  <td className="px-4 py-3 text-slate-600">{grade.feedback ?? '—'}</td>
                   <td className="px-4 py-3 text-slate-500">{new Date(grade.created_at).toLocaleDateString()}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
                   No grades recorded yet.
                 </td>
               </tr>

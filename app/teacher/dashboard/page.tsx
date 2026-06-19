@@ -43,7 +43,7 @@ export default async function TeacherDashboardPage() {
       .eq('role', 'Student')
       .order('created_at', { ascending: false }),
     supabase.from('submissions').select('student_id'),
-    supabase.from('grades').select('id, student_id, title, grade, feedback, created_at').order('created_at', { ascending: false }).limit(50),
+    supabase.from('grades').select('id, student_id, title, grade, feedback, created_at').order('created_at', { ascending: false }),
     supabase
       .from('documents')
       .select('id, title, file_url, external_link, material_category, file_name, created_at')
