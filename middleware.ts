@@ -2,6 +2,20 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const code = request.nextUrl.searchParams.get('code');
+  const tokenHash = request.nextUrl.searchParams.get('token_hash');
+
+  // Supabase sometimes redirects to Site URL (/) instead of /auth/callback
+  if (pathname !== '/auth/callback' && (code || tokenHash)) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/auth/callback';
+    if (!url.searchParams.get('next')) {
+      url.searchParams.set('next', '/auth/confirmed');
+    }
+    return NextResponse.redirect(url);
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -29,7 +43,6 @@ export async function middleware(request: NextRequest) {
   });
 
   const { data: { user } } = await supabase.auth.getUser();
-  const pathname = request.nextUrl.pathname;
 
   if (user && pathname.startsWith('/student')) {
     try {
@@ -73,5 +86,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/student/:path*', '/suspended']
+  matcher: ['/', '/student/:path*', '/suspended']
 };
