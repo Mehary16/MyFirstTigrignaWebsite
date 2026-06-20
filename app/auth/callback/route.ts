@@ -11,7 +11,10 @@ export async function GET(request: NextRequest) {
   const next = requestUrl.searchParams.get('next') ?? '/auth/confirmed';
   const siteUrl = getSiteUrlFromRequest(request);
   const successUrl = `${siteUrl}${next.startsWith('/') ? next : `/${next}`}`;
-  const failureUrl = `${siteUrl}/login?error=email-confirmation-failed`;
+  const failureUrl =
+    next === '/reset-password'
+      ? `${siteUrl}/login?error=password-reset-failed`
+      : `${siteUrl}/login?error=email-confirmation-failed`;
 
   let response = NextResponse.redirect(successUrl);
 
@@ -52,6 +55,11 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return response;
     }
+  }
+
+  // Recovery links sometimes only include type=recovery without code (hash handled on client)
+  if (type === 'recovery' && !code && !tokenHash) {
+    return NextResponse.redirect(`${siteUrl}/reset-password${requestUrl.hash}`);
   }
 
   return NextResponse.redirect(failureUrl);

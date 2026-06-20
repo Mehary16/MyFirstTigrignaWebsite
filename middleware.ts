@@ -6,13 +6,20 @@ export async function middleware(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');
   const tokenHash = request.nextUrl.searchParams.get('token_hash');
 
-  // Supabase sometimes redirects to Site URL (/) instead of /auth/callback
-  if (pathname !== '/auth/callback' && (code || tokenHash)) {
+  // Supabase sometimes redirects to Site URL (/) instead of the intended path
+  if (pathname !== '/auth/callback' && pathname !== '/reset-password' && (code || tokenHash)) {
     const url = request.nextUrl.clone();
-    url.pathname = '/auth/callback';
-    if (!url.searchParams.get('next')) {
-      url.searchParams.set('next', '/auth/confirmed');
+    const type = url.searchParams.get('type');
+
+    if (type === 'recovery') {
+      url.pathname = '/reset-password';
+    } else {
+      url.pathname = '/auth/callback';
+      if (!url.searchParams.get('next')) {
+        url.searchParams.set('next', '/auth/confirmed');
+      }
     }
+
     return NextResponse.redirect(url);
   }
 
@@ -86,5 +93,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/student/:path*', '/suspended']
+  matcher: ['/', '/reset-password', '/student/:path*', '/suspended']
 };

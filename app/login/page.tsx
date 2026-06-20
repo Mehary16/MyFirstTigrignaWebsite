@@ -61,7 +61,7 @@ const LOGIN_COPY: Record<
     processing: 'Processing...',
     signUpSuccess: 'Account created. Check your email and click the confirmation link to continue.',
     emailConfirmFailed: 'Email confirmation failed or expired. Please sign up again or log in.',
-    passwordResetFailed: 'Password reset link expired. Please request a new one.',
+    passwordResetFailed: 'Password reset link expired or invalid. Please request a new reset link.',
     forgotPassword: 'Forgot password?',
     supabaseConfigError:
       'Could not reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart the dev server.',

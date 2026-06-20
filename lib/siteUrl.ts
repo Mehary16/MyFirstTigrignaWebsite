@@ -39,6 +39,5 @@ export function getEmailConfirmRedirectUrl() {
 }
 
 export function getPasswordResetRedirectUrl() {
-  const next = encodeURIComponent('/reset-password');
-  return `${getSiteUrl()}/auth/callback?next=${next}`;
+  return `${getSiteUrl()}/reset-password`;
 }

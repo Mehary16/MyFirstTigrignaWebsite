@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createBrowserSupabaseClient } from '../../lib/supabaseClient';
+import { establishSessionFromAuthUrl } from '../../lib/authUrlSession';
 import { resolveDashboardPath } from '../../lib/resolveDashboard';
 
 export default function ResetPasswordPage() {
@@ -14,17 +15,25 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
+  const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) {
+    const verifyResetLink = async () => {
+      setVerifying(true);
+      setError(null);
+
+      const result = await establishSessionFromAuthUrl(supabase);
+
+      if (!result.ok) {
         router.replace('/login?error=password-reset-failed');
         return;
       }
+
       setReady(true);
+      setVerifying(false);
     };
-    checkSession();
+
+    verifyResetLink();
   }, [router, supabase]);
 
   const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
@@ -68,7 +77,7 @@ export default function ResetPasswordPage() {
     }
   };
 
-  if (!ready) {
+  if (verifying || !ready) {
     return (
       <div className="mx-auto max-w-md rounded-[2rem] border border-slate-200 bg-white p-8 text-center">
         <p className="text-slate-600">Verifying reset link...</p>
