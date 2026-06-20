@@ -111,16 +111,29 @@ export default function StudentHomeworkForm({ studentId, assignments = [] }: Stu
         resolvedType = submissionType;
       }
 
-      const { error: submissionError } = await supabase.from('submissions').insert([
-        {
-          student_id: studentId,
-          video_url: storedUrl,
-          submission_type: resolvedType,
-          file_name: fileName,
-          notes: notes.trim() || null,
-          assignment_id: assignmentId || null
+      const basePayload = {
+        student_id: studentId,
+        video_url: storedUrl,
+        submission_type: resolvedType,
+        file_name: fileName,
+        notes: notes.trim() || null
+      };
+
+      const payloadWithAssignment = assignmentId
+        ? { ...basePayload, assignment_id: assignmentId }
+        : basePayload;
+
+      let { error: submissionError } = await supabase.from('submissions').insert([payloadWithAssignment]);
+
+      // Fallback when TIER_1_AND_2_FEATURES.sql has not been run yet
+      if (submissionError?.message.includes('assignment_id')) {
+        if (assignmentId) {
+          setStatus(
+            'Assignment linking is not set up yet. Submitting as general homework — ask your teacher to run TIER_1_AND_2_FEATURES.sql in Supabase.'
+          );
         }
-      ]);
+        ({ error: submissionError } = await supabase.from('submissions').insert([basePayload]));
+      }
 
       if (submissionError) {
         setStatus(`Submission failed: ${submissionError.message}`);
