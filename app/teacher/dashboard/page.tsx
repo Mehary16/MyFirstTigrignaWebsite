@@ -111,7 +111,7 @@ export default async function TeacherDashboardPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <p className="rounded-full bg-blue-600 px-4 py-2 text-base font-medium text-white">Teacher</p>
-            <p className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{userEmail}</p>
+            <p className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{displayName}</p>
             <LogoutButton />
           </div>
         </div>

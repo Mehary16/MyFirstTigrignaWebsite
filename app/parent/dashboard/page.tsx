@@ -113,7 +113,7 @@ export default async function ParentDashboardPage() {
             <p className="mt-2 text-slate-600">See how your children are doing in Tigrigna class.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <p className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{userEmail}</p>
+            <p className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{displayName}</p>
             <LogoutButton />
           </div>
         </div>
