@@ -4,6 +4,10 @@ import type { MaterialRow } from './teacherMaterials';
 
 type QueryError = { message: string } | null;
 
+function isMissingTableError(message: string, table: string) {
+  return message.includes(table) && (message.includes('does not exist') || message.includes('schema cache'));
+}
+
 function isMissingColumnError(message: string, column: string) {
   return message.includes(column) || message.includes('schema cache');
 }
@@ -44,7 +48,7 @@ export async function fetchDocumentsForDisplay(supabase: SupabaseClient) {
 export async function fetchStudentSubmissions(supabase: SupabaseClient, studentId: string) {
   const full = await supabase
     .from('submissions')
-    .select('id, video_url, submission_type, file_name, notes, created_at')
+    .select('id, video_url, submission_type, file_name, notes, assignment_id, teacher_feedback, feedback_at, created_at')
     .eq('student_id', studentId)
     .order('created_at', { ascending: false });
 
@@ -52,7 +56,12 @@ export async function fetchStudentSubmissions(supabase: SupabaseClient, studentI
     return { data: full.data ?? [], error: null as QueryError };
   }
 
-  if (isMissingColumnError(full.error.message, 'submission_type') || isMissingColumnError(full.error.message, 'file_name')) {
+  if (
+    isMissingColumnError(full.error.message, 'submission_type') ||
+    isMissingColumnError(full.error.message, 'file_name') ||
+    isMissingColumnError(full.error.message, 'assignment_id') ||
+    isMissingColumnError(full.error.message, 'teacher_feedback')
+  ) {
     const basic = await supabase
       .from('submissions')
       .select('id, video_url, notes, created_at')
@@ -67,7 +76,10 @@ export async function fetchStudentSubmissions(supabase: SupabaseClient, studentI
       data: (basic.data ?? []).map((row) => ({
         ...row,
         submission_type: 'link',
-        file_name: null
+        file_name: null,
+        assignment_id: null,
+        teacher_feedback: null,
+        feedback_at: null
       })),
       error: null as QueryError
     };
@@ -79,7 +91,7 @@ export async function fetchStudentSubmissions(supabase: SupabaseClient, studentI
 export async function fetchLessonsForDisplay(supabase: SupabaseClient) {
   const full = await supabase
     .from('lessons')
-    .select('id, title, description, video_url, category, external_link, created_at')
+    .select('id, title, description, video_url, category, level, external_link, created_at')
     .order('created_at', { ascending: false });
 
   if (!full.error) {
@@ -88,7 +100,8 @@ export async function fetchLessonsForDisplay(supabase: SupabaseClient) {
 
   if (
     isMissingColumnError(full.error.message, 'category') ||
-    isMissingColumnError(full.error.message, 'external_link')
+    isMissingColumnError(full.error.message, 'external_link') ||
+    isMissingColumnError(full.error.message, 'level')
   ) {
     const basic = await supabase
       .from('lessons')
@@ -103,7 +116,8 @@ export async function fetchLessonsForDisplay(supabase: SupabaseClient) {
       data: (basic.data ?? []).map((row) => ({
         ...row,
         category: null,
-        external_link: null
+        external_link: null,
+        level: null
       })),
       error: null as QueryError
     };
@@ -123,11 +137,114 @@ export async function fetchStudentGrades(supabase: SupabaseClient, studentId: st
     return { data: result.data ?? [], error: null as QueryError };
   }
 
-  if (isMissingColumnError(result.error.message, 'grades') || result.error.message.includes('does not exist')) {
+  if (isMissingTableError(result.error.message, 'grades')) {
     return { data: [], error: result.error };
   }
 
   return { data: [], error: result.error };
+}
+
+export async function fetchAssignments(supabase: SupabaseClient) {
+  const result = await supabase
+    .from('assignments')
+    .select('id, title, description, due_date, lesson_id, created_at')
+    .order('created_at', { ascending: false });
+
+  if (!result.error) {
+    return { data: result.data ?? [], error: null as QueryError };
+  }
+
+  if (isMissingTableError(result.error.message, 'assignments')) {
+    return { data: [], error: null as QueryError };
+  }
+
+  return { data: [], error: result.error };
+}
+
+export async function fetchAnnouncements(supabase: SupabaseClient) {
+  const result = await supabase
+    .from('announcements')
+    .select('id, title, body, created_at')
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  if (!result.error) {
+    return { data: result.data ?? [], error: null as QueryError };
+  }
+
+  if (isMissingTableError(result.error.message, 'announcements')) {
+    return { data: [], error: null as QueryError };
+  }
+
+  return { data: [], error: result.error };
+}
+
+export async function fetchLiveClasses(supabase: SupabaseClient) {
+  const result = await supabase
+    .from('live_classes')
+    .select('id, title, meeting_url, scheduled_at, duration_minutes, notes, created_at')
+    .order('scheduled_at', { ascending: true });
+
+  if (!result.error) {
+    return { data: result.data ?? [], error: null as QueryError };
+  }
+
+  if (isMissingTableError(result.error.message, 'live_classes')) {
+    return { data: [], error: null as QueryError };
+  }
+
+  return { data: [], error: result.error };
+}
+
+export async function fetchLessonViews(supabase: SupabaseClient, studentId: string) {
+  const result = await supabase.from('lesson_views').select('lesson_id').eq('student_id', studentId);
+
+  if (!result.error) {
+    return { data: (result.data ?? []).map((row) => row.lesson_id), error: null as QueryError };
+  }
+
+  if (isMissingTableError(result.error.message, 'lesson_views')) {
+    return { data: [], error: null as QueryError };
+  }
+
+  return { data: [], error: result.error };
+}
+
+export async function fetchChildSubmissionsForParent(supabase: SupabaseClient, studentId: string) {
+  const full = await supabase
+    .from('submissions')
+    .select('id, video_url, submission_type, file_name, notes, teacher_feedback, feedback_at, created_at, assignment_id, assignments(title)')
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false });
+
+  if (!full.error) {
+    return { data: full.data ?? [], error: null as QueryError };
+  }
+
+  if (isMissingColumnError(full.error.message, 'teacher_feedback') || isMissingColumnError(full.error.message, 'assignment_id')) {
+    const basic = await supabase
+      .from('submissions')
+      .select('id, video_url, submission_type, file_name, notes, created_at')
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: false });
+
+    if (basic.error) {
+      return { data: [], error: basic.error };
+    }
+
+    return {
+      data: (basic.data ?? []).map((row) => ({
+        ...row,
+        teacher_feedback: null,
+        feedback_at: null,
+        assignment_id: null,
+        assignments: null
+      })),
+      error: null as QueryError
+    };
+  }
+
+  return { data: [], error: full.error };
 }
 
 export function firstQueryError(errors: Array<QueryError | undefined>) {

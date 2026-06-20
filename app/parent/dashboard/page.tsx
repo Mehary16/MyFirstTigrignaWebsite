@@ -1,5 +1,16 @@
 import { redirect } from 'next/navigation';
 import LogoutButton from '../../../components/LogoutButton';
+import ProgressSummary from '../../../components/ProgressSummary';
+import AnnouncementsFeed from '../../../components/AnnouncementsFeed';
+import LiveClassSchedule from '../../../components/LiveClassSchedule';
+import ParentHomeworkView from '../../../components/ParentHomeworkView';
+import {
+  fetchAnnouncements,
+  fetchChildSubmissionsForParent,
+  fetchLessonViews,
+  fetchLessonsForDisplay,
+  fetchLiveClasses
+} from '../../../lib/safeQueries';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
 type ChildSummary = {
@@ -13,6 +24,8 @@ type ChildSummary = {
     feedback: string | null;
     created_at: string;
   }[];
+  submissions: Awaited<ReturnType<typeof fetchChildSubmissionsForParent>>['data'];
+  lessonsViewed: number;
 };
 
 export default async function ParentDashboardPage() {
@@ -43,12 +56,14 @@ export default async function ParentDashboardPage() {
     redirect('/login');
   }
 
-  const { data: links } = await supabase
-    .from('parent_student_links')
-    .select('student_id')
-    .eq('parent_id', user.id);
+  const [linksResult, announcementsResult, liveClassesResult, lessonsResult] = await Promise.all([
+    supabase.from('parent_student_links').select('student_id').eq('parent_id', user.id),
+    fetchAnnouncements(supabase),
+    fetchLiveClasses(supabase),
+    fetchLessonsForDisplay(supabase)
+  ]);
 
-  const studentIds = (links ?? []).map((link) => link.student_id);
+  const studentIds = (linksResult.data ?? []).map((link) => link.student_id);
   const { data: studentProfiles } = studentIds.length
     ? await supabase.from('profiles').select('id, full_name').in('id', studentIds)
     : { data: [] as { id: string; full_name: string }[] };
@@ -56,24 +71,37 @@ export default async function ParentDashboardPage() {
   const children: ChildSummary[] = [];
 
   for (const student of studentProfiles ?? []) {
-    const [{ count: submissionCount }, { data: grades }] = await Promise.all([
+    const [{ count: submissionCount }, { data: grades }, submissionsResult, lessonViewsResult] = await Promise.all([
       supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('student_id', student.id),
       supabase
         .from('grades')
         .select('id, title, grade, feedback, created_at')
         .eq('student_id', student.id)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }),
+      fetchChildSubmissionsForParent(supabase, student.id),
+      fetchLessonViews(supabase, student.id)
     ]);
 
     children.push({
       id: student.id,
       full_name: student.full_name,
       submission_count: submissionCount ?? 0,
-      grades: grades ?? []
+      grades: grades ?? [],
+      submissions: submissionsResult.data ?? [],
+      lessonsViewed: lessonViewsResult.data.length
     });
   }
 
   const displayName = profile?.full_name || user.user_metadata?.full_name || 'Parent';
+  const totalLessons = lessonsResult.data?.length ?? 0;
+  const now = Date.now();
+  const upcomingClasses = (liveClassesResult.data ?? []).filter(
+    (item) => new Date(item.scheduled_at).getTime() >= now - item.duration_minutes * 60 * 1000
+  ).length;
+
+  const totalSubmissions = children.reduce((sum, child) => sum + child.submission_count, 0);
+  const totalGrades = children.reduce((sum, child) => sum + child.grades.length, 0);
+  const totalLessonsViewed = children.reduce((sum, child) => sum + child.lessonsViewed, 0);
 
   return (
     <section className="space-y-8">
@@ -91,6 +119,21 @@ export default async function ParentDashboardPage() {
         </div>
       </div>
 
+      {children.length > 0 && (
+        <ProgressSummary
+          label="Family Progress Summary"
+          lessonsViewed={totalLessonsViewed}
+          totalLessons={totalLessons * children.length}
+          submissionsCount={totalSubmissions}
+          gradesCount={totalGrades}
+          upcomingClasses={upcomingClasses}
+        />
+      )}
+
+      <AnnouncementsFeed announcements={announcementsResult.data ?? []} />
+
+      <LiveClassSchedule classes={liveClassesResult.data ?? []} />
+
       {!children.length ? (
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 text-slate-600">
           No children linked yet. Ask your teacher to link your parent account to your child&apos;s student account.
@@ -101,12 +144,16 @@ export default async function ParentDashboardPage() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-2xl font-semibold text-slate-950">{child.full_name}</h2>
-                <p className="text-sm text-slate-600">{child.submission_count} homework submission(s)</p>
+                <p className="text-sm text-slate-600">
+                  {child.lessonsViewed}/{totalLessons} lessons viewed · {child.submission_count} homework submission(s)
+                </p>
               </div>
               <span className="rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-800">
                 {child.grades.length} grade record(s)
               </span>
             </div>
+
+            <ParentHomeworkView submissions={child.submissions} childName={child.full_name} />
 
             <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200">
               <table className="min-w-full divide-y divide-slate-200 text-sm">

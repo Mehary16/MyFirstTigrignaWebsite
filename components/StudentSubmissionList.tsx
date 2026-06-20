@@ -22,6 +22,8 @@ export type StudentSubmissionRow = {
   submission_type: string;
   file_name: string | null;
   notes: string | null;
+  teacher_feedback?: string | null;
+  feedback_at?: string | null;
   created_at: string;
 };
 
@@ -295,6 +297,12 @@ export default function StudentSubmissionList({ studentId, initialSubmissions }:
                     {submission.file_name ? ` · ${submission.file_name}` : ''}
                   </p>
                   {submission.notes && <p className="mt-1 text-sm text-slate-600">{submission.notes}</p>}
+                  {submission.teacher_feedback && (
+                    <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                      <p className="text-xs font-semibold uppercase text-emerald-800">Teacher feedback</p>
+                      <p className="mt-1 text-sm text-emerald-900">{submission.teacher_feedback}</p>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {submission.video_url && (

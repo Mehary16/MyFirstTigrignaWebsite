@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ComponentProps } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createBrowserSupabaseClient } from '../../lib/supabaseClient';
 import { ensureUserProfile, resolveDashboardPath } from '../../lib/resolveDashboard';
 import { getEmailConfirmRedirectUrl } from '../../lib/siteUrl';
@@ -33,6 +34,8 @@ const LOGIN_COPY: Record<
     processing: string;
     signUpSuccess: string;
     emailConfirmFailed: string;
+    passwordResetFailed: string;
+    forgotPassword: string;
     supabaseConfigError: string;
     languageEn: string;
     languageTi: string;
@@ -58,6 +61,8 @@ const LOGIN_COPY: Record<
     processing: 'Processing...',
     signUpSuccess: 'Account created. Check your email and click the confirmation link to continue.',
     emailConfirmFailed: 'Email confirmation failed or expired. Please sign up again or log in.',
+    passwordResetFailed: 'Password reset link expired. Please request a new one.',
+    forgotPassword: 'Forgot password?',
     supabaseConfigError:
       'Could not reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart the dev server.',
     languageEn: 'EN',
@@ -83,6 +88,8 @@ const LOGIN_COPY: Record<
     processing: 'ይሰርሕ ኣሎ...',
     signUpSuccess: 'ሕሳብ ተፈጢሩ። ኢሜይልኩም ተመልክቶ ኣሎ። ኣብቲ ምርግጋፅ ሊንክ ጠዊቕኩም ቀጽሉ።',
     emailConfirmFailed: 'ኢሜይል ምርግጋጽ ኣይተኻእለን። ዳግም ተመዝገቡ ወይ እተዉ።',
+    passwordResetFailed: 'መሕለፊ ቃል ምቕይር ሊንክ ጊዜኡ ጸኒሑ። ዳግም ሓዱሽ ሊንክ ሓቲትኩም።',
+    forgotPassword: 'መሕለፊ ቃል ረሲዕኩም?',
     supabaseConfigError:
       'Supabase ዝደለኽምዎ ክንረክቦ ኣይከኣልናን። NEXT_PUBLIC_SUPABASE_URLን NEXT_PUBLIC_SUPABASE_ANON_KEYን ኣብ .env.local ኣረጋግጹ፣ ድሕሪኡ dev server ዳግም ጽቀጡ።',
     languageEn: 'EN',
@@ -117,11 +124,16 @@ export default function LoginPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('error') === 'email-confirmation-failed') {
+    const errorParam = params.get('error');
+    if (errorParam === 'email-confirmation-failed') {
       setError(copy.emailConfirmFailed);
       window.history.replaceState({}, '', '/login');
     }
-  }, [copy.emailConfirmFailed]);
+    if (errorParam === 'password-reset-failed') {
+      setError(copy.passwordResetFailed);
+      window.history.replaceState({}, '', '/login');
+    }
+  }, [copy.emailConfirmFailed, copy.passwordResetFailed]);
 
   const switchLocale = (next: LoginLocale) => {
     setLocale(next);
@@ -348,6 +360,13 @@ export default function LoginPage() {
               {showPassword ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
             </button>
           </div>
+          {mode === 'signIn' && (
+            <p className="mt-2 text-right">
+              <Link href="/forgot-password" className="text-sm font-semibold text-slate-700 hover:underline">
+                {copy.forgotPassword}
+              </Link>
+            </p>
+          )}
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

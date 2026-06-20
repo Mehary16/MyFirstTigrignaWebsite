@@ -2,6 +2,7 @@
 
 import { useState, type ComponentProps } from 'react';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
+import { LESSON_LEVELS, LESSON_LEVEL_LABELS, type LessonLevel } from '../lib/lessonLevels';
 
 export default function TeacherLessonForm() {
   const supabase = createBrowserSupabaseClient();
@@ -9,6 +10,7 @@ export default function TeacherLessonForm() {
   const [titleEnglish, setTitleEnglish] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [level, setLevel] = useState<LessonLevel | ''>('');
   const [videoUrl, setVideoUrl] = useState('');
   const [externalLink, setExternalLink] = useState('');
   const [status, setStatus] = useState<string | null>(null);
@@ -32,6 +34,7 @@ export default function TeacherLessonForm() {
           title,
           description,
           category,
+          level: level || null,
           video_url: videoUrl,
           external_link: externalLink
         }
@@ -46,6 +49,7 @@ export default function TeacherLessonForm() {
       setTitleEnglish('');
       setDescription('');
       setCategory('');
+      setLevel('');
       setVideoUrl('');
       setExternalLink('');
       setStatus('Lesson created successfully.');
@@ -88,7 +92,23 @@ export default function TeacherLessonForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700">Category</label>
+        <label className="block text-sm font-medium text-slate-700">Level</label>
+        <select
+          value={level}
+          onChange={(event) => setLevel(event.currentTarget.value as LessonLevel | '')}
+          className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 outline-none transition focus:border-slate-500"
+        >
+          <option value="">Select level (optional)</option>
+          {LESSON_LEVELS.map((item) => (
+            <option key={item} value={item}>
+              {LESSON_LEVEL_LABELS[item]}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700">Topic category</label>
         <input
           value={category}
           onChange={(event) => setCategory(event.target.value)}

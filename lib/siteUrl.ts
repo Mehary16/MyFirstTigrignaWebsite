@@ -37,3 +37,8 @@ export function getEmailConfirmRedirectUrl() {
   const next = encodeURIComponent('/auth/confirmed');
   return `${getSiteUrl()}/auth/callback?next=${next}`;
 }
+
+export function getPasswordResetRedirectUrl() {
+  const next = encodeURIComponent('/reset-password');
+  return `${getSiteUrl()}/auth/callback?next=${next}`;
+}

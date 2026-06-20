@@ -20,6 +20,8 @@ export default function DatabaseSetupAlert({ message }: DatabaseSetupAlertProps)
               <code className="rounded bg-amber-100 px-1.5 py-0.5">supabase/FIX_RLS_RECURSION.sql</code> if you see
               infinite recursion, otherwise{' '}
               <code className="rounded bg-amber-100 px-1.5 py-0.5">supabase/RUN_THIS_FIRST.sql</code>
+              , then{' '}
+              <code className="rounded bg-amber-100 px-1.5 py-0.5">supabase/TIER_1_AND_2_FEATURES.sql</code>
             </>
           )}{' '}
           from this project.

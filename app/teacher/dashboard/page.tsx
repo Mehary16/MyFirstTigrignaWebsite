@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import TeacherLessonForm from '../../../components/TeacherLessonForm';
+import TeacherLessonList from '../../../components/TeacherLessonList';
 import TeacherMaterialForm from '../../../components/TeacherMaterialForm';
 import TeacherMaterialList from '../../../components/TeacherMaterialList';
 import type { MaterialRow } from '../../../lib/teacherMaterials';
@@ -7,9 +8,13 @@ import TeacherSubmissionGrid from '../../../components/TeacherSubmissionGrid';
 import TeacherStudentList, { type StudentListItem } from '../../../components/TeacherStudentList';
 import TeacherGradeManager, { type GradeRow } from '../../../components/TeacherGradeManager';
 import TeacherParentLinkForm from '../../../components/TeacherParentLinkForm';
+import TeacherAssignmentManager from '../../../components/TeacherAssignmentManager';
+import TeacherLiveClassManager from '../../../components/TeacherLiveClassManager';
+import TeacherAnnouncementManager from '../../../components/TeacherAnnouncementManager';
 import LogoutButton from '../../../components/LogoutButton';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
 import { isTeacherProfile, ensureTeacherProfileRole } from '../../../lib/auth';
+import { fetchAssignments, fetchAnnouncements, fetchLessonsForDisplay, fetchLiveClasses } from '../../../lib/safeQueries';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
@@ -36,27 +41,36 @@ export default async function TeacherDashboardPage() {
 
   await ensureTeacherProfileRole(supabase, user.id, userEmail, adminEmail, profile?.role);
 
-  const [studentsResult, submissionsResult, gradesResult, documentsResult] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('id, full_name, created_at, is_active, suspended_reason', { count: 'exact' })
-      .eq('role', 'Student')
-      .order('created_at', { ascending: false }),
-    supabase.from('submissions').select('student_id'),
-    supabase.from('grades').select('id, student_id, title, grade, feedback, created_at').order('created_at', { ascending: false }),
-    supabase
-      .from('documents')
-      .select('id, title, file_url, external_link, material_category, file_name, created_at')
-      .order('created_at', { ascending: false })
-  ]);
+  const [studentsResult, submissionsResult, gradesResult, documentsResult, lessonsResult, assignmentsResult, liveClassesResult, announcementsResult] =
+    await Promise.all([
+      supabase
+        .from('profiles')
+        .select('id, full_name, created_at, is_active, suspended_reason', { count: 'exact' })
+        .eq('role', 'Student')
+        .order('created_at', { ascending: false }),
+      supabase.from('submissions').select('student_id'),
+      supabase.from('grades').select('id, student_id, title, grade, feedback, created_at').order('created_at', { ascending: false }),
+      supabase
+        .from('documents')
+        .select('id, title, file_url, external_link, material_category, file_name, created_at')
+        .order('created_at', { ascending: false }),
+      fetchLessonsForDisplay(supabase),
+      fetchAssignments(supabase),
+      fetchLiveClasses(supabase),
+      fetchAnnouncements(supabase)
+    ]);
 
   const students = studentsResult.data;
   const studentCount = studentsResult.count;
   const submissionRows = submissionsResult.data;
   const gradeRows = gradesResult.data;
   const documents = (documentsResult.data ?? []) as MaterialRow[];
+  const lessons = lessonsResult.data ?? [];
+  const assignments = assignmentsResult.data ?? [];
+  const liveClasses = liveClassesResult.data ?? [];
+  const announcements = announcementsResult.data ?? [];
 
-  const setupMessage = [submissionsResult.error, gradesResult.error, documentsResult.error]
+  const setupMessage = [submissionsResult.error, gradesResult.error, documentsResult.error, lessonsResult.error, assignmentsResult.error]
     .filter(Boolean)
     .map((error) => formatDatabaseError(error!.message))[0] ?? null;
 
@@ -92,7 +106,7 @@ export default async function TeacherDashboardPage() {
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.2em] text-amber-700">Teacher Dashboard / ናይ መምህር ዳሽቦርድ</p>
-            <h1 className="text-3xl font-semibold text-slate-900">ሓለዋ ዳሽቦርድ</h1>
+            <h1 className="text-3xl font-semibold text-slate-900">ናይ ተማሃሮ ንጥፈታት መከታተሊ</h1>
             <p className="mt-1 text-sm text-slate-600">Welcome, {displayName}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -102,12 +116,24 @@ export default async function TeacherDashboardPage() {
           </div>
         </div>
         <p className="mt-3 max-w-2xl text-slate-600">
-          Create lessons, upload documents and media, review submissions, manage students, assign grades, and link parents.
+          Create lessons, assign homework, schedule live classes, post announcements, review submissions, and manage grades.
         </p>
       </div>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
         <TeacherStudentList students={studentList} totalCount={studentCount ?? studentList.length} />
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
+        <TeacherAssignmentManager initialAssignments={assignments} />
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
+        <TeacherLiveClassManager initialClasses={liveClasses} />
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
+        <TeacherAnnouncementManager initialAnnouncements={announcements} />
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
@@ -122,15 +148,17 @@ export default async function TeacherDashboardPage() {
         <div className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
             <h2 className="text-2xl font-semibold text-slate-900">Add New Lesson</h2>
-            <p className="mt-2 text-slate-600">Enter the lesson title in Tigrigna and English, then save it to the lesson library.</p>
+            <p className="mt-2 text-slate-600">Enter the lesson title in Tigrigna and English, set a level, then save it to the lesson library.</p>
             <div className="mt-6"><TeacherLessonForm /></div>
           </section>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
+            <TeacherLessonList initialLessons={lessons} />
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
             <h2 className="text-2xl font-semibold text-slate-900">Upload Documents</h2>
-            <p className="mt-2 text-slate-600">
-              Share PDFs, Word, Excel, PowerPoint, images, and other files with students.
-            </p>
+            <p className="mt-2 text-slate-600">Share PDFs, Word, Excel, PowerPoint, images, and other files with students.</p>
             <div className="mt-6">
               <TeacherMaterialForm category="document" />
             </div>
@@ -139,9 +167,7 @@ export default async function TeacherDashboardPage() {
 
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
             <h2 className="text-2xl font-semibold text-slate-900">Upload Video / Audio</h2>
-            <p className="mt-2 text-slate-600">
-              Share lesson recordings, pronunciation clips, or audio materials with students.
-            </p>
+            <p className="mt-2 text-slate-600">Share lesson recordings, pronunciation clips, or audio materials with students.</p>
             <div className="mt-6">
               <TeacherMaterialForm category="media" />
             </div>

@@ -15,16 +15,20 @@ import {
   type SubmissionType
 } from '../lib/submissionMedia';
 
+import type { AssignmentRow } from './TeacherAssignmentManager';
+
 interface StudentHomeworkFormProps {
   studentId: string;
+  assignments?: AssignmentRow[];
 }
 
-export default function StudentHomeworkForm({ studentId }: StudentHomeworkFormProps) {
+export default function StudentHomeworkForm({ studentId, assignments = [] }: StudentHomeworkFormProps) {
   const router = useRouter();
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [submissionType, setSubmissionType] = useState<SubmissionType>('video');
   const [mediaUrl, setMediaUrl] = useState('');
   const [notes, setNotes] = useState('');
+  const [assignmentId, setAssignmentId] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -113,7 +117,8 @@ export default function StudentHomeworkForm({ studentId }: StudentHomeworkFormPr
           video_url: storedUrl,
           submission_type: resolvedType,
           file_name: fileName,
-          notes: notes.trim() || null
+          notes: notes.trim() || null,
+          assignment_id: assignmentId || null
         }
       ]);
 
@@ -124,6 +129,7 @@ export default function StudentHomeworkForm({ studentId }: StudentHomeworkFormPr
 
       setMediaUrl('');
       setNotes('');
+      setAssignmentId('');
       setFile(null);
       setStatus('Homework submitted successfully!');
       router.refresh();
@@ -137,8 +143,27 @@ export default function StudentHomeworkForm({ studentId }: StudentHomeworkFormPr
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
+      {assignments.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Assignment (optional)</label>
+          <select
+            value={assignmentId}
+            onChange={(event) => setAssignmentId(event.currentTarget.value)}
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 outline-none transition focus:border-slate-500"
+          >
+            <option value="">General homework (no specific assignment)</option>
+            {assignments.map((assignment) => (
+              <option key={assignment.id} value={assignment.id}>
+                {assignment.title}
+                {assignment.due_date ? ` — due ${new Date(assignment.due_date).toLocaleDateString()}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div>
-        <p className="block text-sm font-medium text-slate-700">Submission type / ዓይነት ስራሕ ቤት</p>
+        <p className="block text-sm font-medium text-slate-700">Submission type / ዝርከብ ዓይነት ስራሕ</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {(Object.keys(SUBMISSION_TYPE_LABELS) as SubmissionType[]).map((type) => (
             <button
