@@ -40,7 +40,10 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
         .single();
 
       if (error) {
-        setStatus(`Could not post announcement: ${error.message}`);
+        const hint = error.message.includes('announcements')
+          ? ' Run supabase/FIX_ANNOUNCEMENTS.sql in Supabase SQL Editor, then try again.'
+          : '';
+        setStatus(`Could not post announcement: ${error.message}${hint}`);
         return;
       }
 
