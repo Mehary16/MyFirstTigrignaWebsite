@@ -47,10 +47,32 @@ export default function TeacherSubmissionGrid() {
     setLoading(true);
     setError(null);
 
-    const { data, error: fetchError } = await supabase
-      .from('submissions')
-      .select('id, video_url, submission_type, file_name, notes, teacher_feedback, feedback_at, created_at, assignment_id, profiles(full_name), assignments(title)')
-      .order('created_at', { ascending: false });
+    const fullSelect =
+      'id, video_url, submission_type, file_name, notes, teacher_feedback, feedback_at, created_at, assignment_id, profiles(full_name), assignments(title)';
+    const basicSelect =
+      'id, video_url, submission_type, file_name, notes, teacher_feedback, feedback_at, created_at, assignment_id, profiles(full_name)';
+
+    let data: SubmissionRow[] | null = null;
+    let fetchError: { message: string } | null = null;
+
+    const fullResult = await supabase.from('submissions').select(fullSelect).order('created_at', { ascending: false });
+    data = (fullResult.data ?? null) as SubmissionRow[] | null;
+    fetchError = fullResult.error;
+
+    if (fetchError?.message.includes('relationship') && fetchError.message.includes('assignments')) {
+      const basicResult = await supabase.from('submissions').select(basicSelect).order('created_at', { ascending: false });
+      data = (basicResult.data ?? null) as SubmissionRow[] | null;
+      fetchError = basicResult.error;
+    }
+
+    if (fetchError?.message.includes('assignment_id') || fetchError?.message.includes('teacher_feedback')) {
+      const legacyResult = await supabase
+        .from('submissions')
+        .select('id, video_url, submission_type, file_name, notes, created_at, profiles(full_name)')
+        .order('created_at', { ascending: false });
+      data = (legacyResult.data ?? null) as SubmissionRow[] | null;
+      fetchError = legacyResult.error;
+    }
 
     if (fetchError) {
       setError(formatDatabaseError(fetchError.message));

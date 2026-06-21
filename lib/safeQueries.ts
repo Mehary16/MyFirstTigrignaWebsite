@@ -8,6 +8,10 @@ function isMissingTableError(message: string, table: string) {
   return message.includes(table) && (message.includes('does not exist') || message.includes('schema cache'));
 }
 
+function isMissingAssignmentsRelationshipError(message: string) {
+  return message.includes('relationship') && message.includes('assignments');
+}
+
 function isMissingColumnError(message: string, column: string) {
   return message.includes(column) || message.includes('schema cache');
 }
@@ -221,7 +225,11 @@ export async function fetchChildSubmissionsForParent(supabase: SupabaseClient, s
     return { data: full.data ?? [], error: null as QueryError };
   }
 
-  if (isMissingColumnError(full.error.message, 'teacher_feedback') || isMissingColumnError(full.error.message, 'assignment_id')) {
+  if (
+    isMissingColumnError(full.error.message, 'teacher_feedback') ||
+    isMissingColumnError(full.error.message, 'assignment_id') ||
+    isMissingAssignmentsRelationshipError(full.error.message)
+  ) {
     const basic = await supabase
       .from('submissions')
       .select('id, video_url, submission_type, file_name, notes, created_at')
