@@ -33,17 +33,13 @@ export default async function HomePage() {
           A safe learning environment for students aged 6-17 to practice Tigrigna through videos, reading materials, and
           homework submissions. Teachers manage classes; parents track their children&apos;s grades.
         </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          {!user ? (
-            <Link href="/login" className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
-              Login / መእተዊ
-            </Link>
-          ) : (
+        {user && (
+          <div className="mt-6 flex flex-wrap gap-3">
             <Link href={dashboardHref} className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
               Go to {dashboardLabel}
             </Link>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
