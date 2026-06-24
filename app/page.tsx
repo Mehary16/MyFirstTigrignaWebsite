@@ -51,7 +51,6 @@ export default async function HomePage() {
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
           <h3 className="text-xl font-semibold">Teacher Dashboard</h3>
           <p className="mt-3 text-slate-600">Create lessons, review submissions, assign grades, and manage students.</p>
-          <p className="mt-2 text-sm text-slate-500">Use the teacher email set in <code className="text-xs">NEXT_PUBLIC_ADMIN_EMAIL</code>.</p>
         </div>
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
           <h3 className="text-xl font-semibold">Parent Dashboard</h3>
