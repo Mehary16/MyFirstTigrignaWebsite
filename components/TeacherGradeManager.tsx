@@ -167,7 +167,7 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Student grades / ናይ ተማሃሮ ደረጃ</h2>
+        <h2 className="text-2xl font-semibold text-slate-900">Student grades /  ነጥብታት ተማሃሮ</h2>
         <p className="mt-2 text-slate-600">
           Record grades by student name, export to Excel to edit in bulk, then import the file back.
         </p>
