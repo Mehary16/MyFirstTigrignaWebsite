@@ -185,8 +185,6 @@ export default function TeacherMaterialList({ category, initialMaterials }: Teac
   return (
     <div className="mt-8 border-t border-slate-200 pt-6">
       <h3 className="text-lg font-semibold text-slate-900">Uploaded {MATERIAL_CATEGORY_LABELS[category].toLowerCase()}</h3>
-      <p className="mt-1 text-sm text-slate-600">Edit titles or links, or remove items you no longer need.</p>
-
       {status && (
         <p role="status" className="mt-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
           {status}
