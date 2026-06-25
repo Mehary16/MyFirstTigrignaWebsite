@@ -26,6 +26,11 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
   const [dueDate, setDueDate] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
 
   const handleCreate: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
     event.preventDefault();
@@ -81,6 +86,68 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
     router.refresh();
   };
 
+  const handleOpen = (id: string) => {
+    setOpenId((current) => (current === id ? null : id));
+  };
+
+  const startEdit = (assignment: AssignmentRow) => {
+    setEditingId(assignment.id);
+    setEditTitle(assignment.title);
+    setEditDescription(assignment.description ?? '');
+    setEditDueDate(assignment.due_date ? new Date(assignment.due_date).toISOString().slice(0, 16) : '');
+    setOpenId(assignment.id);
+    setStatus(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditTitle('');
+    setEditDescription('');
+    setEditDueDate('');
+  };
+
+  const handleEditSave: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
+    event.preventDefault();
+    if (!editingId) return;
+
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      const { error } = await supabase
+        .from('assignments')
+        .update({
+          title: editTitle.trim(),
+          description: editDescription.trim() || null,
+          due_date: editDueDate ? new Date(editDueDate).toISOString() : null
+        })
+        .eq('id', editingId);
+
+      if (error) {
+        setStatus(`Could not update assignment: ${error.message}`);
+        return;
+      }
+
+      setAssignments((current) =>
+        current.map((assignment) =>
+          assignment.id === editingId
+            ? {
+                ...assignment,
+                title: editTitle.trim(),
+                description: editDescription.trim() || null,
+                due_date: editDueDate ? new Date(editDueDate).toISOString() : null
+              }
+            : assignment
+        )
+      );
+      setStatus('Assignment updated.');
+      cancelEdit();
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -133,7 +200,8 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
       <div className="space-y-3">
         {assignments.length ? (
           assignments.map((assignment) => (
-            <article key={assignment.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+            <article key={assignment.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="font-semibold text-slate-900">{assignment.title}</h3>
                 {assignment.description && <p className="mt-1 text-sm text-slate-600">{assignment.description}</p>}
@@ -143,13 +211,100 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
                   </p>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => handleDelete(assignment.id)}
-                className="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
-              >
-                Delete
-              </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleOpen(assignment.id)}
+                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    {openId === assignment.id ? 'Close' : 'Open'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startEdit(assignment)}
+                    className="rounded-full border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(assignment.id)}
+                    className="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              {openId === assignment.id && (
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  {editingId === assignment.id ? (
+                    <form className="space-y-4" onSubmit={handleEditSave}>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700">Title</label>
+                        <input
+                          value={editTitle}
+                          onChange={(event) => setEditTitle(event.currentTarget.value)}
+                          required
+                          className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 outline-none focus:border-slate-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700">Description</label>
+                        <textarea
+                          value={editDescription}
+                          onChange={(event) => setEditDescription(event.currentTarget.value)}
+                          rows={3}
+                          className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 outline-none focus:border-slate-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700">Due date</label>
+                        <input
+                          type="datetime-local"
+                          value={editDueDate}
+                          onChange={(event) => setEditDueDate(event.currentTarget.value)}
+                          className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 outline-none focus:border-slate-500"
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="submit"
+                          disabled={loading}
+                          className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-700 disabled:bg-slate-400"
+                        >
+                          {loading ? 'Saving...' : 'Save changes'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-white"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="space-y-2 text-sm text-slate-700">
+                      <p>
+                        <span className="font-semibold text-slate-900">Title:</span> {assignment.title}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-slate-900">Description:</span>{' '}
+                        {assignment.description || 'No description added.'}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-slate-900">Due date:</span>{' '}
+                        {assignment.due_date ? new Date(assignment.due_date).toLocaleString() : 'No due date set.'}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-slate-900">Created:</span>{' '}
+                        {new Date(assignment.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </article>
           ))
         ) : (
