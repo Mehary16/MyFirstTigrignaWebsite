@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: 'ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ',
   description: 'A Tigrigna language learning portal for students, teachers and parents to learn and teach Tigrigna language.',
   openGraph: {
-    description: 'ተምሃሮ፣ መምህራንን ወለድን ቋንቋ ትግርኛ ንምምሃርን ንምስትምሃርን ዝሕግዝ ፖርታል',
+    description: 'መማህራንን ወለድን ንተምሃሮ ቋንቋ ትግርኛ ንምምሃርን ንምስትምሃርን ዝሕግዝ ፖርታል',
   }
 };
 

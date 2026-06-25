@@ -96,7 +96,7 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Registered Students / ተመዝጋቢ ተማሃሮ</h2>
+        <h2 className="text-2xl font-semibold text-slate-900">Registered Students / ዝተመዝገቡ ተማሃሮ</h2>
         <p className="mt-2 text-slate-600">Monitor signups, activity, and suspend students when needed.</p>
       </div>
 
