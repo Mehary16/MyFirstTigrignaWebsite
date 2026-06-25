@@ -165,7 +165,7 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
                 <p className="mt-1 text-xs text-slate-500">{new Date(item.created_at).toLocaleString()}</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">{item.body}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-nowrap gap-2">
                 <button
                   type="button"
                   onClick={() => handleOpen(item.id)}
