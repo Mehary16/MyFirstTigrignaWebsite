@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bell,
   BookOpen,
@@ -112,6 +112,7 @@ export default function TeacherDashboardShell({
 }: TeacherDashboardShellProps) {
   const [activeTab, setActiveTab] = useState<TeacherTab>('overview');
   const [showQuickActions, setShowQuickActions] = useState(false);
+  const quickActionsRef = useRef<HTMLDivElement | null>(null);
 
   const overview = useMemo(() => {
     const activeStudents = studentList.filter((student) => student.is_active).length;
@@ -131,6 +132,19 @@ export default function TeacherDashboardShell({
     };
   }, [announcements, assignments, lessons, liveClasses, studentList]);
 
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!quickActionsRef.current) return;
+      if (quickActionsRef.current.contains(event.target as Node)) return;
+      setShowQuickActions(false);
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, []);
+
   return (
     <div className="space-y-8">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -145,7 +159,7 @@ export default function TeacherDashboardShell({
           <div>
             <h2 className="text-xl font-semibold text-slate-900">Teacher Workspace</h2>
           </div>
-          <div className="relative">
+          <div ref={quickActionsRef} className="relative">
             <button
               type="button"
               onClick={() => setShowQuickActions((current) => !current)}
