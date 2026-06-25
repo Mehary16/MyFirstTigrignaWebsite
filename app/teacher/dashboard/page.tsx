@@ -1,16 +1,8 @@
 import { redirect } from 'next/navigation';
-import TeacherLessonForm from '../../../components/TeacherLessonForm';
-import TeacherLessonList from '../../../components/TeacherLessonList';
-import TeacherMaterialForm from '../../../components/TeacherMaterialForm';
-import TeacherMaterialList from '../../../components/TeacherMaterialList';
 import type { MaterialRow } from '../../../lib/teacherMaterials';
-import TeacherSubmissionGrid from '../../../components/TeacherSubmissionGrid';
-import TeacherStudentList, { type StudentListItem } from '../../../components/TeacherStudentList';
-import TeacherGradeManager, { type GradeRow } from '../../../components/TeacherGradeManager';
-import TeacherParentLinkForm from '../../../components/TeacherParentLinkForm';
-import TeacherAssignmentManager from '../../../components/TeacherAssignmentManager';
-import TeacherLiveClassManager from '../../../components/TeacherLiveClassManager';
-import TeacherAnnouncementManager from '../../../components/TeacherAnnouncementManager';
+import { type StudentListItem } from '../../../components/TeacherStudentList';
+import { type GradeRow } from '../../../components/TeacherGradeManager';
+import TeacherDashboardShell from '../../../components/TeacherDashboardShell';
 import LogoutButton from '../../../components/LogoutButton';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
 import { isTeacherProfile, ensureTeacherProfileRole } from '../../../lib/auth';
@@ -119,66 +111,17 @@ export default async function TeacherDashboardPage() {
           Create lessons, assign homework, schedule live classes, post announcements, review submissions, and manage grades.
         </p>
       </div>
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
-        <TeacherStudentList students={studentList} totalCount={studentCount ?? studentList.length} />
-      </section>
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
-        <TeacherAssignmentManager initialAssignments={assignments} />
-      </section>
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
-        <TeacherLiveClassManager initialClasses={liveClasses} />
-      </section>
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
-        <TeacherAnnouncementManager initialAnnouncements={announcements} />
-      </section>
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
-        <TeacherGradeManager students={studentOptions} initialGrades={grades} />
-      </section>
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
-        <TeacherParentLinkForm students={studentOptions} />
-      </section>
-
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
-        <div className="space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
-            <h2 className="text-2xl font-semibold text-slate-900">Add New Lesson</h2>
-            <p className="mt-2 text-slate-600">Enter the lesson title in Tigrigna and English, set a level, then save it to the lesson library.</p>
-            <div className="mt-6"><TeacherLessonForm /></div>
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
-            <TeacherLessonList initialLessons={lessons} />
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
-            <h2 className="text-2xl font-semibold text-slate-900">Upload Documents</h2>
-            <p className="mt-2 text-slate-600">Share PDFs, Word, Excel, PowerPoint, images, and other files with students.</p>
-            <div className="mt-6">
-              <TeacherMaterialForm category="document" />
-            </div>
-            <TeacherMaterialList category="document" initialMaterials={documents} />
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
-            <h2 className="text-2xl font-semibold text-slate-900">Upload Video / Audio</h2>
-            <p className="mt-2 text-slate-600">Share lesson recordings, pronunciation clips, or audio materials with students.</p>
-            <div className="mt-6">
-              <TeacherMaterialForm category="media" />
-            </div>
-            <TeacherMaterialList category="media" initialMaterials={documents} />
-          </section>
-        </div>
-
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
-          <TeacherSubmissionGrid />
-        </div>
-      </div>
+      <TeacherDashboardShell
+        studentList={studentList}
+        studentCount={studentCount ?? studentList.length}
+        studentOptions={studentOptions}
+        grades={grades}
+        documents={documents}
+        lessons={lessons}
+        assignments={assignments}
+        liveClasses={liveClasses}
+        announcements={announcements}
+      />
     </section>
   );
 }
