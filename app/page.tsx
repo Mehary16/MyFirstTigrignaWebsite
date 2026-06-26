@@ -33,11 +33,7 @@ export default async function HomePage() {
             <Link href={dashboardHref} className="link-button-primary">
               Go to {dashboardLabel}
             </Link>
-          ) : (
-            <Link href="/login" className="link-button-primary">
-              Login / መእተዊ
-            </Link>
-          )
+          ) : undefined
         }
       />
 
@@ -91,20 +87,6 @@ export default async function HomePage() {
           </CardContent>
         </Card>
       </div>
-
-      {!user && (
-        <Card variant="muted" padding="lg" className="text-center">
-          <CardTitle className="text-xl">Ready to start?</CardTitle>
-          <CardDescription className="mx-auto mt-2 max-w-xl">
-            Create an account or sign in to access your personalized dashboard.
-          </CardDescription>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link href="/login" className="link-button-primary">
-              Get started
-            </Link>
-          </div>
-        </Card>
-      )}
     </section>
   );
 }
