@@ -2,6 +2,7 @@
 
 import {
   getMaterialDownloadLabel,
+  getMaterialFileHref,
   inferMediaKind,
   type MaterialRow
 } from '../lib/teacherMaterials';
@@ -59,9 +60,10 @@ export default function StudentMaterialSection({
                 <div className="flex flex-wrap gap-2">
                   {material.file_url && (
                     <a
-                      href={material.file_url}
-                      target="_blank"
-                      rel="noreferrer"
+                      href={getMaterialFileHref(material) ?? material.file_url}
+                      {...(material.material_category === 'media'
+                        ? { target: '_blank', rel: 'noreferrer' }
+                        : {})}
                       className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
                     >
                       {getMaterialDownloadLabel(material)}

@@ -122,7 +122,20 @@ export function getMaterialDownloadLabel(material: Pick<MaterialRow, 'material_c
     return inferMediaKind(undefined, material.file_url, material.file_name) === 'audio' ? 'Play audio' : 'Play video';
   }
 
-  return 'Download file';
+  return 'Download';
+}
+
+/** Public Supabase URLs open inline in the browser; append ?download= to force a file save. */
+export function getMaterialFileHref(material: Pick<MaterialRow, 'material_category' | 'file_url' | 'file_name'>) {
+  if (!material.file_url) return null;
+
+  if (material.material_category === 'media') {
+    return material.file_url;
+  }
+
+  const url = new URL(material.file_url);
+  url.searchParams.set('download', material.file_name?.trim() || '');
+  return url.toString();
 }
 
 export function normalizeMaterialCategory(value: string | null | undefined): MaterialCategory {

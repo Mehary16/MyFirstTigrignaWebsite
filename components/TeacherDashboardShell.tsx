@@ -58,15 +58,20 @@ function OverviewCard({
   label,
   value,
   helper,
-  icon: Icon
+  icon: Icon,
+  onClick
 }: {
   label: string;
   value: string | number;
   helper: string;
   icon: React.ComponentType<{ className?: string }>;
+  onClick?: () => void;
 }) {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
+  const className =
+    'w-full rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm shadow-slate-200/50 transition hover:border-slate-300 hover:shadow-md lg:p-5';
+
+  const content = (
+    <>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
         <div className="rounded-2xl bg-slate-100 p-2 text-slate-700">
@@ -75,8 +80,18 @@ function OverviewCard({
       </div>
       <p className="mt-3 text-3xl font-semibold text-slate-950">{value}</p>
       <p className="mt-2 text-sm text-slate-600">{helper}</p>
-    </div>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
 }
 
 function SectionCard({
@@ -146,14 +161,40 @@ export default function TeacherDashboardShell({
   }, []);
 
   return (
-    <div className="space-y-8">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <OverviewCard label="Students" value={studentCount} helper={`${overview.activeStudents} active learners`} icon={Users} />
-        <OverviewCard label="Homework" value={assignments.length} helper={`${overview.pendingReview} total submissions to review`} icon={ClipboardList} />
-        <OverviewCard label="Live Classes" value={overview.upcomingClasses} helper="Upcoming sessions on the calendar" icon={Video} />
-        <OverviewCard label="Announcements" value={announcements.length} helper="Recent updates for students and parents" icon={Bell} />
-      </div>
+    <div className="grid gap-8 lg:grid-cols-[minmax(240px,280px)_1fr] lg:items-start">
+      <aside className="space-y-3 lg:sticky lg:top-6">
+        <p className="px-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Summary</p>
+        <OverviewCard
+          label="Students"
+          value={studentCount}
+          helper={`${overview.activeStudents} active learners`}
+          icon={Users}
+          onClick={() => setActiveTab('students')}
+        />
+        <OverviewCard
+          label="Homework"
+          value={assignments.length}
+          helper={`${overview.pendingReview} total submissions to review`}
+          icon={ClipboardList}
+          onClick={() => setActiveTab('homework')}
+        />
+        <OverviewCard
+          label="Live Classes"
+          value={overview.upcomingClasses}
+          helper="Upcoming sessions on the calendar"
+          icon={Video}
+          onClick={() => setActiveTab('communication')}
+        />
+        <OverviewCard
+          label="Announcements"
+          value={announcements.length}
+          helper="Recent updates for students and parents"
+          icon={Bell}
+          onClick={() => setActiveTab('communication')}
+        />
+      </aside>
 
+      <div className="min-w-0 space-y-8">
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/50">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -377,6 +418,7 @@ export default function TeacherDashboardShell({
           </SectionCard>
         </div>
       )}
+      </div>
     </div>
   );
 }
