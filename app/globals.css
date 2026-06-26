@@ -4,6 +4,16 @@
 
 :root {
   color-scheme: light;
+  --brand-50: #fffbeb;
+  --brand-100: #fef3c7;
+  --brand-700: #b45309;
+  --brand-800: #92400e;
+  --brand-900: #0f172a;
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
 }
 
 * {
@@ -16,18 +26,37 @@ html {
 
 body {
   margin: 0;
-  font-family: 'Trebuchet MS', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(251, 191, 36, 0.18), transparent 28%),
-    radial-gradient(circle at top right, rgba(96, 165, 250, 0.18), transparent 26%),
-    #f8fafc;
+    radial-gradient(circle at top left, rgba(251, 191, 36, 0.14), transparent 30%),
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 28%),
+  linear-gradient(180deg, #fbf7ef 0%, #f8fafc 45%, #eef4ff 100%);
+  color: var(--text);
+}
+
+.font-ethiopic {
+  font-family: var(--font-ethiopic), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 ::selection {
-  background: #cbd5e1;
+  background: #fde68a;
   color: #0f172a;
 }
 
 a {
   text-decoration: none;
+}
+
+@layer components {
+  .link-button {
+    @apply inline-flex items-center justify-center rounded-full font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+  }
+
+  .link-button-primary {
+    @apply link-button bg-brand-900 px-5 py-3 text-sm text-white shadow-sm hover:bg-brand-800 focus-visible:ring-brand-900/30;
+  }
+
+  .link-button-secondary {
+    @apply link-button border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-slate-300;
+  }
 }

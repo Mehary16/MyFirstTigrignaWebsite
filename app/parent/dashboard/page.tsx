@@ -4,6 +4,7 @@ import ProgressSummary from '../../../components/ProgressSummary';
 import AnnouncementsFeed from '../../../components/AnnouncementsFeed';
 import LiveClassSchedule from '../../../components/LiveClassSchedule';
 import ParentHomeworkView from '../../../components/ParentHomeworkView';
+import { Badge, Card, EmptyState, PageHeader } from '../../../components/ui';
 import {
   fetchAnnouncements,
   fetchChildSubmissionsForParent,
@@ -105,19 +106,17 @@ export default async function ParentDashboardPage() {
 
   return (
     <section className="space-y-8">
-      <div className="rounded-[2rem] border border-amber-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-amber-700">Parent Dashboard / ናይ ወለዲ ዳሽቦርድ</p>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-950">Welcome, {displayName}</h1>
-            <p className="mt-2 text-slate-600">See how your children are doing in Tigrigna class.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{displayName}</p>
+      <PageHeader
+        eyebrow="Parent Dashboard / ናይ ወለዲ ዳሽቦርድ"
+        title={`Welcome, ${displayName}`}
+        description="See how your children are doing in Tigrigna class."
+        actions={
+          <>
+            <Badge>{displayName}</Badge>
             <LogoutButton />
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {children.length > 0 && (
         <ProgressSummary
@@ -135,12 +134,13 @@ export default async function ParentDashboardPage() {
       <LiveClassSchedule classes={liveClassesResult.data ?? []} />
 
       {!children.length ? (
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-8 text-slate-600">
-          No children linked yet. Ask your teacher to link your parent account to your child&apos;s student account.
-        </div>
+        <EmptyState
+          title="No children linked yet"
+          description="Ask your teacher to link your parent account to your child's student account."
+        />
       ) : (
         children.map((child) => (
-          <section key={child.id} className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
+          <Card key={child.id} variant="elevated">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-2xl font-semibold text-slate-950">{child.full_name}</h2>
@@ -148,9 +148,7 @@ export default async function ParentDashboardPage() {
                   {child.lessonsViewed}/{totalLessons} lessons viewed · {child.submission_count} homework submission(s)
                 </p>
               </div>
-              <span className="rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-800">
-                {child.grades.length} grade record(s)
-              </span>
+              <Badge variant="brand">{child.grades.length} grade record(s)</Badge>
             </div>
 
             <ParentHomeworkView submissions={child.submissions} childName={child.full_name} />
@@ -185,7 +183,7 @@ export default async function ParentDashboardPage() {
                 </tbody>
               </table>
             </div>
-          </section>
+          </Card>
         ))
       )}
     </section>

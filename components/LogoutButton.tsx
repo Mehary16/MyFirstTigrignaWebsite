@@ -2,12 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
+import Button from './ui/Button';
 
 type LogoutButtonProps = {
   className?: string;
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
 };
 
-export default function LogoutButton({ className }: LogoutButtonProps) {
+export default function LogoutButton({ className, variant = 'secondary' }: LogoutButtonProps) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -18,15 +20,8 @@ export default function LogoutButton({ className }: LogoutButtonProps) {
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleLogout}
-      className={
-        className ??
-        'rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50'
-      }
-    >
+    <Button type="button" variant={variant} onClick={handleLogout} className={className}>
       Logout / ውጻእ
-    </button>
+    </Button>
   );
 }

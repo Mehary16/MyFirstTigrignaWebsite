@@ -5,6 +5,7 @@ import { type GradeRow } from '../../../components/TeacherGradeManager';
 import TeacherDashboardShell from '../../../components/TeacherDashboardShell';
 import LogoutButton from '../../../components/LogoutButton';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
+import { Badge, PageHeader } from '../../../components/ui';
 import { isTeacherProfile, ensureTeacherProfileRole } from '../../../lib/auth';
 import { fetchAssignments, fetchAnnouncements, fetchLessonsForDisplay, fetchLiveClasses } from '../../../lib/safeQueries';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
@@ -94,23 +95,19 @@ export default async function TeacherDashboardPage() {
     <section className="space-y-8">
       <DatabaseSetupAlert message={setupMessage} />
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm shadow-slate-200/50">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-amber-700">Teacher Dashboard / ናይ መምህር ዳሽቦርድ</p>
-            <h1 className="text-3xl font-semibold text-slate-900">ናይ ተማሃሮ ንጥፈታት መከታተሊ</h1>
-            <p className="mt-1 text-sm text-slate-600">Welcome, {displayName}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="rounded-full bg-blue-600 px-4 py-2 text-base font-medium text-white">Teacher</p>
-            <p className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{displayName}</p>
+      <PageHeader
+        eyebrow="Teacher Dashboard / ናይ መምህር ዳሽቦርድ"
+        title="ናይ ተማሃሮ ንጥፈታት መከታተሊ"
+        description={`Welcome, ${displayName}. Create lessons, assign homework, schedule live classes, post announcements, review submissions, and manage grades.`}
+        actions={
+          <>
+            <Badge variant="role">Teacher</Badge>
+            <Badge>{displayName}</Badge>
             <LogoutButton />
-          </div>
-        </div>
-        <p className="mt-3 max-w-2xl text-slate-600">
-          Create lessons, assign homework, schedule live classes, post announcements, review submissions, and manage grades.
-        </p>
-      </div>
+          </>
+        }
+      />
+
       <TeacherDashboardShell
         studentList={studentList}
         studentCount={studentCount ?? studentList.length}
