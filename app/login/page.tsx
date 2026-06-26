@@ -7,6 +7,11 @@ import Link from 'next/link';
 import { createBrowserSupabaseClient } from '../../lib/supabaseClient';
 import { ensureUserProfile, resolveDashboardPath } from '../../lib/resolveDashboard';
 import { getEmailConfirmRedirectUrl } from '../../lib/siteUrl';
+import Alert from '../../components/ui/Alert';
+import Button from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
+import Input from '../../components/ui/Input';
+import { cn } from '../../lib/cn';
 
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
 
@@ -234,9 +239,12 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      <section className="rounded-[2rem] border border-amber-100 bg-slate-950 p-8 text-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+      <Card
+        padding="lg"
+        className="border-brand-900/20 bg-brand-900 text-white shadow-card-lg"
+      >
         <p className="text-sm uppercase tracking-[0.3em] text-amber-300">{copy.tagline}</p>
-        <h1 className="mt-4 text-4xl font-semibold leading-tight">{copy.welcomeTitle}</h1>
+        <h1 className="mt-4 font-ethiopic text-4xl font-semibold leading-tight">{copy.welcomeTitle}</h1>
         <p className="mt-4 max-w-xl text-white/75">{copy.welcomeBody}</p>
 
         <ul className="mt-8 space-y-3 text-sm text-white/75">
@@ -244,9 +252,9 @@ export default function LoginPage() {
           <li>{copy.roleTeachers}</li>
           <li>{copy.roleParents}</li>
         </ul>
-      </section>
+      </Card>
 
-      <section className="relative rounded-[2rem] border border-slate-200 bg-white p-8 pt-14 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:pt-8">
+      <Card padding="lg" className="relative pt-14 shadow-card-lg sm:pt-8">
         <div className="absolute right-8 top-8">
           <div
             className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-0.5 text-xs font-semibold"
@@ -256,9 +264,10 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => switchLocale('en')}
-              className={`rounded-full px-3 py-1 transition ${
-                locale === 'en' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={cn(
+                'rounded-full px-3 py-1 transition',
+                locale === 'en' ? 'bg-brand-900 text-white' : 'text-slate-600 hover:text-slate-900'
+              )}
               aria-pressed={locale === 'en'}
             >
               {copy.languageEn}
@@ -269,9 +278,10 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => switchLocale('ti')}
-              className={`rounded-full px-3 py-1 transition ${
-                locale === 'ti' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={cn(
+                'rounded-full px-3 py-1 transition',
+                locale === 'ti' ? 'bg-brand-900 text-white' : 'text-slate-600 hover:text-slate-900'
+              )}
               aria-pressed={locale === 'ti'}
             >
               {copy.languageTi}
@@ -280,20 +290,12 @@ export default function LoginPage() {
         </div>
 
         <div className="flex gap-3 pr-28">
-          <button
-            type="button"
-            className={`rounded-full px-5 py-2 text-sm font-semibold ${mode === 'signIn' ? 'bg-slate-950 text-white' : 'border border-slate-300 text-slate-700'}`}
-            onClick={() => setMode('signIn')}
-          >
+          <Button type="button" variant={mode === 'signIn' ? 'primary' : 'secondary'} onClick={() => setMode('signIn')}>
             {copy.login}
-          </button>
-          <button
-            type="button"
-            className={`rounded-full px-5 py-2 text-sm font-semibold ${mode === 'signUp' ? 'bg-slate-950 text-white' : 'border border-slate-300 text-slate-700'}`}
-            onClick={() => setMode('signUp')}
-          >
+          </Button>
+          <Button type="button" variant={mode === 'signUp' ? 'primary' : 'secondary'} onClick={() => setMode('signUp')}>
             {copy.signUp}
-          </button>
+          </Button>
         </div>
 
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
@@ -303,63 +305,54 @@ export default function LoginPage() {
             <p className="block text-sm font-medium text-slate-700">{copy.accountType}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {(['Student', 'Parent'] as const).map((type) => (
-                <button
+                <Button
                   key={type}
                   type="button"
+                  variant={accountType === type ? 'primary' : 'secondary'}
+                  size="sm"
                   onClick={() => setAccountType(type)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                    accountType === type ? 'bg-slate-950 text-white' : 'border border-slate-300 text-slate-700'
-                  }`}
                 >
                   {type === 'Student' ? copy.student : copy.parent}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700">{copy.fullName}</label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(event) => setFullName(event.currentTarget.value)}
-              required
-              className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 text-slate-900 outline-none transition focus:border-slate-500"
-            />
-          </div>
+          <Input
+            label={copy.fullName}
+            type="text"
+            value={fullName}
+            onChange={(event) => setFullName(event.currentTarget.value)}
+            required
+          />
           </>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700">{copy.email}</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.currentTarget.value)}
-            required
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 text-slate-900 outline-none transition focus:border-slate-500"
-          />
-        </div>
+        <Input
+          label={copy.email}
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.currentTarget.value)}
+          required
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700">{copy.password}</label>
-          <div className="relative mt-2">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(event) => setPassword(event.currentTarget.value)}
-              required
-              minLength={8}
-              className="w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 pr-12 text-slate-900 outline-none transition focus:border-slate-500"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((current) => !current)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
-              aria-label={showPassword ? copy.hidePassword : copy.showPassword}
-            >
-              {showPassword ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
-            </button>
-          </div>
+        <div className="relative">
+          <Input
+            label={copy.password}
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(event) => setPassword(event.currentTarget.value)}
+            required
+            minLength={8}
+            className="pr-12"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((current) => !current)}
+            className="absolute right-3 top-[2.35rem] rounded-full p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label={showPassword ? copy.hidePassword : copy.showPassword}
+          >
+            {showPassword ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+          </button>
           {mode === 'signIn' && (
             <p className="mt-2 text-right">
               <Link href="/forgot-password" className="text-sm font-semibold text-slate-700 hover:underline">
@@ -369,18 +362,14 @@ export default function LoginPage() {
           )}
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {message && <p className="text-sm text-emerald-700">{message}</p>}
+        {error && <Alert variant="error">{error}</Alert>}
+        {message && <Alert variant="success">{message}</Alert>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-        >
+        <Button type="submit" disabled={loading} fullWidth size="lg">
           {loading ? copy.processing : mode === 'signUp' ? copy.signUp : copy.login}
-        </button>
+        </Button>
         </form>
-      </section>
+      </Card>
     </div>
   );
 }

@@ -1,11 +1,14 @@
 'use client';
 
+import Link from 'next/link';
+import { FileText } from 'lucide-react';
 import {
   getMaterialDownloadLabel,
   getMaterialFileHref,
   inferMediaKind,
   type MaterialRow
 } from '../lib/teacherMaterials';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState } from './ui';
 
 function MaterialPreview({ material }: { material: MaterialRow }) {
   if (!material.file_url) return null;
@@ -45,49 +48,53 @@ export default function StudentMaterialSection({
   materials
 }: StudentMaterialSectionProps) {
   return (
-    <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
-      <h2 className="text-2xl font-semibold text-slate-950">{title}</h2>
-      <p className="mt-2 text-slate-600">{description}</p>
-      <div className="mt-5 grid gap-4">
+    <Card variant="elevated">
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
         {materials.length ? (
-          materials.map((material) => (
-            <article key={material.id} className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-950">{material.title}</h3>
-                  {material.file_name && <p className="text-sm text-slate-500">{material.file_name}</p>}
+          <div className="grid gap-4">
+            {materials.map((material) => (
+              <article key={material.id} className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-950">{material.title}</h3>
+                    {material.file_name && <p className="text-sm text-slate-500">{material.file_name}</p>}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {material.file_url && (
+                      <Link
+                        href={getMaterialFileHref(material) ?? material.file_url}
+                        {...(material.material_category === 'media'
+                          ? { target: '_blank', rel: 'noreferrer' }
+                          : {})}
+                        className="link-button-primary px-4 py-2 text-sm"
+                      >
+                        {getMaterialDownloadLabel(material)}
+                      </Link>
+                    )}
+                    {material.external_link && (
+                      <a
+                        href={material.external_link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="link-button-secondary px-4 py-2 text-sm"
+                      >
+                        Open Link
+                      </a>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {material.file_url && (
-                    <a
-                      href={getMaterialFileHref(material) ?? material.file_url}
-                      {...(material.material_category === 'media'
-                        ? { target: '_blank', rel: 'noreferrer' }
-                        : {})}
-                      className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                    >
-                      {getMaterialDownloadLabel(material)}
-                    </a>
-                  )}
-                  {material.external_link && (
-                    <a
-                      href={material.external_link}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-full border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                    >
-                      Open Link
-                    </a>
-                  )}
-                </div>
-              </div>
-              <MaterialPreview material={material} />
-            </article>
-          ))
+                <MaterialPreview material={material} />
+              </article>
+            ))}
+          </div>
         ) : (
-          <p className="text-slate-600">{emptyMessage}</p>
+          <EmptyState icon={FileText} title={emptyMessage} description="Your teacher will share materials here when they are ready." />
         )}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

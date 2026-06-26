@@ -10,6 +10,7 @@ import AnnouncementsFeed from '../../../components/AnnouncementsFeed';
 import LiveClassSchedule from '../../../components/LiveClassSchedule';
 import { splitStudentMaterials } from '../../../lib/teacherMaterials';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
+import { Badge, PageHeader } from '../../../components/ui';
 import { isStudentSuspended } from '../../../lib/auth';
 import {
   fetchAnnouncements,
@@ -135,19 +136,18 @@ export default async function StudentDashboardPage() {
       <section className="space-y-8">
         <DatabaseSetupAlert message={setupMessage} />
 
-        <div className="rounded-[2rem] border border-amber-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-amber-700">Student Dashboard / ናይ ተማሃሮ ዳሽቦርድ</p>
-              <h1 className="mt-2 text-3xl font-semibold text-slate-950">Welcome, {displayName}</h1>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{displayName}</p>
-              <p className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700">{profile?.role ?? 'Student'}</p>
-              <LogoutButton className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700" />
-            </div>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="Student Dashboard / ናይ ተማሃሮ ዳሽቦርድ"
+          title={`Welcome, ${displayName}`}
+          description="Watch lessons, download materials, submit homework, and track your progress."
+          actions={
+            <>
+              <Badge>{displayName}</Badge>
+              <Badge variant="info">{profile?.role ?? 'Student'}</Badge>
+              <LogoutButton variant="primary" />
+            </>
+          }
+        />
 
         <ProgressSummary
           lessonsViewed={viewedLessonIds.length}

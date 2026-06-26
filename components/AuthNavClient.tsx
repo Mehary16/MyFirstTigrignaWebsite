@@ -13,18 +13,15 @@ export default function AuthNavClient({ isLoggedIn }: AuthNavClientProps) {
   const onLoginPage = pathname === '/login';
 
   return (
-    <nav className="flex flex-wrap items-center gap-3 text-sm font-medium text-slate-700">
-      <Link
-        href="/"
-        className="rounded-full border border-slate-200 bg-white px-4 py-2 transition hover:border-slate-300 hover:bg-slate-50"
-      >
+    <nav className="flex flex-wrap items-center gap-3 text-sm font-medium">
+      <Link href="/" className="link-button-secondary">
         Home
       </Link>
       {isLoggedIn ? (
-        <LogoutButton className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800" />
+        <LogoutButton variant="primary" />
       ) : (
         !onLoginPage && (
-          <Link href="/login" className="rounded-full bg-slate-950 px-4 py-2 text-white transition hover:bg-slate-800">
+          <Link href="/login" className="link-button-primary px-4 py-2 text-sm">
             Login / መእተዊ
           </Link>
         )

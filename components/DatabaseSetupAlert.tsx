@@ -1,3 +1,5 @@
+import Alert from './ui/Alert';
+
 type DatabaseSetupAlertProps = {
   message?: string | null;
 };
@@ -6,10 +8,9 @@ export default function DatabaseSetupAlert({ message }: DatabaseSetupAlertProps)
   if (!message) return null;
 
   return (
-    <div role="alert" className="rounded-3xl border border-amber-300 bg-amber-50 p-6 text-amber-950">
-      <p className="text-sm font-semibold uppercase tracking-[0.15em]">Database setup required</p>
-      <p className="mt-2 text-sm">{message}</p>
-      <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm">
+    <Alert variant="warning" title="Database setup required">
+      <p>{message}</p>
+      <ol className="mt-4 list-decimal space-y-2 pl-5">
         <li>Open your Supabase project → SQL Editor.</li>
         <li>
           Copy and run{' '}
@@ -28,6 +29,6 @@ export default function DatabaseSetupAlert({ message }: DatabaseSetupAlertProps)
         </li>
         <li>Refresh this page and try again.</li>
       </ol>
-    </div>
+    </Alert>
   );
 }

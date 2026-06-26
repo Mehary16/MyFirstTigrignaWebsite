@@ -23,6 +23,9 @@ import TeacherAssignmentManager, { type AssignmentRow } from './TeacherAssignmen
 import TeacherLiveClassManager, { type LiveClassRow } from './TeacherLiveClassManager';
 import TeacherAnnouncementManager, { type AnnouncementRow } from './TeacherAnnouncementManager';
 import type { MaterialRow } from '../lib/teacherMaterials';
+import Button from './ui/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, StatCard } from './ui';
+import { cn } from '../lib/cn';
 
 type TeacherDashboardShellProps = {
   studentList: StudentListItem[];
@@ -54,51 +57,6 @@ const TABS: TabConfig[] = [
   { id: 'communication', label: 'Communication', subtitle: 'Announcements and live classes', icon: MessageSquare }
 ];
 
-function OverviewCard({
-  label,
-  value,
-  helper,
-  icon: Icon,
-  onClick,
-  active = false
-}: {
-  label: string;
-  value: string | number;
-  helper: string;
-  icon: React.ComponentType<{ className?: string }>;
-  onClick?: () => void;
-  active?: boolean;
-}) {
-  const className = `w-full rounded-3xl border p-4 text-left shadow-sm shadow-slate-200/50 transition lg:p-5 ${
-    active
-      ? 'border-slate-900 bg-slate-900 text-white shadow-md'
-      : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md'
-  }`;
-
-  const content = (
-    <>
-      <div className="flex items-center justify-between gap-3">
-        <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${active ? 'text-slate-200' : 'text-slate-500'}`}>{label}</p>
-        <div className={`rounded-2xl p-2 ${active ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700'}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-      <p className={`mt-3 text-3xl font-semibold ${active ? 'text-white' : 'text-slate-950'}`}>{value}</p>
-      <p className={`mt-2 text-sm ${active ? 'text-slate-200' : 'text-slate-600'}`}>{helper}</p>
-    </>
-  );
-
-  if (onClick) {
-    return (
-      <button type="button" onClick={onClick} className={className}>
-        {content}
-      </button>
-    );
-  }
-
-  return <div className={className}>{content}</div>;
-}
-
 function SectionCard({
   title,
   description,
@@ -109,13 +67,13 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/50">
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-slate-900">{title}</h2>
-        {description ? <p className="mt-2 text-slate-600">{description}</p> : null}
-      </div>
-      {children}
-    </section>
+    <Card variant="elevated">
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        {description ? <CardDescription>{description}</CardDescription> : null}
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
   );
 }
 
@@ -167,22 +125,18 @@ export default function TeacherDashboardShell({
 
   return (
     <div className="space-y-8">
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/50">
+      <Card variant="elevated" padding="sm">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-slate-900">Teacher Workspace</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-slate-900">Teacher Workspace</h2>
           </div>
           <div ref={quickActionsRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setShowQuickActions((current) => !current)}
-              className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
+            <Button type="button" variant="secondary" onClick={() => setShowQuickActions((current) => !current)}>
               Quick Actions
-            </button>
+            </Button>
 
             {showQuickActions && (
-              <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
+              <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card-lg">
                 <button
                   type="button"
                   onClick={() => {
@@ -229,7 +183,7 @@ export default function TeacherDashboardShell({
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <OverviewCard
+          <StatCard
             label="Students"
             value={studentCount}
             helper={`${overview.activeStudents} active learners`}
@@ -237,7 +191,7 @@ export default function TeacherDashboardShell({
             active={activeTab === 'students'}
             onClick={() => setActiveTab('students')}
           />
-          <OverviewCard
+          <StatCard
             label="Homework"
             value={assignments.length}
             helper={`${overview.pendingReview} total submissions to review`}
@@ -245,7 +199,7 @@ export default function TeacherDashboardShell({
             active={activeTab === 'homework'}
             onClick={() => setActiveTab('homework')}
           />
-          <OverviewCard
+          <StatCard
             label="Live Classes"
             value={overview.upcomingClasses}
             helper="Upcoming sessions on the calendar"
@@ -253,7 +207,7 @@ export default function TeacherDashboardShell({
             active={activeTab === 'communication'}
             onClick={() => setActiveTab('communication')}
           />
-          <OverviewCard
+          <StatCard
             label="Announcements"
             value={announcements.length}
             helper="Recent updates for students and parents"
@@ -269,21 +223,22 @@ export default function TeacherDashboardShell({
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`rounded-2xl border px-4 py-4 text-left transition ${
+              className={cn(
+                'rounded-2xl border px-4 py-4 text-left transition',
                 activeTab === tab.id
-                  ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                  ? 'border-brand-900 bg-brand-900 text-white shadow-sm'
                   : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white'
-              }`}
+              )}
             >
               <div className="flex items-center gap-2">
                 <tab.icon className="h-4 w-4" />
                 <p className="text-sm font-semibold">{tab.label}</p>
               </div>
-              <p className={`mt-1 text-xs ${activeTab === tab.id ? 'text-slate-200' : 'text-slate-500'}`}>{tab.subtitle}</p>
+              <p className={cn('mt-1 text-xs', activeTab === tab.id ? 'text-slate-200' : 'text-slate-500')}>{tab.subtitle}</p>
             </button>
           ))}
         </div>
-      </section>
+      </Card>
 
       {activeTab === 'overview' && (
         <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
@@ -302,7 +257,7 @@ export default function TeacherDashboardShell({
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-600">No assignments yet.</p>
+                <EmptyState title="No assignments yet." description="Create your first homework task from the Homework tab." />
               )}
             </SectionCard>
 
@@ -322,7 +277,7 @@ export default function TeacherDashboardShell({
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-600">No lessons added yet.</p>
+                <EmptyState title="No lessons added yet." description="Add lessons from the Teaching tab to build your library." />
               )}
             </SectionCard>
           </div>
@@ -340,7 +295,7 @@ export default function TeacherDashboardShell({
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-600">No announcements posted yet.</p>
+                <EmptyState title="No announcements posted yet." description="Share updates with students and parents from Communication." />
               )}
             </SectionCard>
 
@@ -356,7 +311,7 @@ export default function TeacherDashboardShell({
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-600">No live classes scheduled yet.</p>
+                <EmptyState title="No live classes scheduled yet." description="Schedule a session so students and parents can see it on their dashboards." />
               )}
             </SectionCard>
           </div>
