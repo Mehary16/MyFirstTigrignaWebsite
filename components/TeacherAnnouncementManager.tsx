@@ -135,11 +135,6 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Announcements</h2>
-        <p className="mt-2 text-slate-600">Share updates with all students and parents.</p>
-      </div>
-
       <form className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4" onSubmit={handleCreate}>
         <div>
           <label className="block text-sm font-medium text-slate-700">Title</label>
