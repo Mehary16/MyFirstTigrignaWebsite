@@ -84,11 +84,6 @@ export default function TeacherLiveClassManager({ initialClasses }: TeacherLiveC
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Live Classes</h2>
-        <p className="mt-2 text-slate-600">Schedule Zoom or Google Meet sessions for students and parents.</p>
-      </div>
-
       <form className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2" onSubmit={handleCreate}>
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-slate-700">Class title</label>
