@@ -19,7 +19,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Supabase sometimes redirects to Site URL (/) instead of the intended path
   if (pathname !== '/auth/callback' && pathname !== '/reset-password' && (code || tokenHash)) {
     const url = request.nextUrl.clone();
     const type = url.searchParams.get('type');
@@ -62,7 +61,23 @@ export async function middleware(request: NextRequest) {
     }
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (user?.user_metadata?.force_password_change && pathname !== '/change-password') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/change-password';
+    url.search = '';
+    url.hash = '';
+    return NextResponse.redirect(url);
+  }
+
+  if (user && pathname === '/change-password' && !user.user_metadata?.force_password_change) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/student/dashboard';
+    return NextResponse.redirect(url);
+  }
 
   if (user && pathname.startsWith('/student')) {
     try {
@@ -85,18 +100,18 @@ export async function middleware(request: NextRequest) {
   if (user && pathname === '/suspended') {
     try {
       const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, is_active')
-      .eq('id', user.id)
-      .maybeSingle();
+        .from('profiles')
+        .select('role, is_active')
+        .eq('id', user.id)
+        .maybeSingle();
 
-    if (!profile || profile.role !== 'Student' || profile.is_active !== false) {
-      const url = request.nextUrl.clone();
-      if (profile?.role === 'Teacher') url.pathname = '/teacher/dashboard';
-      else if (profile?.role === 'Parent') url.pathname = '/parent/dashboard';
-      else url.pathname = '/student/dashboard';
-      return NextResponse.redirect(url);
-    }
+      if (!profile || profile.role !== 'Student' || profile.is_active !== false) {
+        const url = request.nextUrl.clone();
+        if (profile?.role === 'Teacher') url.pathname = '/teacher/dashboard';
+        else if (profile?.role === 'Parent') url.pathname = '/parent/dashboard';
+        else url.pathname = '/student/dashboard';
+        return NextResponse.redirect(url);
+      }
     } catch {
       return supabaseResponse;
     }
@@ -106,5 +121,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/login', '/reset-password', '/student/:path*', '/suspended']
+  matcher: ['/', '/login', '/reset-password', '/change-password', '/student/:path*', '/parent/:path*', '/teacher/:path*', '/suspended']
 };

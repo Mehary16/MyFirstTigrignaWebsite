@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+﻿import { redirect } from 'next/navigation';
 import LogoutButton from '../../../components/LogoutButton';
 import ProgressSummary from '../../../components/ProgressSummary';
 import AnnouncementsFeed from '../../../components/AnnouncementsFeed';
@@ -38,6 +38,10 @@ export default async function ParentDashboardPage() {
   }
 
   const user = sessionData.session.user;
+  if (user.user_metadata?.force_password_change) {
+    redirect('/change-password');
+  }
+
   const userEmail = user.email ?? '';
   const { data: profile } = await supabase
     .from('profiles')
@@ -88,16 +92,15 @@ export default async function ParentDashboardPage() {
       full_name: student.full_name,
       submission_count: submissionCount ?? 0,
       grades: grades ?? [],
-      submissions: submissionsResult.data ?? [],
+      submissions: submissionsResult.data,
       lessonsViewed: lessonViewsResult.data.length
     });
   }
 
   const displayName = profile?.full_name || user.user_metadata?.full_name || 'Parent';
-  const totalLessons = lessonsResult.data?.length ?? 0;
-  const now = Date.now();
+  const totalLessons = (lessonsResult.data ?? []).length;
   const upcomingClasses = (liveClassesResult.data ?? []).filter(
-    (item) => new Date(item.scheduled_at).getTime() >= now - item.duration_minutes * 60 * 1000
+    (item) => new Date(item.scheduled_at).getTime() >= Date.now() - item.duration_minutes * 60 * 1000
   ).length;
 
   const totalSubmissions = children.reduce((sum, child) => sum + child.submission_count, 0);
@@ -107,7 +110,7 @@ export default async function ParentDashboardPage() {
   return (
     <section className="space-y-8">
       <PageHeader
-        eyebrow="Parent Dashboard / ናይ ወለዲ ዳሽቦርድ"
+        eyebrow="Parent Dashboard / ?? ??? ?????"
         title={`Welcome, ${displayName}`}
         description="See how your children are doing in Tigrigna class."
         actions={
@@ -145,7 +148,7 @@ export default async function ParentDashboardPage() {
               <div>
                 <h2 className="text-2xl font-semibold text-slate-950">{child.full_name}</h2>
                 <p className="text-sm text-slate-600">
-                  {child.lessonsViewed}/{totalLessons} lessons viewed · {child.submission_count} homework submission(s)
+                  {child.lessonsViewed}/{totalLessons} lessons viewed Â· {child.submission_count} homework submission(s)
                 </p>
               </div>
               <Badge variant="brand">{child.grades.length} grade record(s)</Badge>
@@ -169,7 +172,7 @@ export default async function ParentDashboardPage() {
                       <tr key={grade.id}>
                         <td className="px-4 py-3 text-slate-900">{grade.title}</td>
                         <td className="px-4 py-3 font-semibold text-amber-800">{grade.grade}</td>
-                        <td className="px-4 py-3 text-slate-600">{grade.feedback ?? '—'}</td>
+                        <td className="px-4 py-3 text-slate-600">{grade.feedback ?? 'â€”'}</td>
                         <td className="px-4 py-3 text-slate-500">{new Date(grade.created_at).toLocaleDateString()}</td>
                       </tr>
                     ))
@@ -189,3 +192,4 @@ export default async function ParentDashboardPage() {
     </section>
   );
 }
+

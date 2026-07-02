@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
+import TeacherStudentCreateForm from './TeacherStudentCreateForm';
+import { Alert, Badge, Card, EmptyState } from './ui';
 
 export type StudentListItem = {
   id: string;
@@ -93,32 +95,39 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
     }
   };
 
+  const handleStudentCreated = (student: StudentListItem) => {
+    setStudents((current) => [student, ...current]);
+    setError(null);
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <TeacherStudentCreateForm onStudentCreated={handleStudentCreated} />
+
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Registered Students / ዝተመዝገቡ ተማሃሮ</h2>
-        <p className="mt-2 text-slate-600">Monitor signups, activity, and suspend students when needed.</p>
+        <h2 className="text-2xl font-semibold text-slate-900">Registered Students / ?????? ????</h2>
+        <p className="mt-2 text-slate-600">Monitor signups, add students yourself, and suspend accounts when needed.</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <Card variant="muted" className="p-4">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Total</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-950">{totalCount}</p>
-        </div>
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <p className="mt-1 text-2xl font-semibold text-slate-950">{students.length}</p>
+        </Card>
+        <Card className="border-emerald-200 bg-emerald-50 p-4">
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-700">Active</p>
           <p className="mt-1 text-2xl font-semibold text-emerald-900">{activeCount}</p>
-        </div>
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+        </Card>
+        <Card className="border-red-200 bg-red-50 p-4">
           <p className="text-xs uppercase tracking-[0.2em] text-red-700">Suspended</p>
           <p className="mt-1 text-2xl font-semibold text-red-900">{suspendedCount}</p>
-        </div>
+        </Card>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error ? <Alert variant="error">{error}</Alert> : null}
 
       {!students.length ? (
-        <p className="text-slate-600">No students registered yet.</p>
+        <EmptyState title="No students registered yet." description="Add the first student above or ask them to sign up from the login page." />
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -138,13 +147,9 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
                   <td className="px-4 py-3 text-slate-600">{new Date(student.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3 text-slate-600">{student.submission_count}</td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                        student.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-                      }`}
-                    >
+                    <Badge variant={student.is_active ? 'success' : 'danger'}>
                       {student.is_active ? 'Active' : 'Suspended'}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
