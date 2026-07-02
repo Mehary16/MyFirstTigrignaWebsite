@@ -2,9 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { ChevronDown, UserPlus } from 'lucide-react';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
 import TeacherStudentCreateForm from './TeacherStudentCreateForm';
 import { Alert, Badge, Card, EmptyState } from './ui';
+import { cn } from '../lib/cn';
 
 export type StudentListItem = {
   id: string;
@@ -25,6 +27,7 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
   const [students, setStudents] = useState(initialStudents);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const activeCount = students.filter((s) => s.is_active).length;
   const suspendedCount = students.length - activeCount;
@@ -102,10 +105,39 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
 
   return (
     <div className="space-y-6">
-      <TeacherStudentCreateForm onStudentCreated={handleStudentCreated} />
+      <Card variant="default" className="overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowCreateForm((current) => !current)}
+          className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition hover:bg-slate-50"
+          aria-expanded={showCreateForm}
+        >
+          <div className="flex items-start gap-3">
+            <div className="rounded-2xl bg-slate-100 p-2 text-slate-700">
+              <UserPlus className="h-5 w-5" aria-hidden />
+            </div>
+            <div>
+              <p className="text-xl font-semibold text-slate-900">Register Student</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Create a student account with a temporary password or setup email.
+              </p>
+            </div>
+          </div>
+          <ChevronDown
+            className={cn('h-5 w-5 shrink-0 text-slate-500 transition', showCreateForm && 'rotate-180')}
+            aria-hidden
+          />
+        </button>
+
+        {showCreateForm && (
+          <div className="border-t border-slate-200 p-6 pt-5">
+            <TeacherStudentCreateForm onStudentCreated={handleStudentCreated} />
+          </div>
+        )}
+      </Card>
 
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Registered Students / ?????? ????</h2>
+        <h2 className="text-2xl font-semibold text-slate-900">Registered Students / ዝተመዝገቡ ተማሃሮ</h2>
         <p className="mt-2 text-slate-600">Monitor signups, add students yourself, and suspend accounts when needed.</p>
       </div>
 
