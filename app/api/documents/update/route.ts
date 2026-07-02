@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isTeacherProfile, ensureTeacherProfileRole } from '../../../../lib/auth';
+import { isTeacherUser } from '../../../../lib/auth';
 import { formatDatabaseError } from '../../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
 
@@ -13,14 +13,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'You must be logged in.' }, { status: 401 });
   }
 
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
 
-  if (!isTeacherProfile(profile, user.email, adminEmail)) {
+  if (!isTeacherUser(profile, user)) {
     return NextResponse.json({ error: 'Only teachers can edit materials.' }, { status: 403 });
   }
-
-  await ensureTeacherProfileRole(supabase, user.id, user.email, adminEmail, profile?.role);
 
   const body = (await request.json()) as { id?: string; title?: string; externalLink?: string | null };
   const id = body.id?.trim();

@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ensureUserProfile, resolveDashboardPath } from '../lib/resolveDashboard';
+import { resolveDashboardPath } from '../lib/resolveDashboard';
+import { syncRoleAndGetDashboardPath } from '../lib/clientRoleSync';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
 
 export default function AuthConfirmedClient() {
@@ -22,14 +23,8 @@ export default function AuthConfirmedClient() {
       }
 
       try {
-        await ensureUserProfile(supabase, user);
-
-        const path = await resolveDashboardPath(
-          supabase,
-          user.id,
-          user.email,
-          (user.user_metadata?.role as string | undefined) ?? (user.app_metadata?.role as string | undefined)
-        );
+        const syncedPath = await syncRoleAndGetDashboardPath();
+        const path = syncedPath ?? (await resolveDashboardPath(supabase, user.id, user));
 
         window.setTimeout(() => {
           router.replace(path);

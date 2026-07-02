@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isTeacherProfile, ensureTeacherProfileRole } from '../../../../lib/auth';
+import { isTeacherUser } from '../../../../lib/auth';
 import { formatDatabaseError } from '../../../../lib/supabaseErrors';
 import { createAdminSupabaseClient } from '../../../../lib/supabaseAdmin';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
@@ -14,14 +14,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'You must be logged in.' }, { status: 401 });
   }
 
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
   const { data: teacherProfile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
 
-  if (!isTeacherProfile(teacherProfile, user.email, adminEmail)) {
+  if (!isTeacherUser(teacherProfile, user)) {
     return NextResponse.json({ error: 'Only teachers can delete student records.' }, { status: 403 });
   }
-
-  await ensureTeacherProfileRole(supabase, user.id, user.email, adminEmail, teacherProfile?.role);
 
   const body = (await request.json()) as { studentId?: string };
   const studentId = body.studentId?.trim();

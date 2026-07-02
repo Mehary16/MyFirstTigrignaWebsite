@@ -12,6 +12,8 @@ import { splitStudentMaterials } from '../../../lib/teacherMaterials';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
 import { Badge, PageHeader } from '../../../components/ui';
 import { isStudentSuspended } from '../../../lib/auth';
+import { getUserRole } from '../../../lib/roleAuth';
+import { dashboardPathForRole } from '../../../lib/routes';
 import {
   fetchAnnouncements,
   fetchAssignments,
@@ -42,44 +44,21 @@ export default async function StudentDashboardPage() {
     }
 
     const userEmail = user.email ?? '';
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
-    const isTeacher = userEmail.toLowerCase() === adminEmail.toLowerCase();
 
-    const { data: initialProfile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('full_name, role, is_active')
       .eq('id', user.id)
       .maybeSingle();
 
-    let profile = initialProfile;
-
-    if (!profile && !profileError) {
-      const role = (user.user_metadata?.role as string | undefined)?.toLowerCase() === 'parent' ? 'Parent' : 'Student';
-      const { error: upsertError } = await supabase.from('profiles').upsert({
-        id: user.id,
-        full_name: (user.user_metadata?.full_name as string | undefined) ?? userEmail.split('@')[0] ?? 'Student',
-        role,
-        email: userEmail.toLowerCase(),
-        is_active: true
-      });
-
-      if (!upsertError) {
-        const { data: createdProfile } = await supabase
-          .from('profiles')
-          .select('full_name, role, is_active')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        profile = createdProfile;
-      }
+    if (profileError) {
+      throw new Error(profileError.message);
     }
 
-    if (isTeacher || profile?.role === 'Teacher') {
-      redirect('/teacher/dashboard');
-    }
+    const role = await getUserRole(supabase, user);
 
-    if (profile?.role === 'Parent') {
-      redirect('/parent/dashboard');
+    if (role !== 'Student') {
+      redirect(dashboardPathForRole(role));
     }
 
     if (isStudentSuspended(profile)) {

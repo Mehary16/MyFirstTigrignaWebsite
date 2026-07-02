@@ -1,34 +1,32 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { ProfileRow } from './roleAuth';
+import { isTeacherUser } from './roleAuth';
 
-export type ProfileRow = {
-  full_name: string;
-  role: string;
-  is_active?: boolean | null;
-  suspended_reason?: string | null;
-};
+export type { ProfileRow };
 
-export function isTeacherEmail(email: string | undefined, adminEmail: string) {
-  return (email ?? '').toLowerCase() === adminEmail.toLowerCase();
-}
-
-export function isTeacherProfile(profile: Pick<ProfileRow, 'role'> | null | undefined, email: string | undefined, adminEmail: string) {
-  return profile?.role === 'Teacher' || isTeacherEmail(email, adminEmail);
-}
+export {
+  getAdminEmail,
+  getUserRole,
+  isTeacherEmail,
+  isTeacherUser,
+  normalizeRole,
+  resolveRoleFromAuth,
+  syncUserRole
+} from './roleAuth';
 
 export function isStudentSuspended(profile: Pick<ProfileRow, 'is_active'> | null | undefined) {
   return profile?.is_active === false;
 }
 
-export async function ensureTeacherProfileRole(
-  supabase: SupabaseClient,
-  userId: string,
-  email: string | undefined,
-  adminEmail: string,
-  currentRole?: string | null
+export function isTeacherProfile(
+  profile: Pick<ProfileRow, 'role'> | null | undefined,
+  _email?: string | undefined,
+  _adminEmail?: string,
+  user?: { app_metadata?: Record<string, unknown> } | null
 ) {
-  if (currentRole === 'Teacher' || !isTeacherEmail(email, adminEmail)) {
-    return;
-  }
+  return isTeacherUser(profile, user);
+}
 
-  await supabase.from('profiles').update({ role: 'Teacher', email: email?.toLowerCase() ?? null }).eq('id', userId);
+/** @deprecated Role sync runs via syncUserRole on login/callback. */
+export async function ensureTeacherProfileRole() {
+  // Intentionally empty — kept for call-site compatibility during migration.
 }

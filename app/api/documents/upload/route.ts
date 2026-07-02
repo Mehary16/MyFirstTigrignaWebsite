@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { BUCKET_SETUP_MESSAGE, ensureLessonMaterialsBucket } from '../../../../lib/ensureStorageBucket';
-import { isTeacherProfile } from '../../../../lib/auth';
+import { isTeacherUser } from '../../../../lib/auth';
 import { STORAGE_BUCKETS } from '../../../../lib/storageBuckets';
 import { MAX_DOCUMENT_BYTES } from '../../../../lib/teacherMaterials';
 import { formatUploadLimit } from '../../../../lib/uploadLimits';
@@ -16,10 +16,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'You must be logged in to upload materials.' }, { status: 401 });
   }
 
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
 
-  if (!isTeacherProfile(profile, user.email, adminEmail)) {
+  if (!isTeacherUser(profile, user)) {
     return NextResponse.json({ error: 'Only teachers can upload reading materials.' }, { status: 403 });
   }
 

@@ -1,5 +1,17 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { dashboardPathForRole } from './lib/routes';
+import { fetchProfileRole, resolveRoleFromAuth } from './lib/roleAuth';
+
+const PROTECTED_PREFIXES = ['/teacher', '/parent', '/student'] as const;
+
+function isProtectedPath(pathname: string) {
+  return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function dashboardForRole(role: string) {
+  return dashboardPathForRole(role);
+}
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -65,6 +77,14 @@ export async function middleware(request: NextRequest) {
     data: { user }
   } = await supabase.auth.getUser();
 
+  if (!user && isProtectedPath(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    url.search = '';
+    url.hash = '';
+    return NextResponse.redirect(url);
+  }
+
   if (user?.user_metadata?.force_password_change && pathname !== '/change-password') {
     const url = request.nextUrl.clone();
     url.pathname = '/change-password';
@@ -74,9 +94,34 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && pathname === '/change-password' && !user.user_metadata?.force_password_change) {
+    const profileRole = await fetchProfileRole(supabase, user.id);
+    const role = resolveRoleFromAuth(user, profileRole);
     const url = request.nextUrl.clone();
-    url.pathname = '/student/dashboard';
+    url.pathname = dashboardForRole(role);
     return NextResponse.redirect(url);
+  }
+
+  if (user && isProtectedPath(pathname)) {
+    const profileRole = await fetchProfileRole(supabase, user.id);
+    const role = resolveRoleFromAuth(user, profileRole);
+
+    if (pathname.startsWith('/teacher') && role !== 'Teacher') {
+      const url = request.nextUrl.clone();
+      url.pathname = dashboardForRole(role);
+      return NextResponse.redirect(url);
+    }
+
+    if (pathname.startsWith('/parent') && role !== 'Parent') {
+      const url = request.nextUrl.clone();
+      url.pathname = dashboardForRole(role);
+      return NextResponse.redirect(url);
+    }
+
+    if (pathname.startsWith('/student') && role !== 'Student') {
+      const url = request.nextUrl.clone();
+      url.pathname = dashboardForRole(role);
+      return NextResponse.redirect(url);
+    }
   }
 
   if (user && pathname.startsWith('/student')) {
@@ -107,9 +152,7 @@ export async function middleware(request: NextRequest) {
 
       if (!profile || profile.role !== 'Student' || profile.is_active !== false) {
         const url = request.nextUrl.clone();
-        if (profile?.role === 'Teacher') url.pathname = '/teacher/dashboard';
-        else if (profile?.role === 'Parent') url.pathname = '/parent/dashboard';
-        else url.pathname = '/student/dashboard';
+        url.pathname = dashboardForRole(resolveRoleFromAuth(user, profile?.role));
         return NextResponse.redirect(url);
       }
     } catch {

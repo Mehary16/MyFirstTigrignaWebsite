@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createBrowserSupabaseClient } from '../../lib/supabaseClient';
 import { establishSessionFromAuthUrl } from '../../lib/authUrlSession';
 import { resolveDashboardPath } from '../../lib/resolveDashboard';
+import { syncRoleAndGetDashboardPath } from '../../lib/clientRoleSync';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -62,13 +63,10 @@ export default function ResetPasswordPage() {
 
       const { data: userData } = await supabase.auth.getUser();
       if (userData.user) {
-        const path = await resolveDashboardPath(
-          supabase,
-          userData.user.id,
-          userData.user.email,
-          (userData.user.user_metadata?.role as string | undefined) ?? (userData.user.app_metadata?.role as string | undefined)
+        const syncedPath = await syncRoleAndGetDashboardPath();
+        router.replace(
+          syncedPath ?? (await resolveDashboardPath(supabase, userData.user.id, userData.user))
         );
-        router.replace(path);
       } else {
         router.replace('/login');
       }

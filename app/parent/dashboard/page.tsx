@@ -13,6 +13,8 @@ import {
   fetchLiveClasses
 } from '../../../lib/safeQueries';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
+import { getUserRole } from '../../../lib/roleAuth';
+import { dashboardPathForRole } from '../../../lib/routes';
 
 type ChildSummary = {
   id: string;
@@ -31,34 +33,28 @@ type ChildSummary = {
 
 export default async function ParentDashboardPage() {
   const supabase = await createServerSupabaseClient();
-  const { data: sessionData } = await supabase.auth.getSession();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
-  if (!sessionData.session) {
+  if (!user) {
     redirect('/login');
   }
 
-  const user = sessionData.session.user;
   if (user.user_metadata?.force_password_change) {
     redirect('/change-password');
   }
 
-  const userEmail = user.email ?? '';
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, role')
     .eq('id', user.id)
     .maybeSingle();
 
-  if (profile?.role === 'Teacher' || userEmail.toLowerCase() === (process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com').toLowerCase()) {
-    redirect('/teacher/dashboard');
-  }
+  const role = await getUserRole(supabase, user);
 
-  if (profile?.role === 'Student') {
-    redirect('/student/dashboard');
-  }
-
-  if (profile?.role !== 'Parent') {
-    redirect('/login');
+  if (role !== 'Parent') {
+    redirect(dashboardPathForRole(role));
   }
 
   const [linksResult, announcementsResult, liveClassesResult, lessonsResult] = await Promise.all([
