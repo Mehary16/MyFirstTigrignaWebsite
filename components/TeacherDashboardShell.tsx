@@ -66,10 +66,12 @@ function SectionCard({
 }) {
   return (
     <Card variant="elevated">
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        {description ? <CardDescription>{description}</CardDescription> : null}
-      </CardHeader>
+      {title || description ? (
+        <CardHeader>
+          {title ? <CardTitle>{title}</CardTitle> : null}
+          {description ? <CardDescription>{description}</CardDescription> : null}
+        </CardHeader>
+      ) : null}
       <CardContent>{children}</CardContent>
     </Card>
   );
@@ -299,7 +301,7 @@ export default function TeacherDashboardShell({
           <SectionCard title="Student Management" description="Student List, Student Status, and Parent Linking">
             <TeacherStudentList students={studentList} totalCount={studentCount} />
           </SectionCard>
-          <SectionCard title="Parent Linking" description="Connect each child account to the correct parent email.">
+          <SectionCard title="">
             <TeacherParentLinkForm students={studentOptions} />
           </SectionCard>
         </div>

@@ -141,7 +141,7 @@ export default async function StudentDashboardPage() {
         <DatabaseSetupAlert message={setupMessage} />
 
         <PageHeader
-          eyebrow="Student Dashboard / ?? ???? ?????"
+          eyebrow="Student Dashboard / ናይ ተማሃሮ ዳሽቦርድ"
           title={`Welcome, ${displayName}`}
           description="Watch lessons, download materials, submit homework, and track your progress."
           actions={

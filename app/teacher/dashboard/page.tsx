@@ -100,8 +100,8 @@ export default async function TeacherDashboardPage() {
       <DatabaseSetupAlert message={setupMessage} />
 
       <PageHeader
-        eyebrow="Teacher Dashboard / ?? ???? ?????"
-        title="?? ???? ????? ?????"
+        eyebrow="Teacher Dashboard / ናይ መምህር ዳሽቦርድ"
+        title="ናይ ተማሃሮ ንጥፈታት መከታተሊ"
         description={`Welcome, ${displayName}. Create lessons, assign homework, schedule live classes, post announcements, review submissions, and manage grades.`}
         actions={
           <>
