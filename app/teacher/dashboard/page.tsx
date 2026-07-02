@@ -20,6 +20,10 @@ export default async function TeacherDashboardPage() {
   }
 
   const user = sessionData.session.user;
+  if (user.user_metadata?.force_password_change) {
+    redirect('/change-password');
+  }
+
   const userEmail = user.email ?? '';
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
   const { data: profile } = await supabase.from('profiles').select('full_name, role').eq('id', user.id).maybeSingle();
@@ -96,8 +100,8 @@ export default async function TeacherDashboardPage() {
       <DatabaseSetupAlert message={setupMessage} />
 
       <PageHeader
-        eyebrow="Teacher Dashboard / ናይ መምህር ዳሽቦርድ"
-        title="ናይ ተማሃሮ ንጥፈታት መከታተሊ"
+        eyebrow="Teacher Dashboard / ?? ???? ?????"
+        title="?? ???? ????? ?????"
         description={`Welcome, ${displayName}. Create lessons, assign homework, schedule live classes, post announcements, review submissions, and manage grades.`}
         actions={
           <>

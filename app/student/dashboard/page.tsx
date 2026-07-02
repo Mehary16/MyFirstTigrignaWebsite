@@ -37,6 +37,10 @@ export default async function StudentDashboardPage() {
       redirect('/login');
     }
 
+    if (user.user_metadata?.force_password_change) {
+      redirect('/change-password');
+    }
+
     const userEmail = user.email ?? '';
     const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
     const isTeacher = userEmail.toLowerCase() === adminEmail.toLowerCase();
@@ -137,7 +141,7 @@ export default async function StudentDashboardPage() {
         <DatabaseSetupAlert message={setupMessage} />
 
         <PageHeader
-          eyebrow="Student Dashboard / ናይ ተማሃሮ ዳሽቦርድ"
+          eyebrow="Student Dashboard / ?? ???? ?????"
           title={`Welcome, ${displayName}`}
           description="Watch lessons, download materials, submit homework, and track your progress."
           actions={
@@ -182,70 +186,59 @@ export default async function StudentDashboardPage() {
             />
           </div>
 
-          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
-            <h2 className="text-2xl font-semibold text-slate-950">Homework Submission</h2>
-            <p className="mt-2 text-slate-600">Submit a video link, short clip, image, or document for your teacher to review.</p>
-            <div className="mt-6">
-              <HomeworkSubmissionForm studentId={user.id} assignments={assignments ?? []} />
-            </div>
-          </section>
-        </div>
+          <div className="space-y-6">
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
+              <h2 className="text-2xl font-semibold text-slate-950">Homework Submission</h2>
+              <p className="mt-2 text-slate-600">Submit a video link, short clip, image, or document for your teacher to review.</p>
+              <div className="mt-6">
+                <HomeworkSubmissionForm studentId={user.id} assignments={assignments ?? []} />
+              </div>
+            </section>
 
-        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
-          <h2 className="text-2xl font-semibold text-slate-950">Your Grades</h2>
-          <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-700">Assignment</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-700">Grade</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-700">Feedback</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-700">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {grades?.length ? (
-                  grades.map((grade) => (
-                    <tr key={grade.id}>
-                      <td className="px-4 py-3 text-slate-900">{grade.title}</td>
-                      <td className="px-4 py-3 font-semibold text-amber-800">{grade.grade}</td>
-                      <td className="px-4 py-3 text-slate-600">{grade.feedback ?? '—'}</td>
-                      <td className="px-4 py-3 text-slate-500">{new Date(grade.created_at).toLocaleDateString()}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
-                      No grades posted yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
-          <h2 className="text-2xl font-semibold text-slate-950">Your Submissions</h2>
-          <p className="mt-2 text-slate-600">Edit or delete homework you have already submitted.</p>
-          <div className="mt-5">
             <StudentSubmissionList studentId={user.id} initialSubmissions={submissions ?? []} />
+
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
+              <h2 className="text-2xl font-semibold text-slate-950">Your Grades</h2>
+              <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
+                <table className="min-w-full divide-y divide-slate-200 text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Assignment</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Grade</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Feedback</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {grades?.length ? (
+                      grades.map((grade) => (
+                        <tr key={grade.id}>
+                          <td className="px-4 py-3 text-slate-900">{grade.title}</td>
+                          <td className="px-4 py-3 font-semibold text-amber-800">{grade.grade}</td>
+                          <td className="px-4 py-3 text-slate-600">{grade.feedback ?? '—'}</td>
+                          <td className="px-4 py-3 text-slate-500">{new Date(grade.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
+                          No grades posted yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
           </div>
-        </section>
+        </div>
       </section>
     );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Student dashboard could not load.';
+  } catch (error) {
     return (
-      <section className="space-y-6">
-        <DatabaseSetupAlert message={formatDatabaseError(message)} />
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-8">
-          <h1 className="text-2xl font-semibold text-red-900">Student dashboard could not load</h1>
-          <p className="mt-3 text-sm text-red-800">
-            Run <code className="rounded bg-red-100 px-1">supabase/TIER_1_AND_2_FEATURES.sql</code> in Supabase SQL Editor if new features are missing.
-          </p>
-          <p className="mt-3 rounded bg-red-100/80 px-3 py-2 font-mono text-xs text-red-900">{message}</p>
-        </div>
+      <section className="rounded-[2rem] border border-red-200 bg-red-50 p-8 text-red-900 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+        <h1 className="text-2xl font-semibold">Could not load student dashboard</h1>
+        <p className="mt-2 text-sm">{error instanceof Error ? formatDatabaseError(error.message) : 'Please try again.'}</p>
       </section>
     );
   }
