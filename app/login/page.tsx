@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ComponentProps } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createBrowserSupabaseClient } from '../../lib/supabaseClient';
@@ -11,6 +12,7 @@ import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
+import EritreanHeritagePattern from '../../components/EritreanHeritagePattern';
 import { cn } from '../../lib/cn';
 
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
@@ -259,20 +261,35 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+    <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.15fr_0.85fr]">
       <Card
-        padding="lg"
-        className="border-brand-900/20 bg-brand-900 text-white shadow-card-lg"
+        padding="none"
+        className="relative overflow-hidden border-brand-900/20 bg-brand-900 text-white shadow-card-lg"
       >
-        <p className="text-sm uppercase tracking-[0.3em] text-amber-300">{copy.tagline}</p>
-        <h1 className="mt-4 font-ethiopic text-4xl font-semibold leading-tight">{copy.welcomeTitle}</h1>
-        <p className="mt-4 max-w-xl text-white/75">{copy.welcomeBody}</p>
+        <div className="relative h-72 sm:h-80 lg:h-96">
+          <Image
+            src="/images/eritrean-heritage-red-sea-hero-v2.png"
+            alt="Eritrean heritage panorama: traditional stone house, women carrying water, highlands, Asmara, and the Red Sea"
+            fill
+            priority
+            className="object-cover object-center"
+            sizes="(max-width: 1024px) 100vw, 55vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-brand-900/90 via-brand-900/25 to-transparent" />
+          <EritreanHeritagePattern className="absolute bottom-0 left-0 right-0 h-12 text-amber-300/30" />
+        </div>
 
-        <ul className="mt-8 space-y-3 text-sm text-white/75">
-          <li>{copy.roleStudents}</li>
-          <li>{copy.roleTeachers}</li>
-          <li>{copy.roleParents}</li>
-        </ul>
+        <div className="relative px-8 pb-8 pt-6">
+          <p className="text-sm uppercase tracking-[0.3em] text-amber-300">{copy.tagline}</p>
+          <h1 className="mt-4 font-ethiopic text-4xl font-semibold leading-tight">{copy.welcomeTitle}</h1>
+          <p className="mt-4 max-w-xl text-white/75">{copy.welcomeBody}</p>
+
+          <ul className="mt-8 space-y-3 border-t border-white/10 pt-6 text-sm text-white/75">
+            <li>{copy.roleStudents}</li>
+            <li>{copy.roleTeachers}</li>
+            <li>{copy.roleParents}</li>
+          </ul>
+        </div>
       </Card>
 
       <Card padding="lg" className="relative pt-14 shadow-card-lg sm:pt-8">
