@@ -5,6 +5,19 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const code = request.nextUrl.searchParams.get('code');
   const tokenHash = request.nextUrl.searchParams.get('token_hash');
+  const error = request.nextUrl.searchParams.get('error');
+  const errorCode = request.nextUrl.searchParams.get('error_code');
+
+  if (
+    (pathname === '/' || pathname === '/login') &&
+    (error === 'access_denied' || errorCode === 'otp_expired')
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    url.search = 'error=email-confirmation-failed';
+    url.hash = '';
+    return NextResponse.redirect(url);
+  }
 
   // Supabase sometimes redirects to Site URL (/) instead of the intended path
   if (pathname !== '/auth/callback' && pathname !== '/reset-password' && (code || tokenHash)) {
@@ -93,5 +106,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/reset-password', '/student/:path*', '/suspended']
+  matcher: ['/', '/login', '/reset-password', '/student/:path*', '/suspended']
 };

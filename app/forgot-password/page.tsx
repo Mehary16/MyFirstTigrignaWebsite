@@ -19,8 +19,20 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
+      let redirectTo: string;
+      try {
+        redirectTo = getPasswordResetRedirectUrl();
+      } catch (configError) {
+        setError(
+          configError instanceof Error
+            ? configError.message
+            : 'Production site URL is not configured. Set NEXT_PUBLIC_SITE_URL to your live domain.'
+        );
+        return;
+      }
+
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: getPasswordResetRedirectUrl()
+        redirectTo
       });
 
       if (resetError) {

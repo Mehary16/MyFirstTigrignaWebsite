@@ -171,11 +171,23 @@ export default function LoginPage() {
       if (mode === 'signUp') {
         const role = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'Teacher' : accountType;
 
+        let emailRedirectTo: string;
+        try {
+          emailRedirectTo = getEmailConfirmRedirectUrl();
+        } catch (configError) {
+          setError(
+            configError instanceof Error
+              ? configError.message
+              : 'Production site URL is not configured. Set NEXT_PUBLIC_SITE_URL to your live domain.'
+          );
+          return;
+        }
+
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: getEmailConfirmRedirectUrl(),
+            emailRedirectTo,
             data: {
               full_name: fullName,
               role
