@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { FileText } from 'lucide-react';
 import {
+  getFileExtension,
   getMaterialDownloadLabel,
   getMaterialFileHref,
   inferMediaKind,
@@ -10,28 +12,75 @@ import {
 } from '../lib/teacherMaterials';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState } from './ui';
 
-function MaterialPreview({ material }: { material: MaterialRow }) {
-  if (!material.file_url) return null;
+const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp']);
 
-  const mediaKind = inferMediaKind(undefined, material.file_url, material.file_name);
+function isImageMaterial(material: MaterialRow) {
+  const extension = getFileExtension(material.file_name ?? material.file_url ?? '');
+  return IMAGE_EXTENSIONS.has(extension);
+}
 
-  if (material.material_category === 'media' && mediaKind === 'video') {
-    return (
-      <video controls className="mt-4 w-full rounded-2xl border border-slate-200 bg-black" src={material.file_url}>
-        Your browser does not support video playback.
-      </video>
-    );
-  }
+function isPdfMaterial(material: MaterialRow) {
+  return getFileExtension(material.file_name ?? material.file_url ?? '') === 'pdf';
+}
 
-  if (material.material_category === 'media' && mediaKind === 'audio') {
-    return (
-      <audio controls className="mt-4 w-full" src={material.file_url}>
-        Your browser does not support audio playback.
-      </audio>
-    );
-  }
+function MaterialOpenPanel({ material }: { material: MaterialRow }) {
+  if (!material.file_url && !material.external_link) return null;
 
-  return null;
+  const mediaKind = material.file_url ? inferMediaKind(undefined, material.file_url, material.file_name) : 'file';
+
+  return (
+    <div className="mt-4 space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+      {material.file_url && material.material_category === 'media' && mediaKind === 'video' && (
+        <video controls className="w-full rounded-2xl border border-slate-200 bg-black" src={material.file_url}>
+          Your browser does not support video playback.
+        </video>
+      )}
+
+      {material.file_url && material.material_category === 'media' && mediaKind === 'audio' && (
+        <audio controls className="w-full" src={material.file_url}>
+          Your browser does not support audio playback.
+        </audio>
+      )}
+
+      {material.file_url && material.material_category === 'document' && isImageMaterial(material) && (
+        <img
+          src={material.file_url}
+          alt={material.file_name ?? material.title}
+          className="max-h-[28rem] w-full rounded-2xl border border-slate-200 object-contain"
+        />
+      )}
+
+      {material.file_url && material.material_category === 'document' && isPdfMaterial(material) && (
+        <iframe
+          title={material.title}
+          src={material.file_url}
+          className="h-[28rem] w-full rounded-2xl border border-slate-200 bg-white"
+        />
+      )}
+
+      {material.file_url &&
+        material.material_category === 'document' &&
+        !isImageMaterial(material) &&
+        !isPdfMaterial(material) && (
+          <p className="text-sm text-slate-600">
+            Preview is not available for this file type.{' '}
+            <a href={material.file_url} target="_blank" rel="noreferrer" className="font-semibold text-slate-900 underline">
+              Open file in a new tab
+            </a>
+            .
+          </p>
+        )}
+
+      {material.external_link && (
+        <p className="text-sm text-slate-600">
+          External link:{' '}
+          <a href={material.external_link} target="_blank" rel="noreferrer" className="font-semibold text-slate-900 underline break-all">
+            {material.external_link}
+          </a>
+        </p>
+      )}
+    </div>
+  );
 }
 
 type StudentMaterialSectionProps = {
@@ -47,6 +96,8 @@ export default function StudentMaterialSection({
   emptyMessage,
   materials
 }: StudentMaterialSectionProps) {
+  const [openId, setOpenId] = useState<string | null>(null);
+
   return (
     <Card variant="elevated">
       <CardHeader>
@@ -64,6 +115,15 @@ export default function StudentMaterialSection({
                     {material.file_name && <p className="text-sm text-slate-500">{material.file_name}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {(material.file_url || material.external_link) && (
+                      <button
+                        type="button"
+                        onClick={() => setOpenId((current) => (current === material.id ? null : material.id))}
+                        className="link-button-secondary px-4 py-2 text-sm"
+                      >
+                        {openId === material.id ? 'Close' : 'Open'}
+                      </button>
+                    )}
                     {material.file_url && (
                       <Link
                         href={getMaterialFileHref(material) ?? material.file_url}
@@ -87,7 +147,7 @@ export default function StudentMaterialSection({
                     )}
                   </div>
                 </div>
-                <MaterialPreview material={material} />
+                {openId === material.id && <MaterialOpenPanel material={material} />}
               </article>
             ))}
           </div>
