@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import AuthNav from '../components/AuthNav';
+import AuthUrlErrorHandler from '../components/AuthUrlErrorHandler';
 import { notoEthiopic, plusJakarta } from './fonts';
 
 export const metadata: Metadata = {
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ti" className={`${plusJakarta.variable} ${notoEthiopic.variable}`}>
       <body className="min-h-screen text-slate-900 antialiased">
+        <AuthUrlErrorHandler />
         <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8">
           <header className="mb-8 rounded-[2rem] border border-amber-100/80 bg-white/90 px-5 py-4 shadow-card-lg backdrop-blur">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

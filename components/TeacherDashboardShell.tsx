@@ -2,15 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Bell,
   BookOpen,
-  ChevronDown,
   ClipboardList,
   GraduationCap,
   LayoutDashboard,
   MessageSquare,
-  Users,
-  Video
+  Users
 } from 'lucide-react';
 import TeacherLessonForm from './TeacherLessonForm';
 import TeacherLessonList, { type LessonRow } from './TeacherLessonList';
@@ -91,9 +88,7 @@ export default function TeacherDashboardShell({
 }: TeacherDashboardShellProps) {
   const [activeTab, setActiveTab] = useState<TeacherTab>('overview');
   const [showQuickActions, setShowQuickActions] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
   const quickActionsRef = useRef<HTMLDivElement | null>(null);
-  const summaryRef = useRef<HTMLDivElement | null>(null);
 
   const overview = useMemo(() => {
     const activeStudents = studentList.filter((student) => student.is_active).length;
@@ -113,51 +108,23 @@ export default function TeacherDashboardShell({
     };
   }, [announcements, assignments, lessons, liveClasses, studentList]);
 
-  const summaryItems = useMemo(
-    () => [
-      {
-        label: 'Students',
-        value: studentCount,
-        helper: `${overview.activeStudents} active learners`,
-        icon: Users,
-        tab: 'students' as const,
-        active: activeTab === 'students'
-      },
-      {
-        label: 'Homework',
-        value: assignments.length,
-        helper: `${overview.pendingReview} total submissions to review`,
-        icon: ClipboardList,
-        tab: 'homework' as const,
-        active: activeTab === 'homework'
-      },
-      {
-        label: 'Live Classes',
-        value: overview.upcomingClasses,
-        helper: 'Upcoming sessions on the calendar',
-        icon: Video,
-        tab: 'communication' as const,
-        active: activeTab === 'communication'
-      },
-      {
-        label: 'Announcements',
-        value: announcements.length,
-        helper: 'Recent updates for students and parents',
-        icon: Bell,
-        tab: 'communication' as const,
-        active: activeTab === 'communication'
-      }
-    ],
-    [activeTab, announcements.length, assignments.length, overview.activeStudents, overview.pendingReview, overview.upcomingClasses, studentCount]
+  const tabLabels = useMemo(
+    () => ({
+      overview: 'Overview',
+      students: `Students (${studentCount})`,
+      homework: `Homework (${assignments.length})`,
+      teaching: 'Teaching',
+      grades: 'Grades',
+      communication: `Communication (${overview.upcomingClasses} live · ${announcements.length} ann)`
+    }),
+    [announcements.length, assignments.length, overview.upcomingClasses, studentCount]
   );
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
       if (quickActionsRef.current?.contains(target)) return;
-      if (summaryRef.current?.contains(target)) return;
       setShowQuickActions(false);
-      setShowSummary(false);
     };
 
     document.addEventListener('mousedown', handlePointerDown);
@@ -173,66 +140,12 @@ export default function TeacherDashboardShell({
           <div>
             <h2 className="text-xl font-semibold tracking-tight text-slate-900">Teacher Workspace</h2>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div ref={summaryRef} className="relative">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setShowSummary((current) => !current);
-                  setShowQuickActions(false);
-                }}
-                className="gap-2"
-              >
-                Summary
-                <ChevronDown className={cn('h-4 w-4 transition', showSummary && 'rotate-180')} aria-hidden />
-              </Button>
+          <div ref={quickActionsRef} className="relative">
+            <Button type="button" variant="secondary" onClick={() => setShowQuickActions((current) => !current)}>
+              Quick Actions
+            </Button>
 
-              {showSummary && (
-                <div className="absolute left-0 z-20 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card-lg sm:w-80">
-                  {summaryItems.map((item, index) => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={() => {
-                        setActiveTab(item.tab);
-                        setShowSummary(false);
-                      }}
-                      className={cn(
-                        'flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-slate-50',
-                        index > 0 && 'border-t border-slate-100',
-                        item.active && 'bg-slate-50'
-                      )}
-                    >
-                      <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
-                        <item.icon className="h-4 w-4" aria-hidden />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-semibold text-slate-900">{item.label}</p>
-                          <span className="text-lg font-semibold text-slate-950">{item.value}</span>
-                        </div>
-                        <p className="mt-0.5 text-xs text-slate-500">{item.helper}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div ref={quickActionsRef} className="relative">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setShowQuickActions((current) => !current);
-                  setShowSummary(false);
-                }}
-              >
-                Quick Actions
-              </Button>
-
-              {showQuickActions && (
+            {showQuickActions && (
                 <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card-lg">
                   <button
                     type="button"
@@ -277,10 +190,9 @@ export default function TeacherDashboardShell({
                 </div>
               )}
             </div>
-          </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {TABS.map((tab) => (
             <button
               key={tab.id}
@@ -294,8 +206,8 @@ export default function TeacherDashboardShell({
               )}
             >
               <div className="flex items-center gap-2">
-                <tab.icon className="h-4 w-4" />
-                <p className="text-sm font-semibold">{tab.label}</p>
+                <tab.icon className="h-4 w-4 shrink-0" />
+                <p className="text-sm font-semibold leading-snug">{tabLabels[tab.id]}</p>
               </div>
               <p className={cn('mt-1 text-xs', activeTab === tab.id ? 'text-slate-200' : 'text-slate-500')}>{tab.subtitle}</p>
             </button>
@@ -303,6 +215,7 @@ export default function TeacherDashboardShell({
         </div>
       </Card>
 
+      <div key={activeTab} className="animate-fade-in">
       {activeTab === 'overview' && (
         <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-6">
@@ -444,6 +357,7 @@ export default function TeacherDashboardShell({
         </div>
       )}
 
+      </div>
     </div>
   );
 }
