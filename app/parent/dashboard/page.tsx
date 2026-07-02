@@ -110,7 +110,7 @@ export default async function ParentDashboardPage() {
   return (
     <section className="space-y-8">
       <PageHeader
-        eyebrow="Parent Dashboard / ?? ??? ?????"
+        eyebrow="Parent Dashboard / ናይ ወለዲ ዳሽቦርድ"
         title={`Welcome, ${displayName}`}
         description="See how your children are doing in Tigrigna class."
         actions={
@@ -172,7 +172,7 @@ export default async function ParentDashboardPage() {
                       <tr key={grade.id}>
                         <td className="px-4 py-3 text-slate-900">{grade.title}</td>
                         <td className="px-4 py-3 font-semibold text-amber-800">{grade.grade}</td>
-                        <td className="px-4 py-3 text-slate-600">{grade.feedback ?? 'â€”'}</td>
+                        <td className="px-4 py-3 text-slate-600">{grade.feedback ?? '—'}</td>
                         <td className="px-4 py-3 text-slate-500">{new Date(grade.created_at).toLocaleDateString()}</td>
                       </tr>
                     ))
