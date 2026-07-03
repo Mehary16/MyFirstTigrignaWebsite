@@ -36,7 +36,7 @@ export default function AlphabetPageClient() {
     <section className="space-y-8">
       <div className="rounded-[2rem] border border-amber-100 bg-white p-8 shadow-sm">
         <p className="text-sm uppercase tracking-[0.25em] text-amber-700">Resources</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Tigrinya Alphabet (Fidel)</h1>
+        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Tigrinya Alphabet (ፊደላት ትግርኛ)</h1>
         <p className="mt-3 max-w-2xl text-slate-600">
           Practice Ge&apos;ez script characters with transliteration and native-speaker audio.
         </p>
