@@ -1,8 +1,9 @@
 'use client';
 
+import { Fragment, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 import { ChevronDown, UserPlus } from 'lucide-react';
+import { splitFullName } from '../lib/studentNames';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
 import TeacherStudentCreateForm from './TeacherStudentCreateForm';
 import { Alert, Badge, Card, EmptyState } from './ui';
@@ -10,12 +11,41 @@ import { cn } from '../lib/cn';
 
 export type StudentListItem = {
   id: string;
+  first_name: string;
+  last_name: string;
   full_name: string;
+  email: string | null;
   created_at: string;
   is_active: boolean;
   suspended_reason: string | null;
   submission_count: number;
 };
+
+export function toStudentListItem(
+  student: {
+    id: string;
+    full_name: string;
+    email?: string | null;
+    created_at: string;
+    is_active?: boolean | null;
+    suspended_reason?: string | null;
+  },
+  submissionCount = 0
+): StudentListItem {
+  const { firstName, lastName } = splitFullName(student.full_name);
+
+  return {
+    id: student.id,
+    first_name: firstName,
+    last_name: lastName,
+    full_name: student.full_name,
+    email: student.email ?? null,
+    created_at: student.created_at,
+    is_active: student.is_active ?? true,
+    suspended_reason: student.suspended_reason ?? null,
+    submission_count: submissionCount
+  };
+}
 
 type TeacherStudentListProps = {
   students: StudentListItem[];
@@ -28,6 +58,8 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [helpOpenId, setHelpOpenId] = useState<string | null>(null);
+  const [helpMessage, setHelpMessage] = useState<string | null>(null);
 
   const activeCount = students.filter((s) => s.is_active).length;
   const suspendedCount = students.length - activeCount;
@@ -103,6 +135,47 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
     setError(null);
   };
 
+  const copyEmail = async (email: string) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      setHelpMessage(`Copied ${email} to clipboard.`);
+    } catch {
+      setHelpMessage('Could not copy email. Select and copy it manually.');
+    }
+  };
+
+  const sendAccessHelp = async (studentId: string, action: 'reset_password' | 'resend_invite') => {
+    setBusyId(studentId);
+    setError(null);
+    setHelpMessage(null);
+
+    try {
+      const response = await fetch('/api/students/send-access-help', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, action })
+      });
+
+      const payload = (await response.json()) as { error?: string; message?: string; email?: string };
+
+      if (!response.ok || payload.error) {
+        setError(payload.error ?? 'Could not send login help.');
+        return;
+      }
+
+      setHelpMessage(payload.message ?? 'Login help sent.');
+      if (payload.email) {
+        setStudents((current) =>
+          current.map((student) => (student.id === studentId ? { ...student, email: payload.email! } : student))
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send login help.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card variant="default" className="overflow-hidden">
@@ -157,6 +230,7 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
       </div>
 
       {error ? <Alert variant="error">{error}</Alert> : null}
+      {helpMessage ? <Alert variant="success">{helpMessage}</Alert> : null}
 
       {!students.length ? (
         <EmptyState title="No students registered yet." description="Add the first student above or ask them to sign up from the login page." />
@@ -165,17 +239,37 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-slate-700">Name</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-700">First name</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-700">Last name</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-700">Email</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-700">Joined</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-700">Submissions</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-700">Status</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-700">Action</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-700">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
               {students.map((student) => (
-                <tr key={student.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{student.full_name}</td>
+                <Fragment key={student.id}>
+                <tr>
+                  <td className="px-4 py-3 font-medium text-slate-900">{student.first_name}</td>
+                  <td className="px-4 py-3 text-slate-700">{student.last_name}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {student.email ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="break-all">{student.email}</span>
+                        <button
+                          type="button"
+                          onClick={() => copyEmail(student.email!)}
+                          className="rounded-full border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">Not on file</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-slate-600">{new Date(student.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3 text-slate-600">{student.submission_count}</td>
                   <td className="px-4 py-3">
@@ -185,6 +279,13 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setHelpOpenId((current) => (current === student.id ? null : student.id))}
+                        className="rounded-full border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-800 transition hover:bg-blue-50"
+                      >
+                        {helpOpenId === student.id ? 'Close help' : 'Login help'}
+                      </button>
                       {student.is_active ? (
                         <button
                           type="button"
@@ -215,6 +316,49 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
                     </div>
                   </td>
                 </tr>
+                {helpOpenId === student.id && (
+                  <tr className="bg-blue-50/40">
+                    <td colSpan={7} className="px-4 py-4">
+                      <div className="rounded-2xl border border-blue-100 bg-white p-4">
+                        <p className="text-sm font-semibold text-slate-900">Help this student access their portal</p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          Share their login email if they forgot it, then send a reset link or resend the setup invitation.
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {student.email ? (
+                            <button
+                              type="button"
+                              onClick={() => copyEmail(student.email!)}
+                              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                            >
+                              Copy email
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            disabled={busyId === student.id || !student.is_active}
+                            onClick={() => sendAccessHelp(student.id, 'reset_password')}
+                            className="rounded-full border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {busyId === student.id ? 'Sending...' : 'Send password reset'}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === student.id || !student.is_active}
+                            onClick={() => sendAccessHelp(student.id, 'resend_invite')}
+                            className="rounded-full border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-800 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {busyId === student.id ? 'Sending...' : 'Resend setup email'}
+                          </button>
+                        </div>
+                        {!student.is_active ? (
+                          <p className="mt-3 text-xs text-amber-700">Activate the account before sending login help.</p>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>

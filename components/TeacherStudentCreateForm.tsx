@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { StudentListItem } from './TeacherStudentList';
+import { toStudentListItem } from './TeacherStudentList';
 import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from './ui';
 
 type CreateMode = 'password' | 'invite';
@@ -13,7 +14,8 @@ type TeacherStudentCreateFormProps = {
 
 export default function TeacherStudentCreateForm({ onStudentCreated }: TeacherStudentCreateFormProps) {
   const router = useRouter();
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [temporaryPassword, setTemporaryPassword] = useState('');
   const [mode, setMode] = useState<CreateMode>('password');
@@ -30,7 +32,8 @@ export default function TeacherStudentCreateForm({ onStudentCreated }: TeacherSt
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fullName,
+          firstName,
+          lastName,
           email,
           temporaryPassword: mode === 'password' ? temporaryPassword : undefined,
           mode
@@ -40,7 +43,15 @@ export default function TeacherStudentCreateForm({ onStudentCreated }: TeacherSt
       const payload = (await response.json()) as {
         error?: string;
         message?: string;
-        student?: StudentListItem;
+        student?: {
+          id: string;
+          full_name: string;
+          email?: string | null;
+          created_at: string;
+          is_active: boolean;
+          suspended_reason: string | null;
+          submission_count: number;
+        };
       };
 
       if (!response.ok || payload.error || !payload.student) {
@@ -49,10 +60,11 @@ export default function TeacherStudentCreateForm({ onStudentCreated }: TeacherSt
       }
 
       setFeedback({ type: 'success', message: payload.message ?? 'Student created successfully.' });
-      setFullName('');
+      setFirstName('');
+      setLastName('');
       setEmail('');
       setTemporaryPassword('');
-      onStudentCreated?.(payload.student);
+      onStudentCreated?.(toStudentListItem(payload.student, payload.student.submission_count));
       router.refresh();
     } catch (error) {
       setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Could not create the student account.' });
@@ -71,8 +83,9 @@ export default function TeacherStudentCreateForm({ onStudentCreated }: TeacherSt
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Input label="Student name" value={fullName} onChange={(event) => setFullName(event.currentTarget.value)} required />
+          <div className="grid gap-4 md:grid-cols-3">
+            <Input label="First name" value={firstName} onChange={(event) => setFirstName(event.currentTarget.value)} required />
+            <Input label="Last name" value={lastName} onChange={(event) => setLastName(event.currentTarget.value)} required />
             <Input label="Student email" type="email" value={email} onChange={(event) => setEmail(event.currentTarget.value)} required />
           </div>
 
