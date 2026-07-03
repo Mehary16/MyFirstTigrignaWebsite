@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import type { MaterialRow } from '../../../lib/teacherMaterials';
-import { type StudentListItem, toStudentListItem } from '../../../components/TeacherStudentList';
+import type { StudentListItem } from '../../../lib/studentList';
+import { toStudentListItem } from '../../../lib/studentList';
 import { type GradeRow } from '../../../components/TeacherGradeManager';
 import TeacherDashboardShell from '../../../components/TeacherDashboardShell';
 import LogoutButton from '../../../components/LogoutButton';
