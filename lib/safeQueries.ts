@@ -149,38 +149,71 @@ export async function fetchStudentGrades(supabase: SupabaseClient, studentId: st
 }
 
 export async function fetchAssignments(supabase: SupabaseClient) {
-  const result = await supabase
+  const full = await supabase
     .from('assignments')
-    .select('id, title, description, due_date, lesson_id, created_at')
+    .select('id, title, description, due_date, lesson_id, file_url, file_name, created_at')
     .order('created_at', { ascending: false });
 
-  if (!result.error) {
-    return { data: result.data ?? [], error: null as QueryError };
+  if (!full.error) {
+    return { data: full.data ?? [], error: null as QueryError };
   }
 
-  if (isMissingTableError(result.error.message, 'assignments')) {
+  if (isMissingTableError(full.error.message, 'assignments')) {
     return { data: [], error: null as QueryError };
   }
 
-  return { data: [], error: result.error };
+  if (isMissingColumnError(full.error.message, 'file_url') || isMissingColumnError(full.error.message, 'file_name')) {
+    const basic = await supabase
+      .from('assignments')
+      .select('id, title, description, due_date, lesson_id, created_at')
+      .order('created_at', { ascending: false });
+
+    if (basic.error) {
+      return { data: [], error: basic.error };
+    }
+
+    return {
+      data: (basic.data ?? []).map((row) => ({ ...row, file_url: null, file_name: null })),
+      error: null as QueryError
+    };
+  }
+
+  return { data: [], error: full.error };
 }
 
 export async function fetchAnnouncements(supabase: SupabaseClient) {
-  const result = await supabase
+  const full = await supabase
     .from('announcements')
-    .select('id, title, body, created_at')
+    .select('id, title, body, file_url, file_name, created_at')
     .order('created_at', { ascending: false })
     .limit(10);
 
-  if (!result.error) {
-    return { data: result.data ?? [], error: null as QueryError };
+  if (!full.error) {
+    return { data: full.data ?? [], error: null as QueryError };
   }
 
-  if (isMissingTableError(result.error.message, 'announcements')) {
+  if (isMissingTableError(full.error.message, 'announcements')) {
     return { data: [], error: null as QueryError };
   }
 
-  return { data: [], error: result.error };
+  if (isMissingColumnError(full.error.message, 'file_url') || isMissingColumnError(full.error.message, 'file_name')) {
+    const basic = await supabase
+      .from('announcements')
+      .select('id, title, body, created_at')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (basic.error) {
+      return { data: [], error: basic.error };
+    }
+
+    return {
+      data: (basic.data ?? []).map((row) => ({ ...row, file_url: null, file_name: null })),
+      error: null as QueryError
+    };
+  }
+
+  return { data: [], error: full.error };
 }
 
 export async function fetchLiveClasses(supabase: SupabaseClient) {

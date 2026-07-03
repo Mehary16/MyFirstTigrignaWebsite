@@ -2,14 +2,20 @@
 
 import { useMemo, useState, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
+import { uploadTeacherAttachment } from '../lib/attachments';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
+import { AttachmentActions, AttachmentFileInput } from './AttachmentField';
 
 export type AnnouncementRow = {
   id: string;
   title: string;
   body: string;
+  file_url: string | null;
+  file_name: string | null;
   created_at: string;
 };
+
+const ANNOUNCEMENT_SELECT = 'id, title, body, file_url, file_name, created_at';
 
 type TeacherAnnouncementManagerProps = {
   initialAnnouncements: AnnouncementRow[];
@@ -21,12 +27,15 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
   const [announcements, setAnnouncements] = useState(initialAnnouncements);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [createFile, setCreateFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editBody, setEditBody] = useState('');
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editClearAttachment, setEditClearAttachment] = useState(false);
 
   const handleCreate: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
     event.preventDefault();
@@ -37,16 +46,35 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
 
+      let fileUrl: string | null = null;
+      let fileName: string | null = null;
+
+      if (createFile) {
+        const uploaded = await uploadTeacherAttachment(createFile);
+        fileUrl = uploaded.fileUrl;
+        fileName = uploaded.fileName;
+      }
+
       const { data, error } = await supabase
         .from('announcements')
-        .insert([{ teacher_id: userData.user.id, title: title.trim(), body: body.trim() }])
-        .select('id, title, body, created_at')
+        .insert([
+          {
+            teacher_id: userData.user.id,
+            title: title.trim(),
+            body: body.trim(),
+            file_url: fileUrl,
+            file_name: fileName
+          }
+        ])
+        .select(ANNOUNCEMENT_SELECT)
         .single();
 
       if (error) {
         const hint = error.message.includes('announcements')
           ? ' Run supabase/FIX_ANNOUNCEMENTS.sql in Supabase SQL Editor, then try again.'
-          : '';
+          : error.message.includes('file_url') || error.message.includes('file_name')
+            ? ' Run supabase/FIX_ASSIGNMENT_ANNOUNCEMENT_ATTACHMENTS.sql in Supabase SQL Editor, then try again.'
+            : '';
         setStatus(`Could not post announcement: ${error.message}${hint}`);
         return;
       }
@@ -54,8 +82,11 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
       setAnnouncements((current) => [data as AnnouncementRow, ...current]);
       setTitle('');
       setBody('');
+      setCreateFile(null);
       setStatus('Announcement posted.');
       router.refresh();
+    } catch (uploadError) {
+      setStatus(uploadError instanceof Error ? uploadError.message : 'Could not upload the attachment.');
     } finally {
       setLoading(false);
     }
@@ -72,6 +103,35 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
     router.refresh();
   };
 
+  const handleDeleteAttachment = async (item: AnnouncementRow) => {
+    if (!window.confirm('Remove the attached file from this announcement?')) return;
+
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      const { error } = await supabase
+        .from('announcements')
+        .update({ file_url: null, file_name: null })
+        .eq('id', item.id);
+
+      if (error) {
+        setStatus(`Could not remove attachment: ${error.message}`);
+        return;
+      }
+
+      setAnnouncements((current) =>
+        current.map((announcement) =>
+          announcement.id === item.id ? { ...announcement, file_url: null, file_name: null } : announcement
+        )
+      );
+      setStatus('Attachment removed.');
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOpen = (id: string) => {
     setOpenId((current) => (current === id ? null : id));
   };
@@ -81,6 +141,8 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
     setOpenId(item.id);
     setEditTitle(item.title);
     setEditBody(item.body);
+    setEditFile(null);
+    setEditClearAttachment(false);
     setStatus(null);
   };
 
@@ -88,6 +150,8 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
     setEditingId(null);
     setEditTitle('');
     setEditBody('');
+    setEditFile(null);
+    setEditClearAttachment(false);
   };
 
   const handleSaveEdit: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
@@ -98,11 +162,23 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
     setStatus(null);
 
     try {
+      const current = announcements.find((item) => item.id === editingId);
+      let fileUrl = editClearAttachment ? null : (current?.file_url ?? null);
+      let fileName = editClearAttachment ? null : (current?.file_name ?? null);
+
+      if (editFile) {
+        const uploaded = await uploadTeacherAttachment(editFile);
+        fileUrl = uploaded.fileUrl;
+        fileName = uploaded.fileName;
+      }
+
       const { error } = await supabase
         .from('announcements')
         .update({
           title: editTitle.trim(),
-          body: editBody.trim()
+          body: editBody.trim(),
+          file_url: fileUrl,
+          file_name: fileName
         })
         .eq('id', editingId);
 
@@ -114,13 +190,15 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
         return;
       }
 
-      setAnnouncements((current) =>
-        current.map((item) =>
+      setAnnouncements((currentList) =>
+        currentList.map((item) =>
           item.id === editingId
             ? {
                 ...item,
                 title: editTitle.trim(),
-                body: editBody.trim()
+                body: editBody.trim(),
+                file_url: fileUrl,
+                file_name: fileName
               }
             : item
         )
@@ -128,6 +206,8 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
       setStatus('Announcement updated.');
       cancelEdit();
       router.refresh();
+    } catch (uploadError) {
+      setStatus(uploadError instanceof Error ? uploadError.message : 'Could not upload the attachment.');
     } finally {
       setLoading(false);
     }
@@ -144,6 +224,12 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
           <label className="block text-sm font-medium text-slate-700">Message</label>
           <textarea value={body} onChange={(e) => setBody(e.currentTarget.value)} required rows={4} className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3" />
         </div>
+        <AttachmentFileInput
+          label="Attach file (optional)"
+          file={createFile}
+          onFileChange={setCreateFile}
+          disabled={loading}
+        />
         <button type="submit" disabled={loading} className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-700 disabled:bg-slate-400">
           {loading ? 'Posting...' : 'Post announcement'}
         </button>
@@ -158,6 +244,9 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
               <div>
                 <h3 className="font-semibold text-slate-900">{item.title}</h3>
                 <p className="mt-1 text-xs text-slate-500">{new Date(item.created_at).toLocaleString()}</p>
+                {item.file_url && (
+                  <p className="mt-1 text-xs font-medium text-slate-500">Attachment: {item.file_name ?? 'File'}</p>
+                )}
                 <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">{item.body}</p>
               </div>
               <div className="flex flex-nowrap gap-2">
@@ -204,6 +293,19 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
                         className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3"
                       />
                     </div>
+                    {item.file_url && !editClearAttachment && !editFile && (
+                      <AttachmentActions
+                        attachment={item}
+                        onDelete={() => setEditClearAttachment(true)}
+                        busy={loading}
+                      />
+                    )}
+                    <AttachmentFileInput
+                      label={item.file_url && !editClearAttachment ? 'Replace attachment' : 'Attach file'}
+                      file={editFile}
+                      onFileChange={setEditFile}
+                      disabled={loading}
+                    />
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="submit"
@@ -222,16 +324,28 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
                     </div>
                   </form>
                 ) : (
-                  <div className="space-y-2 text-sm text-slate-700">
-                    <p>
-                      <span className="font-semibold text-slate-900">Title:</span> {item.title}
-                    </p>
-                    <p>
-                      <span className="font-semibold text-slate-900">Posted:</span> {new Date(item.created_at).toLocaleString()}
-                    </p>
-                    <p className="whitespace-pre-wrap">
-                      <span className="font-semibold text-slate-900">Message:</span> {item.body}
-                    </p>
+                  <div className="space-y-4 text-sm text-slate-700">
+                    <div className="space-y-2">
+                      <p>
+                        <span className="font-semibold text-slate-900">Title:</span> {item.title}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-slate-900">Posted:</span> {new Date(item.created_at).toLocaleString()}
+                      </p>
+                      <p className="whitespace-pre-wrap">
+                        <span className="font-semibold text-slate-900">Message:</span> {item.body}
+                      </p>
+                    </div>
+                    {item.file_url ? (
+                      <AttachmentActions
+                        attachment={item}
+                        onReplace={() => startEdit(item)}
+                        onDelete={() => handleDeleteAttachment(item)}
+                        busy={loading}
+                      />
+                    ) : (
+                      <p className="text-slate-500">No file attached.</p>
+                    )}
                   </div>
                 )}
               </div>
