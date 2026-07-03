@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { createBrowserSupabaseClient } from '../../lib/supabaseClient';
 import { resolveDashboardPath } from '../../lib/resolveDashboard';
 import { syncRoleAndGetDashboardPath } from '../../lib/clientRoleSync';
@@ -12,6 +13,8 @@ export default function ChangePasswordPage() {
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -100,22 +103,44 @@ export default function ChangePasswordPage() {
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <Input
-            label="New password"
-            type="password"
-            minLength={8}
-            value={password}
-            onChange={(event) => setPassword(event.currentTarget.value)}
-            required
-          />
-          <Input
-            label="Confirm password"
-            type="password"
-            minLength={8}
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.currentTarget.value)}
-            required
-          />
+          <div className="relative">
+            <Input
+              label="New password"
+              type={showPassword ? 'text' : 'password'}
+              minLength={8}
+              value={password}
+              onChange={(event) => setPassword(event.currentTarget.value)}
+              required
+              className="pr-12"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+              className="absolute right-3 top-[2.35rem] rounded-full p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+            </button>
+          </div>
+          <div className="relative">
+            <Input
+              label="Confirm password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              minLength={8}
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.currentTarget.value)}
+              required
+              className="pr-12"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((current) => !current)}
+              className="absolute right-3 top-[2.35rem] rounded-full p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+              aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+            >
+              {showConfirmPassword ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+            </button>
+          </div>
           {error ? <Alert variant="error">{error}</Alert> : null}
           <Button type="submit" fullWidth disabled={loading}>
             {loading ? 'Saving...' : 'Update password'}
