@@ -18,13 +18,13 @@ import {
   fetchAnnouncements,
   fetchAssignments,
   fetchDocumentsForDisplay,
-  fetchLessonsForDisplay,
   fetchLessonViews,
   fetchLiveClasses,
   fetchStudentGrades,
   fetchStudentSubmissions,
   firstQueryError
 } from '../../../lib/safeQueries';
+import { loadLessonsForStudent } from '../../../lib/loadLessonsForStudent';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
@@ -66,7 +66,7 @@ export default async function StudentDashboardPage() {
     }
 
     const [
-      lessonsResult,
+      lessons,
       documentsResult,
       submissionsResult,
       gradesResult,
@@ -75,7 +75,7 @@ export default async function StudentDashboardPage() {
       liveClassesResult,
       lessonViewsResult
     ] = await Promise.all([
-      fetchLessonsForDisplay(supabase),
+      loadLessonsForStudent(supabase),
       fetchDocumentsForDisplay(supabase),
       fetchStudentSubmissions(supabase, user.id),
       fetchStudentGrades(supabase, user.id),
@@ -84,8 +84,6 @@ export default async function StudentDashboardPage() {
       fetchLiveClasses(supabase),
       fetchLessonViews(supabase, user.id)
     ]);
-
-    const lessons = lessonsResult.data;
     const submissions = submissionsResult.data;
     const grades = gradesResult.data;
     const assignments = assignmentsResult.data;
@@ -95,7 +93,6 @@ export default async function StudentDashboardPage() {
 
     const setupMessage = firstQueryError([
       profileError,
-      lessonsResult.error,
       documentsResult.error,
       submissionsResult.error,
       gradesResult.error,
@@ -134,7 +131,7 @@ export default async function StudentDashboardPage() {
 
         <ProgressSummary
           lessonsViewed={viewedLessonIds.length}
-          totalLessons={lessons?.length ?? 0}
+          totalLessons={lessons.length}
           submissionsCount={submissions?.length ?? 0}
           gradesCount={grades?.length ?? 0}
           upcomingClasses={upcomingClasses}
@@ -148,7 +145,7 @@ export default async function StudentDashboardPage() {
 
         <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
           <div className="space-y-6">
-            <StudentLessonSection lessons={lessons ?? []} viewedLessonIds={viewedLessonIds} studentId={user.id} />
+            <StudentLessonSection lessons={lessons} viewedLessonIds={viewedLessonIds} />
 
             <StudentMaterialSection
               title="Documents & Files"
