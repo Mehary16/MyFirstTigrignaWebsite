@@ -4,7 +4,7 @@ import { useMemo, useState, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
 import { uploadTeacherAttachment } from '../lib/attachments';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
-import { AttachmentActions, AttachmentFileInput } from './AttachmentField';
+import { AttachmentActions, AttachmentFileInput, ItemRowActions } from './AttachmentField';
 
 export type AnnouncementRow = {
   id: string;
@@ -249,25 +249,13 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
                 )}
                 <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">{item.body}</p>
               </div>
-              <div className="flex flex-nowrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleOpen(item.id)}
-                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  {openId === item.id ? 'Close' : 'Open'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => startEdit(item)}
-                  className="rounded-full border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50"
-                >
-                  Edit
-                </button>
-                <button type="button" onClick={() => handleDelete(item.id)} className="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">
-                  Delete
-                </button>
-              </div>
+              <ItemRowActions
+                attachment={item}
+                detailsOpen={openId === item.id}
+                onToggleDetails={() => handleOpen(item.id)}
+                onEdit={() => startEdit(item)}
+                onDelete={() => handleDelete(item.id)}
+              />
             </div>
 
             {openId === item.id && (
