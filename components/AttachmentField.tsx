@@ -3,6 +3,8 @@
 import type { AttachmentFields } from '../lib/attachments';
 import { getAttachmentDownloadHref, getAttachmentOpenHref } from '../lib/attachments';
 
+const pillBase = 'rounded-full border px-4 py-2 text-sm font-semibold';
+
 type AttachmentFieldProps = {
   label?: string;
   file: File | null;
@@ -29,6 +31,76 @@ export function AttachmentFileInput({
         className="mt-2 block w-full text-sm text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-700"
       />
       {file && <p className="mt-2 text-xs text-slate-500">Selected: {file.name}</p>}
+    </div>
+  );
+}
+
+type ItemRowActionsProps = {
+  attachment: AttachmentFields;
+  detailsOpen: boolean;
+  onToggleDetails: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+};
+
+/** List-row Open / Download / Details / Edit / Delete for assignments and announcements. */
+export function ItemRowActions({ attachment, detailsOpen, onToggleDetails, onEdit, onDelete }: ItemRowActionsProps) {
+  const hasFile = Boolean(attachment.file_url);
+  const openHref = getAttachmentOpenHref(attachment);
+  const downloadHref = getAttachmentDownloadHref(attachment);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {hasFile && openHref ? (
+        <a
+          href={openHref}
+          target="_blank"
+          rel="noreferrer"
+          className={`${pillBase} border-slate-300 text-slate-700 hover:bg-slate-50`}
+        >
+          Open
+        </a>
+      ) : (
+        <button
+          type="button"
+          onClick={onToggleDetails}
+          className={`${pillBase} border-slate-300 text-slate-700 hover:bg-slate-50`}
+        >
+          {detailsOpen ? 'Close' : 'Open'}
+        </button>
+      )}
+      {hasFile && downloadHref && (
+        <a
+          href={downloadHref}
+          download={attachment.file_name ?? undefined}
+          className={`${pillBase} border-emerald-200 text-emerald-800 hover:bg-emerald-50`}
+        >
+          Download
+        </a>
+      )}
+      {hasFile && (
+        <button
+          type="button"
+          onClick={onToggleDetails}
+          className={`${pillBase} border-slate-300 text-slate-700 hover:bg-slate-50`}
+        >
+          {detailsOpen ? 'Close' : 'Details'}
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onEdit}
+        className={`${pillBase} border-amber-200 text-amber-800 hover:bg-amber-50`}
+      >
+        Edit
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        className={`${pillBase} border-red-200 text-red-700 hover:bg-red-50`}
+      >
+        Delete
+      </button>
     </div>
   );
 }
