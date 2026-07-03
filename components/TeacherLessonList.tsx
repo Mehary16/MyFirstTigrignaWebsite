@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState, type ComponentProps } from 'react';
+import { useState, type ComponentProps } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createBrowserSupabaseClient } from '../lib/supabaseClient';
 import { LESSON_LEVELS, LESSON_LEVEL_LABELS, type LessonLevel } from '../lib/lessonLevels';
 
 export type LessonRow = {
@@ -22,7 +22,6 @@ type TeacherLessonListProps = {
 
 export default function TeacherLessonList({ initialLessons }: TeacherLessonListProps) {
   const router = useRouter();
-  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [lessons, setLessons] = useState(initialLessons);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -57,22 +56,24 @@ export default function TeacherLessonList({ initialLessons }: TeacherLessonListP
     setBusyId(editingId);
     setStatus(null);
 
-    const { error } = await supabase
-      .from('lessons')
-      .update({
+    const response = await fetch(`/api/lessons/${editingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         title: editTitle.trim(),
         description: editDescription.trim() || null,
         category: editCategory.trim() || null,
         level: editLevel || null,
-        video_url: editVideoUrl.trim(),
-        external_link: editExternalLink.trim() || null
+        videoUrl: editVideoUrl.trim(),
+        externalLink: editExternalLink.trim() || null
       })
-      .eq('id', editingId);
+    });
 
+    const payload = (await response.json()) as { error?: string };
     setBusyId(null);
 
-    if (error) {
-      setStatus(`Update failed: ${error.message}`);
+    if (!response.ok) {
+      setStatus(payload.error ?? 'Update failed.');
       return;
     }
 
@@ -100,11 +101,12 @@ export default function TeacherLessonList({ initialLessons }: TeacherLessonListP
     if (!window.confirm('Delete this lesson?')) return;
 
     setBusyId(id);
-    const { error } = await supabase.from('lessons').delete().eq('id', id);
+    const response = await fetch(`/api/lessons/${id}`, { method: 'DELETE' });
+    const payload = (await response.json()) as { error?: string };
     setBusyId(null);
 
-    if (error) {
-      setStatus(`Delete failed: ${error.message}`);
+    if (!response.ok) {
+      setStatus(payload.error ?? 'Delete failed.');
       return;
     }
 
@@ -198,7 +200,14 @@ export default function TeacherLessonList({ initialLessons }: TeacherLessonListP
                   </div>
                   {lesson.description && <p className="mt-2 text-sm text-slate-600">{lesson.description}</p>}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/student/lessons/${lesson.id}`}
+                    target="_blank"
+                    className="rounded-full border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50"
+                  >
+                    Preview
+                  </Link>
                   <button
                     type="button"
                     onClick={() => startEdit(lesson)}
