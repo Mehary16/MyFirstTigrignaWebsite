@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { BookOpen, GraduationCap, Users } from 'lucide-react';
 import { createServerSupabaseClient } from '../lib/supabaseServer';
 import { dashboardPathForRole } from '../lib/routes';
+import { getUserRole } from '../lib/roleAuth';
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, PageHeader } from '../components/ui';
 
 export default async function HomePage() {
@@ -14,9 +15,7 @@ export default async function HomePage() {
   let dashboardLabel = 'Login to your dashboard';
 
   if (user) {
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
-    const role = user.email?.toLowerCase() === adminEmail.toLowerCase() ? 'Teacher' : profile?.role ?? 'Student';
+    const role = await getUserRole(supabase, user);
     dashboardHref = dashboardPathForRole(role);
     dashboardLabel =
       role === 'Teacher' ? 'Teacher Dashboard' : role === 'Parent' ? 'Parent Dashboard' : 'Student Dashboard';

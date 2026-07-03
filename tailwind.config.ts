@@ -6,7 +6,14 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        ethiopic: ['var(--font-ethiopic)', 'var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif']
+        ethiopic: ['var(--font-ethiopic)', 'var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        'ethiopic-display': [
+          'var(--font-ethiopic-display)',
+          'var(--font-ethiopic)',
+          'var(--font-sans)',
+          'ui-serif',
+          'serif'
+        ]
       },
       colors: {
         brand: {

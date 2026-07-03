@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
-import { isTeacherProfile } from '../../../../lib/auth';
+import { isTeacherUser } from '../../../../lib/auth';
 import { GRADES_SHEET_NAME } from '../../../../lib/gradesExcel';
 import { formatDatabaseError } from '../../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
@@ -15,10 +15,9 @@ export async function GET() {
     return NextResponse.json({ error: 'You must be logged in.' }, { status: 401 });
   }
 
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
 
-  if (!isTeacherProfile(profile, user.email, adminEmail)) {
+  if (!isTeacherUser(profile, user)) {
     return NextResponse.json({ error: 'Only teachers can export grades.' }, { status: 403 });
   }
 

@@ -6,7 +6,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createBrowserSupabaseClient } from '../../lib/supabaseClient';
-import { ensureUserProfile, resolveDashboardPath } from '../../lib/resolveDashboard';
+import { resolveDashboardPath } from '../../lib/resolveDashboard';
+import { syncRoleAndGetDashboardPath } from '../../lib/clientRoleSync';
 import { getEmailConfirmRedirectUrl } from '../../lib/siteUrl';
 import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
@@ -14,8 +15,6 @@ import { Card } from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import EritreanHeritagePattern from '../../components/EritreanHeritagePattern';
 import { cn } from '../../lib/cn';
-
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
 
 type LoginLocale = 'en' | 'ti';
 
@@ -147,6 +146,20 @@ export default function LoginPage() {
     window.localStorage.setItem(LOCALE_STORAGE_KEY, next);
   };
 
+  const redirectAuthenticatedUser = async (options?: { accountType?: 'Student' | 'Parent'; fullName?: string }) => {
+    const syncedPath = await syncRoleAndGetDashboardPath(options);
+    if (syncedPath) {
+      router.replace(syncedPath);
+      return;
+    }
+
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      const path = await resolveDashboardPath(supabase, data.user.id, data.user);
+      router.replace(path);
+    }
+  };
+
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getUser();
@@ -156,13 +169,7 @@ export default function LoginPage() {
           return;
         }
 
-        const path = await resolveDashboardPath(
-          supabase,
-          data.user.id,
-          data.user.email,
-          (data.user.user_metadata?.role as string | undefined) ?? (data.user.app_metadata?.role as string | undefined)
-        );
-        router.replace(path);
+        await redirectAuthenticatedUser();
       }
     };
     checkSession();
@@ -176,8 +183,6 @@ export default function LoginPage() {
 
     try {
       if (mode === 'signUp') {
-        const role = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'Teacher' : accountType;
-
         let emailRedirectTo: string;
         try {
           emailRedirectTo = getEmailConfirmRedirectUrl();
@@ -197,7 +202,7 @@ export default function LoginPage() {
             emailRedirectTo,
             data: {
               full_name: fullName,
-              role
+              role: accountType
             }
           }
         });
@@ -208,15 +213,13 @@ export default function LoginPage() {
         }
 
         if (data.session && data.user) {
-          const { error: profileError } = await supabase.from('profiles').upsert({
-            id: data.user.id,
-            full_name: fullName,
-            role,
-            email: email.trim().toLowerCase()
-          });
-          if (profileError) {
-            console.error('Profile upsert failed:', profileError.message);
+          if (data.user.user_metadata?.force_password_change) {
+            router.replace('/change-password');
+            return;
           }
+
+          await redirectAuthenticatedUser({ accountType, fullName });
+          return;
         }
 
         setMessage(copy.signUpSuccess);
@@ -232,20 +235,12 @@ export default function LoginPage() {
 
         const { data: userData } = await supabase.auth.getUser();
         if (userData.user) {
-          await ensureUserProfile(supabase, userData.user);
-
           if (userData.user.user_metadata?.force_password_change) {
             router.replace('/change-password');
             return;
           }
 
-          const path = await resolveDashboardPath(
-            supabase,
-            userData.user.id,
-            userData.user.email,
-            (userData.user.user_metadata?.role as string | undefined) ?? (userData.user.app_metadata?.role as string | undefined)
-          );
-          router.replace(path);
+          await redirectAuthenticatedUser();
         }
       }
     } catch (err) {
@@ -281,7 +276,7 @@ export default function LoginPage() {
 
         <div className="relative px-8 pb-8 pt-6">
           <p className="text-sm uppercase tracking-[0.3em] text-amber-300">{copy.tagline}</p>
-          <h1 className="mt-4 font-ethiopic text-4xl font-semibold leading-tight">{copy.welcomeTitle}</h1>
+          <h1 className="mt-4 font-ethiopic-display text-4xl font-semibold leading-tight">{copy.welcomeTitle}</h1>
           <p className="mt-4 max-w-xl text-white/75">{copy.welcomeBody}</p>
 
           <ul className="mt-8 space-y-3 border-t border-white/10 pt-6 text-sm text-white/75">

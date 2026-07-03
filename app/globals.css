@@ -26,16 +26,11 @@ html {
 
 body {
   margin: 0;
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   background:
     radial-gradient(circle at top left, rgba(251, 191, 36, 0.14), transparent 30%),
     radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 28%),
   linear-gradient(180deg, #fbf7ef 0%, #f8fafc 45%, #eef4ff 100%);
   color: var(--text);
-}
-
-.font-ethiopic {
-  font-family: var(--font-ethiopic), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 ::selection {

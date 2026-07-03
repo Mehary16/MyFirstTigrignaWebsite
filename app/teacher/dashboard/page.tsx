@@ -6,37 +6,33 @@ import TeacherDashboardShell from '../../../components/TeacherDashboardShell';
 import LogoutButton from '../../../components/LogoutButton';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
 import { Badge, PageHeader } from '../../../components/ui';
-import { isTeacherProfile, ensureTeacherProfileRole } from '../../../lib/auth';
+import { isTeacherUser } from '../../../lib/auth';
+import { getUserRole } from '../../../lib/roleAuth';
+import { dashboardPathForRole } from '../../../lib/routes';
 import { fetchAssignments, fetchAnnouncements, fetchLessonsForDisplay, fetchLiveClasses } from '../../../lib/safeQueries';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
 export default async function TeacherDashboardPage() {
   const supabase = await createServerSupabaseClient();
-  const { data: sessionData } = await supabase.auth.getSession();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
-  if (!sessionData.session) {
+  if (!user) {
     redirect('/login');
   }
 
-  const user = sessionData.session.user;
   if (user.user_metadata?.force_password_change) {
     redirect('/change-password');
   }
 
-  const userEmail = user.email ?? '';
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
   const { data: profile } = await supabase.from('profiles').select('full_name, role').eq('id', user.id).maybeSingle();
 
-  if (profile?.role === 'Parent') {
-    redirect('/parent/dashboard');
+  if (!isTeacherUser(profile, user)) {
+    const role = await getUserRole(supabase, user);
+    redirect(dashboardPathForRole(role));
   }
-
-  if (!isTeacherProfile(profile, userEmail, adminEmail)) {
-    redirect('/student/dashboard');
-  }
-
-  await ensureTeacherProfileRole(supabase, user.id, userEmail, adminEmail, profile?.role);
 
   const [studentsResult, submissionsResult, gradesResult, documentsResult, lessonsResult, assignmentsResult, liveClassesResult, announcementsResult] =
     await Promise.all([

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { ensureTeacherProfileRole, isTeacherProfile } from '../../../../lib/auth';
+import { isTeacherUser } from '../../../../lib/auth';
+import { syncUserRole } from '../../../../lib/roleAuth';
 import { getAuthRedirectBaseUrl } from '../../../../lib/siteUrl';
 import { createAdminSupabaseClient } from '../../../../lib/supabaseAdmin';
 import { formatDatabaseError } from '../../../../lib/supabaseErrors';
@@ -22,14 +23,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'You must be logged in.' }, { status: 401 });
   }
 
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'teacher@example.com';
   const { data: teacherProfile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
 
-  if (!isTeacherProfile(teacherProfile, user.email, adminEmail)) {
+  if (!isTeacherUser(teacherProfile, user)) {
     return NextResponse.json({ error: 'Only teachers can create student accounts.' }, { status: 403 });
   }
-
-  await ensureTeacherProfileRole(supabase, user.id, user.email, adminEmail, teacherProfile?.role);
 
   const admin = createAdminSupabaseClient();
   if (!admin) {
@@ -86,6 +84,8 @@ export async function POST(request: Request) {
         is_active: true
       });
 
+      await syncUserRole(data.user.id);
+
       return NextResponse.json({
         success: true,
         mode,
@@ -105,9 +105,9 @@ export async function POST(request: Request) {
       email,
       password: temporaryPassword!,
       email_confirm: true,
+      app_metadata: { role: 'Student' },
       user_metadata: {
         full_name: fullName,
-        role: 'Student',
         created_by_teacher: true,
         force_password_change: true
       }
@@ -124,6 +124,8 @@ export async function POST(request: Request) {
       email,
       is_active: true
     });
+
+    await syncUserRole(data.user.id);
 
     return NextResponse.json({
       success: true,

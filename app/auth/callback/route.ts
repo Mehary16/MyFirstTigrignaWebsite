@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { type EmailOtpType } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
+import { syncUserRole } from '../../../lib/roleAuth';
 import { getSiteUrlFromRequest } from '../../../lib/siteUrl';
 
 export async function GET(request: NextRequest) {
@@ -39,27 +40,31 @@ export async function GET(request: NextRequest) {
     }
   );
 
+  let authenticated = false;
+
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return response;
-    }
-  }
-
-  if (tokenHash && type) {
+    authenticated = !error;
+  } else if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
       type: type as EmailOtpType
     });
-
-    if (!error) {
-      return response;
-    }
+    authenticated = !error;
+  } else if (type === 'recovery' && !code && !tokenHash) {
+    return NextResponse.redirect(`${siteUrl}/reset-password${requestUrl.hash}`);
   }
 
-  // Recovery links sometimes only include type=recovery without code (hash handled on client)
-  if (type === 'recovery' && !code && !tokenHash) {
-    return NextResponse.redirect(`${siteUrl}/reset-password${requestUrl.hash}`);
+  if (authenticated) {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      await syncUserRole(user.id);
+    }
+
+    return response;
   }
 
   return NextResponse.redirect(failureUrl);
