@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import type { StudentListItem } from './TeacherStudentList';
-import { toStudentListItem } from './TeacherStudentList';
+import type { StudentListItem } from '../lib/studentList';
+import { toStudentListItem } from '../lib/studentList';
 import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from './ui';
 
 type CreateMode = 'password' | 'invite';
