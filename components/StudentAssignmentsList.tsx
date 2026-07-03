@@ -1,3 +1,4 @@
+import { getAttachmentDownloadHref, getAttachmentOpenHref } from '../lib/attachments';
 import type { AssignmentRow } from './TeacherAssignmentManager';
 
 type StudentAssignmentsListProps = {
@@ -19,6 +20,8 @@ export default function StudentAssignmentsList({ assignments, submittedAssignmen
         {assignments.map((assignment) => {
           const isSubmitted = submittedSet.has(assignment.id);
           const isOverdue = assignment.due_date && new Date(assignment.due_date).getTime() < now && !isSubmitted;
+          const openHref = getAttachmentOpenHref(assignment);
+          const downloadHref = getAttachmentDownloadHref(assignment);
 
           return (
             <article key={assignment.id} className="rounded-2xl border border-amber-100 bg-white p-4">
@@ -30,6 +33,27 @@ export default function StudentAssignmentsList({ assignments, submittedAssignmen
               {assignment.description && <p className="mt-2 text-sm text-slate-600">{assignment.description}</p>}
               {assignment.due_date && (
                 <p className="mt-1 text-xs text-amber-700">Due: {new Date(assignment.due_date).toLocaleString()}</p>
+              )}
+              {openHref && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <a
+                    href={openHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Open homework
+                  </a>
+                  {downloadHref && (
+                    <a
+                      href={downloadHref}
+                      download={assignment.file_name ?? undefined}
+                      className="rounded-full border border-amber-200 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-50"
+                    >
+                      Download
+                    </a>
+                  )}
+                </div>
               )}
             </article>
           );

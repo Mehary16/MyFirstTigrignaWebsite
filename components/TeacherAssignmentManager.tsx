@@ -2,7 +2,9 @@
 
 import { useMemo, useState, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
+import { uploadTeacherAttachment } from '../lib/attachments';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
+import { AttachmentActions, AttachmentFileInput } from './AttachmentField';
 
 export type AssignmentRow = {
   id: string;
@@ -10,8 +12,12 @@ export type AssignmentRow = {
   description: string | null;
   due_date: string | null;
   lesson_id: string | null;
+  file_url: string | null;
+  file_name: string | null;
   created_at: string;
 };
+
+const ASSIGNMENT_SELECT = 'id, title, description, due_date, lesson_id, file_url, file_name, created_at';
 
 type TeacherAssignmentManagerProps = {
   initialAssignments: AssignmentRow[];
@@ -24,6 +30,7 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [createFile, setCreateFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -31,6 +38,8 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editDueDate, setEditDueDate] = useState('');
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editClearAttachment, setEditClearAttachment] = useState(false);
 
   const handleCreate: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
     event.preventDefault();
@@ -44,6 +53,15 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
         return;
       }
 
+      let fileUrl: string | null = null;
+      let fileName: string | null = null;
+
+      if (createFile) {
+        const uploaded = await uploadTeacherAttachment(createFile);
+        fileUrl = uploaded.fileUrl;
+        fileName = uploaded.fileName;
+      }
+
       const { data, error } = await supabase
         .from('assignments')
         .insert([
@@ -51,14 +69,20 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
             teacher_id: userData.user.id,
             title: title.trim(),
             description: description.trim() || null,
-            due_date: dueDate ? new Date(dueDate).toISOString() : null
+            due_date: dueDate ? new Date(dueDate).toISOString() : null,
+            file_url: fileUrl,
+            file_name: fileName
           }
         ])
-        .select('id, title, description, due_date, lesson_id, created_at')
+        .select(ASSIGNMENT_SELECT)
         .single();
 
       if (error) {
-        setStatus(`Could not create assignment: ${error.message}`);
+        const hint =
+          error.message.includes('file_url') || error.message.includes('file_name')
+            ? ' Run supabase/FIX_ASSIGNMENT_ANNOUNCEMENT_ATTACHMENTS.sql in Supabase SQL Editor, then try again.'
+            : '';
+        setStatus(`Could not create assignment: ${error.message}${hint}`);
         return;
       }
 
@@ -66,8 +90,11 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
       setTitle('');
       setDescription('');
       setDueDate('');
+      setCreateFile(null);
       setStatus('Assignment created.');
       router.refresh();
+    } catch (uploadError) {
+      setStatus(uploadError instanceof Error ? uploadError.message : 'Could not upload the attachment.');
     } finally {
       setLoading(false);
     }
@@ -86,6 +113,35 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
     router.refresh();
   };
 
+  const handleDeleteAttachment = async (assignment: AssignmentRow) => {
+    if (!window.confirm('Remove the attached homework file from this assignment?')) return;
+
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      const { error } = await supabase
+        .from('assignments')
+        .update({ file_url: null, file_name: null })
+        .eq('id', assignment.id);
+
+      if (error) {
+        setStatus(`Could not remove attachment: ${error.message}`);
+        return;
+      }
+
+      setAssignments((current) =>
+        current.map((item) =>
+          item.id === assignment.id ? { ...item, file_url: null, file_name: null } : item
+        )
+      );
+      setStatus('Attachment removed.');
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOpen = (id: string) => {
     setOpenId((current) => (current === id ? null : id));
   };
@@ -95,6 +151,8 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
     setEditTitle(assignment.title);
     setEditDescription(assignment.description ?? '');
     setEditDueDate(assignment.due_date ? new Date(assignment.due_date).toISOString().slice(0, 16) : '');
+    setEditFile(null);
+    setEditClearAttachment(false);
     setOpenId(assignment.id);
     setStatus(null);
   };
@@ -104,6 +162,8 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
     setEditTitle('');
     setEditDescription('');
     setEditDueDate('');
+    setEditFile(null);
+    setEditClearAttachment(false);
   };
 
   const handleEditSave: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
@@ -114,12 +174,24 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
     setStatus(null);
 
     try {
+      const current = assignments.find((item) => item.id === editingId);
+      let fileUrl = editClearAttachment ? null : (current?.file_url ?? null);
+      let fileName = editClearAttachment ? null : (current?.file_name ?? null);
+
+      if (editFile) {
+        const uploaded = await uploadTeacherAttachment(editFile);
+        fileUrl = uploaded.fileUrl;
+        fileName = uploaded.fileName;
+      }
+
       const { error } = await supabase
         .from('assignments')
         .update({
           title: editTitle.trim(),
           description: editDescription.trim() || null,
-          due_date: editDueDate ? new Date(editDueDate).toISOString() : null
+          due_date: editDueDate ? new Date(editDueDate).toISOString() : null,
+          file_url: fileUrl,
+          file_name: fileName
         })
         .eq('id', editingId);
 
@@ -128,14 +200,16 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
         return;
       }
 
-      setAssignments((current) =>
-        current.map((assignment) =>
+      setAssignments((currentList) =>
+        currentList.map((assignment) =>
           assignment.id === editingId
             ? {
                 ...assignment,
                 title: editTitle.trim(),
                 description: editDescription.trim() || null,
-                due_date: editDueDate ? new Date(editDueDate).toISOString() : null
+                due_date: editDueDate ? new Date(editDueDate).toISOString() : null,
+                file_url: fileUrl,
+                file_name: fileName
               }
             : assignment
         )
@@ -143,6 +217,8 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
       setStatus('Assignment updated.');
       cancelEdit();
       router.refresh();
+    } catch (uploadError) {
+      setStatus(uploadError instanceof Error ? uploadError.message : 'Could not upload the attachment.');
     } finally {
       setLoading(false);
     }
@@ -184,7 +260,15 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
             className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 outline-none focus:border-slate-500"
           />
         </div>
-        <div className="flex items-end">
+        <div className="md:col-span-2">
+          <AttachmentFileInput
+            label="Attach homework file (optional)"
+            file={createFile}
+            onFileChange={setCreateFile}
+            disabled={loading}
+          />
+        </div>
+        <div className="flex items-end md:col-span-2">
           <button
             type="submit"
             disabled={loading}
@@ -202,15 +286,16 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
           assignments.map((assignment) => (
             <article key={assignment.id} className="rounded-2xl border border-slate-200 bg-white p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="font-semibold text-slate-900">{assignment.title}</h3>
-                {assignment.description && <p className="mt-1 text-sm text-slate-600">{assignment.description}</p>}
-                {assignment.due_date && (
-                  <p className="mt-1 text-xs text-amber-700">
-                    Due: {new Date(assignment.due_date).toLocaleString()}
-                  </p>
-                )}
-              </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900">{assignment.title}</h3>
+                  {assignment.description && <p className="mt-1 text-sm text-slate-600">{assignment.description}</p>}
+                  {assignment.file_url && (
+                    <p className="mt-1 text-xs font-medium text-slate-500">Attachment: {assignment.file_name ?? 'Homework file'}</p>
+                  )}
+                  {assignment.due_date && (
+                    <p className="mt-1 text-xs text-amber-700">Due: {new Date(assignment.due_date).toLocaleString()}</p>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -267,6 +352,19 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
                           className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 outline-none focus:border-slate-500"
                         />
                       </div>
+                      {assignment.file_url && !editClearAttachment && !editFile && (
+                        <AttachmentActions
+                          attachment={assignment}
+                          onDelete={() => setEditClearAttachment(true)}
+                          busy={loading}
+                        />
+                      )}
+                      <AttachmentFileInput
+                        label={assignment.file_url && !editClearAttachment ? 'Replace homework file' : 'Attach homework file'}
+                        file={editFile}
+                        onFileChange={setEditFile}
+                        disabled={loading}
+                      />
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="submit"
@@ -285,22 +383,34 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
                       </div>
                     </form>
                   ) : (
-                    <div className="space-y-2 text-sm text-slate-700">
-                      <p>
-                        <span className="font-semibold text-slate-900">Title:</span> {assignment.title}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-slate-900">Description:</span>{' '}
-                        {assignment.description || 'No description added.'}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-slate-900">Due date:</span>{' '}
-                        {assignment.due_date ? new Date(assignment.due_date).toLocaleString() : 'No due date set.'}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-slate-900">Created:</span>{' '}
-                        {new Date(assignment.created_at).toLocaleString()}
-                      </p>
+                    <div className="space-y-4 text-sm text-slate-700">
+                      <div className="space-y-2">
+                        <p>
+                          <span className="font-semibold text-slate-900">Title:</span> {assignment.title}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-slate-900">Description:</span>{' '}
+                          {assignment.description || 'No description added.'}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-slate-900">Due date:</span>{' '}
+                          {assignment.due_date ? new Date(assignment.due_date).toLocaleString() : 'No due date set.'}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-slate-900">Created:</span>{' '}
+                          {new Date(assignment.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                      {assignment.file_url ? (
+                        <AttachmentActions
+                          attachment={assignment}
+                          onReplace={() => startEdit(assignment)}
+                          onDelete={() => handleDeleteAttachment(assignment)}
+                          busy={loading}
+                        />
+                      ) : (
+                        <p className="text-slate-500">No homework file attached.</p>
+                      )}
                     </div>
                   )}
                 </div>
