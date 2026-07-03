@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import type { MaterialRow } from '../../../lib/teacherMaterials';
-import { type StudentListItem } from '../../../components/TeacherStudentList';
+import { type StudentListItem, toStudentListItem } from '../../../components/TeacherStudentList';
 import { type GradeRow } from '../../../components/TeacherGradeManager';
 import TeacherDashboardShell from '../../../components/TeacherDashboardShell';
 import LogoutButton from '../../../components/LogoutButton';
@@ -38,7 +38,7 @@ export default async function TeacherDashboardPage() {
     await Promise.all([
       supabase
         .from('profiles')
-        .select('id, full_name, created_at, is_active, suspended_reason', { count: 'exact' })
+        .select('id, full_name, email, created_at, is_active, suspended_reason', { count: 'exact' })
         .eq('role', 'Student')
         .order('created_at', { ascending: false }),
       supabase.from('submissions').select('student_id'),
@@ -72,14 +72,9 @@ export default async function TeacherDashboardPage() {
     return acc;
   }, {});
 
-  const studentList: StudentListItem[] = (students ?? []).map((student) => ({
-    id: student.id,
-    full_name: student.full_name,
-    created_at: student.created_at,
-    is_active: student.is_active ?? true,
-    suspended_reason: student.suspended_reason,
-    submission_count: submissionCountByStudent[student.id] ?? 0
-  }));
+  const studentList: StudentListItem[] = (students ?? []).map((student) =>
+    toStudentListItem(student, submissionCountByStudent[student.id] ?? 0)
+  );
 
   const studentOptions = studentList.map(({ id, full_name }) => ({ id, full_name }));
   const studentNameById = Object.fromEntries(studentOptions.map((student) => [student.id, student.full_name]));

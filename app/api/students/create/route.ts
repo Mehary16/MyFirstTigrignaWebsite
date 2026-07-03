@@ -6,7 +6,11 @@ import { createAdminSupabaseClient } from '../../../../lib/supabaseAdmin';
 import { formatDatabaseError } from '../../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
 
+import { buildFullName } from '../../../../lib/studentNames';
+
 type CreateStudentBody = {
+  firstName?: string;
+  lastName?: string;
   fullName?: string;
   email?: string;
   temporaryPassword?: string;
@@ -38,7 +42,9 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as CreateStudentBody;
-  const fullName = body.fullName?.trim();
+  const fullName =
+    body.fullName?.trim() ||
+    buildFullName(body.firstName ?? '', body.lastName ?? '');
   const email = body.email?.trim().toLowerCase();
   const mode = body.mode === 'invite' ? 'invite' : 'password';
   const temporaryPassword = body.temporaryPassword?.trim();
@@ -92,6 +98,7 @@ export async function POST(request: Request) {
         student: {
           id: data.user.id,
           full_name: fullName,
+          email,
           created_at: data.user.created_at ?? new Date().toISOString(),
           is_active: true,
           suspended_reason: null,
@@ -133,12 +140,13 @@ export async function POST(request: Request) {
       student: {
         id: data.user.id,
         full_name: fullName,
+        email,
         created_at: data.user.created_at ?? new Date().toISOString(),
         is_active: true,
         suspended_reason: null,
         submission_count: 0
       },
-      message: `${fullName} was created. Give the student the temporary password and they will be asked to change it after login.`
+      message: `${fullName} was created. Give the student their email (${email}) and temporary password; they will be asked to change it after login.`
     });
   } catch (error) {
     return NextResponse.json(
