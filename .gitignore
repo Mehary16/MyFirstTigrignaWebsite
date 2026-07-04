@@ -1,9 +1,10 @@
 .next
 node_modules
-.env.local
-.env*.local
 .vscode
 Untitled-1.html
-node_modules/
-.vscode/
 
+# Secrets — never commit (use .env.example as the template)
+.env
+.env.local
+.env*.local
+!.env.example
