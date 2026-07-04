@@ -39,7 +39,7 @@ export default async function TeacherDashboardPage() {
     await Promise.all([
       supabase
         .from('profiles')
-        .select('id, full_name, email, created_at, is_active, suspended_reason', { count: 'exact' })
+        .select('id, full_name, email, class_grade, created_at, is_active, suspended_reason', { count: 'exact' })
         .eq('role', 'Student')
         .order('created_at', { ascending: false }),
       supabase.from('submissions').select('student_id'),

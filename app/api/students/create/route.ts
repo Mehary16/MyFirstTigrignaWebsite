@@ -7,12 +7,14 @@ import { formatDatabaseError } from '../../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
 
 import { buildFullName } from '../../../../lib/studentNames';
+import { CLASS_GRADES, type ClassGrade } from '../../../../lib/classGrades';
 
 type CreateStudentBody = {
   firstName?: string;
   lastName?: string;
   fullName?: string;
   email?: string;
+  classGrade?: string;
   temporaryPassword?: string;
   mode?: 'password' | 'invite';
 };
@@ -46,6 +48,7 @@ export async function POST(request: Request) {
     body.fullName?.trim() ||
     buildFullName(body.firstName ?? '', body.lastName ?? '');
   const email = body.email?.trim().toLowerCase();
+  const classGrade = body.classGrade?.trim() as ClassGrade | undefined;
   const mode = body.mode === 'invite' ? 'invite' : 'password';
   const temporaryPassword = body.temporaryPassword?.trim();
 
@@ -55,6 +58,10 @@ export async function POST(request: Request) {
 
   if (!email) {
     return NextResponse.json({ error: 'Student email is required.' }, { status: 400 });
+  }
+
+  if (!classGrade || !CLASS_GRADES.includes(classGrade)) {
+    return NextResponse.json({ error: 'Class grade (Grade 1, Grade 2, or Grade 3) is required.' }, { status: 400 });
   }
 
   if (mode === 'password' && (!temporaryPassword || temporaryPassword.length < 8)) {
@@ -87,6 +94,7 @@ export async function POST(request: Request) {
         full_name: fullName,
         role: 'Student',
         email,
+        class_grade: classGrade,
         is_active: true
       });
 
@@ -99,6 +107,7 @@ export async function POST(request: Request) {
           id: data.user.id,
           full_name: fullName,
           email,
+          class_grade: classGrade,
           created_at: data.user.created_at ?? new Date().toISOString(),
           is_active: true,
           suspended_reason: null,
@@ -129,6 +138,7 @@ export async function POST(request: Request) {
       full_name: fullName,
       role: 'Student',
       email,
+      class_grade: classGrade,
       is_active: true
     });
 
@@ -141,6 +151,7 @@ export async function POST(request: Request) {
         id: data.user.id,
         full_name: fullName,
         email,
+        class_grade: classGrade,
         created_at: data.user.created_at ?? new Date().toISOString(),
         is_active: true,
         suspended_reason: null,

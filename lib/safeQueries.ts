@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { ClassGrade } from './classGrades';
+import { filterItemsByClassGrade } from './classGrades';
 import { formatDatabaseError } from './supabaseErrors';
 import type { MaterialRow } from './teacherMaterials';
 
@@ -16,14 +18,39 @@ function isMissingColumnError(message: string, column: string) {
   return message.includes(column) || message.includes('schema cache');
 }
 
-export async function fetchDocumentsForDisplay(supabase: SupabaseClient) {
+export async function fetchDocumentsForDisplay(supabase: SupabaseClient, classGrade?: ClassGrade | null) {
   const full = await supabase
     .from('documents')
-    .select('id, title, file_url, external_link, material_category, file_name, created_at')
+    .select('id, title, file_url, external_link, material_category, file_name, class_grade, created_at')
     .order('created_at', { ascending: false });
 
   if (!full.error) {
-    return { data: (full.data ?? []) as MaterialRow[], error: null as QueryError };
+    const rows = (full.data ?? []) as MaterialRow[];
+    return {
+      data: classGrade ? filterItemsByClassGrade(rows, classGrade) : rows,
+      error: null as QueryError
+    };
+  }
+
+  if (isMissingColumnError(full.error.message, 'class_grade')) {
+    const withoutGrade = await supabase
+      .from('documents')
+      .select('id, title, file_url, external_link, material_category, file_name, created_at')
+      .order('created_at', { ascending: false });
+
+    if (withoutGrade.error) {
+      return { data: [] as MaterialRow[], error: withoutGrade.error };
+    }
+
+    const rows = (withoutGrade.data ?? []).map((row) => ({
+      ...row,
+      class_grade: null
+    })) as MaterialRow[];
+
+    return {
+      data: classGrade ? filterItemsByClassGrade(rows, classGrade) : rows,
+      error: null as QueryError
+    };
   }
 
   if (isMissingColumnError(full.error.message, 'file_name') || isMissingColumnError(full.error.message, 'material_category')) {
@@ -92,14 +119,18 @@ export async function fetchStudentSubmissions(supabase: SupabaseClient, studentI
   return { data: [], error: full.error };
 }
 
-export async function fetchLessonsForDisplay(supabase: SupabaseClient) {
+export async function fetchLessonsForDisplay(supabase: SupabaseClient, classGrade?: ClassGrade | null) {
   const full = await supabase
     .from('lessons')
     .select('id, title, description, video_url, category, level, external_link, created_at')
     .order('created_at', { ascending: false });
 
   if (!full.error) {
-    return { data: full.data ?? [], error: null as QueryError };
+    const rows = full.data ?? [];
+    return {
+      data: classGrade ? filterItemsByClassGrade(rows, classGrade) : rows,
+      error: null as QueryError
+    };
   }
 
   if (
@@ -148,18 +179,39 @@ export async function fetchStudentGrades(supabase: SupabaseClient, studentId: st
   return { data: [], error: result.error };
 }
 
-export async function fetchAssignments(supabase: SupabaseClient) {
+export async function fetchAssignments(supabase: SupabaseClient, classGrade?: ClassGrade | null) {
   const full = await supabase
     .from('assignments')
-    .select('id, title, description, due_date, lesson_id, file_url, file_name, created_at')
+    .select('id, title, description, due_date, lesson_id, file_url, file_name, class_grade, created_at')
     .order('created_at', { ascending: false });
 
   if (!full.error) {
-    return { data: full.data ?? [], error: null as QueryError };
+    const rows = full.data ?? [];
+    return {
+      data: classGrade ? filterItemsByClassGrade(rows, classGrade) : rows,
+      error: null as QueryError
+    };
   }
 
   if (isMissingTableError(full.error.message, 'assignments')) {
     return { data: [], error: null as QueryError };
+  }
+
+  if (isMissingColumnError(full.error.message, 'class_grade')) {
+    const basic = await supabase
+      .from('assignments')
+      .select('id, title, description, due_date, lesson_id, file_url, file_name, created_at')
+      .order('created_at', { ascending: false });
+
+    if (basic.error) {
+      return { data: [], error: basic.error };
+    }
+
+    const rows = (basic.data ?? []).map((row) => ({ ...row, class_grade: null }));
+    return {
+      data: classGrade ? filterItemsByClassGrade(rows, classGrade) : rows,
+      error: null as QueryError
+    };
   }
 
   if (isMissingColumnError(full.error.message, 'file_url') || isMissingColumnError(full.error.message, 'file_name')) {
@@ -173,7 +225,7 @@ export async function fetchAssignments(supabase: SupabaseClient) {
     }
 
     return {
-      data: (basic.data ?? []).map((row) => ({ ...row, file_url: null, file_name: null })),
+      data: (basic.data ?? []).map((row) => ({ ...row, file_url: null, file_name: null, class_grade: null })),
       error: null as QueryError
     };
   }
@@ -181,19 +233,41 @@ export async function fetchAssignments(supabase: SupabaseClient) {
   return { data: [], error: full.error };
 }
 
-export async function fetchAnnouncements(supabase: SupabaseClient) {
+export async function fetchAnnouncements(supabase: SupabaseClient, classGrade?: ClassGrade | null) {
   const full = await supabase
     .from('announcements')
-    .select('id, title, body, file_url, file_name, created_at')
+    .select('id, title, body, file_url, file_name, class_grade, created_at')
     .order('created_at', { ascending: false })
     .limit(10);
 
   if (!full.error) {
-    return { data: full.data ?? [], error: null as QueryError };
+    const rows = full.data ?? [];
+    return {
+      data: classGrade ? filterItemsByClassGrade(rows, classGrade) : rows,
+      error: null as QueryError
+    };
   }
 
   if (isMissingTableError(full.error.message, 'announcements')) {
     return { data: [], error: null as QueryError };
+  }
+
+  if (isMissingColumnError(full.error.message, 'class_grade')) {
+    const basic = await supabase
+      .from('announcements')
+      .select('id, title, body, file_url, file_name, created_at')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (basic.error) {
+      return { data: [], error: basic.error };
+    }
+
+    const rows = (basic.data ?? []).map((row) => ({ ...row, class_grade: null }));
+    return {
+      data: classGrade ? filterItemsByClassGrade(rows, classGrade) : rows,
+      error: null as QueryError
+    };
   }
 
   if (isMissingColumnError(full.error.message, 'file_url') || isMissingColumnError(full.error.message, 'file_name')) {
@@ -208,7 +282,7 @@ export async function fetchAnnouncements(supabase: SupabaseClient) {
     }
 
     return {
-      data: (basic.data ?? []).map((row) => ({ ...row, file_url: null, file_name: null })),
+      data: (basic.data ?? []).map((row) => ({ ...row, file_url: null, file_name: null, class_grade: null })),
       error: null as QueryError
     };
   }
@@ -216,21 +290,42 @@ export async function fetchAnnouncements(supabase: SupabaseClient) {
   return { data: [], error: full.error };
 }
 
-export async function fetchLiveClasses(supabase: SupabaseClient) {
-  const result = await supabase
+export async function fetchLiveClasses(supabase: SupabaseClient, classGrade?: ClassGrade | null) {
+  const full = await supabase
     .from('live_classes')
-    .select('id, title, meeting_url, scheduled_at, duration_minutes, notes, created_at')
+    .select('id, title, meeting_url, scheduled_at, duration_minutes, notes, class_grade, created_at')
     .order('scheduled_at', { ascending: true });
 
-  if (!result.error) {
-    return { data: result.data ?? [], error: null as QueryError };
+  if (!full.error) {
+    const rows = full.data ?? [];
+    return {
+      data: classGrade ? filterItemsByClassGrade(rows, classGrade) : rows,
+      error: null as QueryError
+    };
   }
 
-  if (isMissingTableError(result.error.message, 'live_classes')) {
+  if (isMissingTableError(full.error.message, 'live_classes')) {
     return { data: [], error: null as QueryError };
   }
 
-  return { data: [], error: result.error };
+  if (isMissingColumnError(full.error.message, 'class_grade')) {
+    const basic = await supabase
+      .from('live_classes')
+      .select('id, title, meeting_url, scheduled_at, duration_minutes, notes, created_at')
+      .order('scheduled_at', { ascending: true });
+
+    if (basic.error) {
+      return { data: [], error: basic.error };
+    }
+
+    const rows = (basic.data ?? []).map((row) => ({ ...row, class_grade: null }));
+    return {
+      data: classGrade ? filterItemsByClassGrade(rows, classGrade) : rows,
+      error: null as QueryError
+    };
+  }
+
+  return { data: [], error: full.error };
 }
 
 export async function fetchLessonViews(supabase: SupabaseClient, studentId: string) {

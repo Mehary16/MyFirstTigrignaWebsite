@@ -3,7 +3,9 @@
 import { useMemo, useState, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
 import { uploadTeacherAttachment } from '../lib/attachments';
+import type { ClassGrade } from '../lib/classGrades';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
+import ClassGradeSelect from './ClassGradeSelect';
 import { AttachmentActions, AttachmentFileInput, ItemRowActions } from './AttachmentField';
 
 export type AssignmentRow = {
@@ -14,10 +16,11 @@ export type AssignmentRow = {
   lesson_id: string | null;
   file_url: string | null;
   file_name: string | null;
+  class_grade: string | null;
   created_at: string;
 };
 
-const ASSIGNMENT_SELECT = 'id, title, description, due_date, lesson_id, file_url, file_name, created_at';
+const ASSIGNMENT_SELECT = 'id, title, description, due_date, lesson_id, file_url, file_name, class_grade, created_at';
 
 type TeacherAssignmentManagerProps = {
   initialAssignments: AssignmentRow[];
@@ -30,6 +33,7 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [classGrade, setClassGrade] = useState<ClassGrade | ''>('');
   const [createFile, setCreateFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -38,6 +42,7 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editDueDate, setEditDueDate] = useState('');
+  const [editClassGrade, setEditClassGrade] = useState<ClassGrade | ''>('');
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editClearAttachment, setEditClearAttachment] = useState(false);
 
@@ -45,6 +50,12 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
     event.preventDefault();
     setStatus(null);
     setLoading(true);
+
+    if (!classGrade) {
+      setStatus('Please select a class grade for this assignment.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -70,6 +81,7 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
             title: title.trim(),
             description: description.trim() || null,
             due_date: dueDate ? new Date(dueDate).toISOString() : null,
+            class_grade: classGrade,
             file_url: fileUrl,
             file_name: fileName
           }
@@ -90,6 +102,7 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
       setTitle('');
       setDescription('');
       setDueDate('');
+      setClassGrade('');
       setCreateFile(null);
       setStatus('Assignment created.');
       router.refresh();
@@ -151,6 +164,7 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
     setEditTitle(assignment.title);
     setEditDescription(assignment.description ?? '');
     setEditDueDate(assignment.due_date ? new Date(assignment.due_date).toISOString().slice(0, 16) : '');
+    setEditClassGrade((assignment.class_grade as ClassGrade) ?? '');
     setEditFile(null);
     setEditClearAttachment(false);
     setOpenId(assignment.id);
@@ -162,6 +176,7 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
     setEditTitle('');
     setEditDescription('');
     setEditDueDate('');
+    setEditClassGrade('');
     setEditFile(null);
     setEditClearAttachment(false);
   };
@@ -169,6 +184,11 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
   const handleEditSave: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
     event.preventDefault();
     if (!editingId) return;
+
+    if (!editClassGrade) {
+      setStatus('Please select a class grade for this assignment.');
+      return;
+    }
 
     setLoading(true);
     setStatus(null);
@@ -190,6 +210,7 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
           title: editTitle.trim(),
           description: editDescription.trim() || null,
           due_date: editDueDate ? new Date(editDueDate).toISOString() : null,
+          class_grade: editClassGrade,
           file_url: fileUrl,
           file_name: fileName
         })
@@ -208,6 +229,7 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
                 title: editTitle.trim(),
                 description: editDescription.trim() || null,
                 due_date: editDueDate ? new Date(editDueDate).toISOString() : null,
+                class_grade: editClassGrade,
                 file_url: fileUrl,
                 file_name: fileName
               }
@@ -252,6 +274,9 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
           />
         </div>
         <div>
+          <ClassGradeSelect value={classGrade} onChange={setClassGrade} disabled={loading} />
+        </div>
+        <div>
           <label className="block text-sm font-medium text-slate-700">Due date (optional)</label>
           <input
             type="datetime-local"
@@ -288,6 +313,9 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="font-semibold text-slate-900">{assignment.title}</h3>
+                  {assignment.class_grade && (
+                    <p className="mt-1 text-xs font-semibold text-blue-700">{assignment.class_grade}</p>
+                  )}
                   {assignment.description && <p className="mt-1 text-sm text-slate-600">{assignment.description}</p>}
                   {assignment.file_url && (
                     <p className="mt-1 text-xs font-medium text-slate-500">Attachment: {assignment.file_name ?? 'Homework file'}</p>
@@ -327,6 +355,7 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
                           className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 outline-none focus:border-slate-500"
                         />
                       </div>
+                      <ClassGradeSelect value={editClassGrade} onChange={setEditClassGrade} disabled={loading} />
                       <div>
                         <label className="block text-sm font-medium text-slate-700">Due date</label>
                         <input

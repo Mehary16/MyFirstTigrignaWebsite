@@ -14,6 +14,8 @@ import {
 import { formatDatabaseError } from '../lib/supabaseErrors';
 import { prepareTeacherAccount } from '../lib/teacherUpload';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
+import type { ClassGrade } from '../lib/classGrades';
+import ClassGradeSelect from './ClassGradeSelect';
 
 type StatusType = 'success' | 'error' | null;
 
@@ -49,6 +51,7 @@ export default function TeacherMaterialForm({ category }: TeacherMaterialFormPro
   const copy = FORM_COPY[category];
   const [title, setTitle] = useState('');
   const [externalLink, setExternalLink] = useState('');
+  const [classGrade, setClassGrade] = useState<ClassGrade | ''>('');
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [statusType, setStatusType] = useState<StatusType>(null);
@@ -70,6 +73,12 @@ export default function TeacherMaterialForm({ category }: TeacherMaterialFormPro
       if (!file && !externalLink.trim()) {
         setStatusType('error');
         setStatus('Upload failed: Choose a file or provide an external link.');
+        return;
+      }
+
+      if (!classGrade) {
+        setStatusType('error');
+        setStatus('Upload failed: Please select a class grade for this material.');
         return;
       }
 
@@ -99,7 +108,8 @@ export default function TeacherMaterialForm({ category }: TeacherMaterialFormPro
           file_url: fileUrl || null,
           external_link: externalLink.trim() || null,
           material_category: category,
-          file_name: fileName
+          file_name: fileName,
+          class_grade: classGrade
         }
       ]);
 
@@ -111,6 +121,7 @@ export default function TeacherMaterialForm({ category }: TeacherMaterialFormPro
 
       setTitle('');
       setExternalLink('');
+      setClassGrade('');
       setFile(null);
       setStatusType('success');
       setStatus(copy.success);
@@ -136,6 +147,8 @@ export default function TeacherMaterialForm({ category }: TeacherMaterialFormPro
           placeholder={copy.placeholder}
         />
       </div>
+
+      <ClassGradeSelect value={classGrade} onChange={setClassGrade} disabled={loading} />
 
       <div>
         <label className="block text-sm font-medium text-slate-700">{copy.fileLabel}</label>

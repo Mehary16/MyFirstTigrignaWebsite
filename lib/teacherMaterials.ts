@@ -9,6 +9,7 @@ export type MaterialRow = {
   external_link: string | null;
   material_category: MaterialCategory;
   file_name: string | null;
+  class_grade?: string | null;
   created_at: string;
 };
 export const MATERIAL_CATEGORY_LABELS: Record<MaterialCategory, string> = {
