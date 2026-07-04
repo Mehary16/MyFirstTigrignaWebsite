@@ -3,7 +3,8 @@
 import { useState, type ComponentProps } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LESSON_LEVELS, LESSON_LEVEL_LABELS, type LessonLevel } from '../lib/lessonLevels';
+import { normalizeClassGrade, type ClassGrade } from '../lib/classGrades';
+import ClassGradeSelect from './ClassGradeSelect';
 
 export type LessonRow = {
   id: string;
@@ -27,7 +28,7 @@ export default function TeacherLessonList({ initialLessons }: TeacherLessonListP
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editCategory, setEditCategory] = useState('');
-  const [editLevel, setEditLevel] = useState<LessonLevel | ''>('');
+  const [editLevel, setEditLevel] = useState<ClassGrade | ''>('');
   const [editVideoUrl, setEditVideoUrl] = useState('');
   const [editExternalLink, setEditExternalLink] = useState('');
   const [status, setStatus] = useState<string | null>(null);
@@ -38,7 +39,7 @@ export default function TeacherLessonList({ initialLessons }: TeacherLessonListP
     setEditTitle(lesson.title);
     setEditDescription(lesson.description ?? '');
     setEditCategory(lesson.category ?? '');
-    setEditLevel((lesson.level as LessonLevel) ?? '');
+    setEditLevel(normalizeClassGrade(lesson.level) ?? '');
     setEditVideoUrl(lesson.video_url);
     setEditExternalLink(lesson.external_link ?? '');
     setStatus(null);
@@ -52,6 +53,11 @@ export default function TeacherLessonList({ initialLessons }: TeacherLessonListP
   const handleSave: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
     event.preventDefault();
     if (!editingId) return;
+
+    if (!editLevel) {
+      setStatus('Please select a class grade for this lesson.');
+      return;
+    }
 
     setBusyId(editingId);
     setStatus(null);
@@ -118,7 +124,7 @@ export default function TeacherLessonList({ initialLessons }: TeacherLessonListP
     <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Lesson Library</h2>
-        <p className="mt-2 text-slate-600">Edit or remove lessons. Set a level so students can find the right content.</p>
+        <p className="mt-2 text-slate-600">Edit or remove lessons. Set a class grade so students see the right content.</p>
       </div>
 
       {status && <p className="text-sm text-slate-600">{status}</p>}
@@ -144,18 +150,7 @@ export default function TeacherLessonList({ initialLessons }: TeacherLessonListP
                 placeholder="Description"
               />
               <div className="grid gap-3 md:grid-cols-2">
-                <select
-                  value={editLevel}
-                  onChange={(event) => setEditLevel(event.currentTarget.value as LessonLevel | '')}
-                  className="rounded-xl border border-slate-300 bg-white p-3"
-                >
-                  <option value="">No level</option>
-                  {LESSON_LEVELS.map((level) => (
-                    <option key={level} value={level}>
-                      {LESSON_LEVEL_LABELS[level]}
-                    </option>
-                  ))}
-                </select>
+                <ClassGradeSelect value={editLevel} onChange={setEditLevel} disabled={busyId === lesson.id} />
                 <input
                   value={editCategory}
                   onChange={(event) => setEditCategory(event.currentTarget.value)}

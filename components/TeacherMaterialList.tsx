@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { normalizeClassGrade, type ClassGrade } from '../lib/classGrades';
 import { deleteLessonMaterialFile } from '../lib/lessonMaterials';
 import {
   getFileExtension,
@@ -16,6 +17,7 @@ import {
 import { formatDatabaseError } from '../lib/supabaseErrors';
 import { prepareTeacherAccount } from '../lib/teacherUpload';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
+import ClassGradeSelect from './ClassGradeSelect';
 
 type TeacherMaterialListProps = {
   category: MaterialCategory;
@@ -107,6 +109,7 @@ export default function TeacherMaterialList({ category, initialMaterials }: Teac
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editExternalLink, setEditExternalLink] = useState('');
+  const [editClassGrade, setEditClassGrade] = useState<ClassGrade | ''>('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [editFeedback, setEditFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -114,7 +117,7 @@ export default function TeacherMaterialList({ category, initialMaterials }: Teac
   const materialsSignature = useMemo(
     () =>
       filteredMaterials
-        .map((item) => `${item.id}|${item.title}|${item.external_link ?? ''}|${item.file_url ?? ''}`)
+        .map((item) => `${item.id}|${item.title}|${item.external_link ?? ''}|${item.file_url ?? ''}|${item.class_grade ?? ''}`)
         .join(';'),
     [filteredMaterials]
   );
@@ -132,6 +135,7 @@ export default function TeacherMaterialList({ category, initialMaterials }: Teac
     setEditingId(material.id);
     setEditTitle(material.title);
     setEditExternalLink(material.external_link ?? '');
+    setEditClassGrade(normalizeClassGrade(material.class_grade) ?? '');
     setStatus(null);
     setEditFeedback(null);
   };
@@ -140,12 +144,18 @@ export default function TeacherMaterialList({ category, initialMaterials }: Teac
     setEditingId(null);
     setEditTitle('');
     setEditExternalLink('');
+    setEditClassGrade('');
     setEditFeedback(null);
   };
 
   const handleSave = async (materialId: string) => {
     if (!editTitle.trim()) {
       setEditFeedback({ type: 'error', message: 'Title is required.' });
+      return;
+    }
+
+    if (!editClassGrade) {
+      setEditFeedback({ type: 'error', message: 'Please select a class grade.' });
       return;
     }
 
@@ -160,7 +170,8 @@ export default function TeacherMaterialList({ category, initialMaterials }: Teac
         body: JSON.stringify({
           id: materialId,
           title: editTitle.trim(),
-          externalLink: editExternalLink.trim() || null
+          externalLink: editExternalLink.trim() || null,
+          classGrade: editClassGrade
         })
       });
 
@@ -266,6 +277,7 @@ export default function TeacherMaterialList({ category, initialMaterials }: Teac
                       className="mt-2 w-full rounded-2xl border border-slate-300 bg-white p-3 outline-none focus:border-slate-500"
                     />
                   </div>
+                  <ClassGradeSelect value={editClassGrade} onChange={setEditClassGrade} disabled={isBusy} />
                   <div>
                     <label className="block text-sm font-medium text-slate-700">External link (optional)</label>
                     <input
@@ -309,6 +321,9 @@ export default function TeacherMaterialList({ category, initialMaterials }: Teac
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="font-medium text-slate-900">{material.title}</p>
+                      {material.class_grade && (
+                        <p className="mt-1 text-xs font-semibold text-blue-700">{material.class_grade}</p>
+                      )}
                       {material.file_name && <p className="text-sm text-slate-500">{material.file_name}</p>}
                       <p className="text-sm text-slate-500">{new Date(material.created_at).toLocaleDateString()}</p>
                     </div>
