@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { CLASS_GRADES } from '../../../../lib/classGrades';
 import { formatDatabaseError } from '../../../../lib/supabaseErrors';
 import { requireTeacherApi } from '../../../../lib/lessonApiAuth';
 import { revalidateLessonCaches } from '../../../../lib/revalidateLessons';
@@ -32,13 +33,18 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Title and video URL are required.' }, { status: 400 });
   }
 
+  const level = body.level?.trim() || null;
+  if (!level || !CLASS_GRADES.includes(level as (typeof CLASS_GRADES)[number])) {
+    return NextResponse.json({ error: 'Class grade (Grade 1, Grade 2, or Grade 3) is required.' }, { status: 400 });
+  }
+
   const { error } = await supabase
     .from('lessons')
     .update({
       title,
       description: body.description?.trim() || null,
       category: body.category?.trim() || null,
-      level: body.level?.trim() || null,
+      level,
       video_url: videoUrl,
       external_link: body.externalLink?.trim() || null
     })
