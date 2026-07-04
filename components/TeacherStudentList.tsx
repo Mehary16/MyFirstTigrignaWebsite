@@ -4,6 +4,7 @@ import { Fragment, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, UserPlus } from 'lucide-react';
 import type { StudentListItem } from '../lib/studentList';
+import { CLASS_GRADES, type ClassGrade } from '../lib/classGrades';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
 import TeacherStudentCreateForm from './TeacherStudentCreateForm';
 import { Alert, Badge, Card, EmptyState } from './ui';
@@ -25,6 +26,30 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
 
   const activeCount = students.filter((s) => s.is_active).length;
   const suspendedCount = students.length - activeCount;
+
+  const updateStudentGrade = async (studentId: string, classGrade: ClassGrade) => {
+    setBusyId(studentId);
+    setError(null);
+
+    const supabase = createBrowserSupabaseClient();
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ class_grade: classGrade })
+      .eq('id', studentId)
+      .eq('role', 'Student');
+
+    if (updateError) {
+      setError(updateError.message);
+      setBusyId(null);
+      return;
+    }
+
+    setStudents((current) =>
+      current.map((student) => (student.id === studentId ? { ...student, class_grade: classGrade } : student))
+    );
+    setBusyId(null);
+    router.refresh();
+  };
 
   const updateStudentStatus = async (studentId: string, suspend: boolean) => {
     setBusyId(studentId);
@@ -204,6 +229,7 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
                 <th className="px-4 py-3 text-left font-semibold text-slate-700">First name</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-700">Last name</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-700">Email</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-700">Grade</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-700">Joined</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-700">Submissions</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-700">Status</th>
@@ -231,6 +257,21 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
                     ) : (
                       <span className="text-slate-400">Not on file</span>
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <select
+                      value={student.class_grade ?? ''}
+                      disabled={busyId === student.id}
+                      onChange={(event) => updateStudentGrade(student.id, event.currentTarget.value as ClassGrade)}
+                      className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-700"
+                    >
+                      <option value="">Not set</option>
+                      {CLASS_GRADES.map((grade) => (
+                        <option key={grade} value={grade}>
+                          {grade}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{new Date(student.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3 text-slate-600">{student.submission_count}</td>
@@ -280,7 +321,7 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
                 </tr>
                 {helpOpenId === student.id && (
                   <tr className="bg-blue-50/40">
-                    <td colSpan={7} className="px-4 py-4">
+                    <td colSpan={8} className="px-4 py-4">
                       <div className="rounded-2xl border border-blue-100 bg-white p-4">
                         <p className="text-sm font-semibold text-slate-900">Help this student access their portal</p>
                         <p className="mt-1 text-sm text-slate-600">

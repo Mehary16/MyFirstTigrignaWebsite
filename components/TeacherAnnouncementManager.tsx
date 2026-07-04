@@ -3,7 +3,9 @@
 import { useMemo, useState, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
 import { uploadTeacherAttachment } from '../lib/attachments';
+import type { ClassGrade } from '../lib/classGrades';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
+import ClassGradeSelect from './ClassGradeSelect';
 import { AttachmentActions, AttachmentFileInput, ItemRowActions } from './AttachmentField';
 
 export type AnnouncementRow = {
@@ -12,10 +14,11 @@ export type AnnouncementRow = {
   body: string;
   file_url: string | null;
   file_name: string | null;
+  class_grade: string | null;
   created_at: string;
 };
 
-const ANNOUNCEMENT_SELECT = 'id, title, body, file_url, file_name, created_at';
+const ANNOUNCEMENT_SELECT = 'id, title, body, file_url, file_name, class_grade, created_at';
 
 type TeacherAnnouncementManagerProps = {
   initialAnnouncements: AnnouncementRow[];
@@ -27,6 +30,7 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
   const [announcements, setAnnouncements] = useState(initialAnnouncements);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [classGrade, setClassGrade] = useState<ClassGrade | ''>('');
   const [createFile, setCreateFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,6 +38,7 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editBody, setEditBody] = useState('');
+  const [editClassGrade, setEditClassGrade] = useState<ClassGrade | ''>('');
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editClearAttachment, setEditClearAttachment] = useState(false);
 
@@ -41,6 +46,12 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
     event.preventDefault();
     setLoading(true);
     setStatus(null);
+
+    if (!classGrade) {
+      setStatus('Please select a class grade for this announcement.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -62,6 +73,7 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
             teacher_id: userData.user.id,
             title: title.trim(),
             body: body.trim(),
+            class_grade: classGrade,
             file_url: fileUrl,
             file_name: fileName
           }
@@ -82,6 +94,7 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
       setAnnouncements((current) => [data as AnnouncementRow, ...current]);
       setTitle('');
       setBody('');
+      setClassGrade('');
       setCreateFile(null);
       setStatus('Announcement posted.');
       router.refresh();
@@ -141,6 +154,7 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
     setOpenId(item.id);
     setEditTitle(item.title);
     setEditBody(item.body);
+    setEditClassGrade((item.class_grade as ClassGrade) ?? '');
     setEditFile(null);
     setEditClearAttachment(false);
     setStatus(null);
@@ -150,6 +164,7 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
     setEditingId(null);
     setEditTitle('');
     setEditBody('');
+    setEditClassGrade('');
     setEditFile(null);
     setEditClearAttachment(false);
   };
@@ -157,6 +172,11 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
   const handleSaveEdit: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
     event.preventDefault();
     if (!editingId) return;
+
+    if (!editClassGrade) {
+      setStatus('Please select a class grade for this announcement.');
+      return;
+    }
 
     setLoading(true);
     setStatus(null);
@@ -177,6 +197,7 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
         .update({
           title: editTitle.trim(),
           body: editBody.trim(),
+          class_grade: editClassGrade,
           file_url: fileUrl,
           file_name: fileName
         })
@@ -197,6 +218,7 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
                 ...item,
                 title: editTitle.trim(),
                 body: editBody.trim(),
+                class_grade: editClassGrade,
                 file_url: fileUrl,
                 file_name: fileName
               }
@@ -224,6 +246,7 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
           <label className="block text-sm font-medium text-slate-700">Message</label>
           <textarea value={body} onChange={(e) => setBody(e.currentTarget.value)} required rows={4} className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3" />
         </div>
+        <ClassGradeSelect value={classGrade} onChange={setClassGrade} disabled={loading} />
         <AttachmentFileInput
           label="Attach file (optional)"
           file={createFile}
@@ -243,6 +266,7 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="font-semibold text-slate-900">{item.title}</h3>
+                {item.class_grade && <p className="mt-1 text-xs font-semibold text-blue-700">{item.class_grade}</p>}
                 <p className="mt-1 text-xs text-slate-500">{new Date(item.created_at).toLocaleString()}</p>
                 {item.file_url && (
                   <p className="mt-1 text-xs font-medium text-slate-500">Attachment: {item.file_name ?? 'File'}</p>
@@ -281,6 +305,7 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
                         className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3"
                       />
                     </div>
+                    <ClassGradeSelect value={editClassGrade} onChange={setEditClassGrade} disabled={loading} />
                     {item.file_url && !editClearAttachment && !editFile && (
                       <AttachmentActions
                         attachment={item}

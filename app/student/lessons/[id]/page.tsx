@@ -3,8 +3,8 @@ import { notFound, redirect } from 'next/navigation';
 import StudentLessonPlayer from '../../../../components/StudentLessonPlayer';
 import { Badge } from '../../../../components/ui';
 import { isStudentSuspended } from '../../../../lib/auth';
+import { CLASS_GRADE_LABELS, matchesClassGrade, normalizeClassGrade, type ClassGrade } from '../../../../lib/classGrades';
 import { getCachedLesson } from '../../../../lib/lessonCache';
-import { LESSON_LEVEL_LABELS, type LessonLevel } from '../../../../lib/lessonLevels';
 import { getUserRole } from '../../../../lib/roleAuth';
 import { dashboardPathForRole } from '../../../../lib/routes';
 import { fetchLessonViews } from '../../../../lib/safeQueries';
@@ -31,7 +31,7 @@ export default async function StudentLessonPage({ params }: StudentLessonPagePro
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, is_active')
+    .select('role, is_active, class_grade')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -45,18 +45,21 @@ export default async function StudentLessonPage({ params }: StudentLessonPagePro
     redirect('/suspended');
   }
 
+  const classGrade = normalizeClassGrade(profile?.class_grade);
   const lesson = await getCachedLesson(id);
 
   if (!lesson) {
     notFound();
   }
 
+  if (classGrade && !matchesClassGrade(lesson, classGrade)) {
+    notFound();
+  }
+
   const lessonViewsResult = await fetchLessonViews(supabase, user.id);
   const initiallyViewed = lessonViewsResult.data.includes(id);
-  const levelLabel =
-    lesson.level === 'Beginner' || lesson.level === 'Intermediate' || lesson.level === 'Advanced'
-      ? LESSON_LEVEL_LABELS[lesson.level as LessonLevel]
-      : null;
+  const lessonGrade = normalizeClassGrade(lesson.level);
+  const levelLabel = lessonGrade ? CLASS_GRADE_LABELS[lessonGrade as ClassGrade] : null;
 
   return (
     <section className="mx-auto max-w-4xl space-y-6">

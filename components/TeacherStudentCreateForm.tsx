@@ -2,6 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import ClassGradeSelect from './ClassGradeSelect';
+import type { ClassGrade } from '../lib/classGrades';
 import type { StudentListItem } from '../lib/studentList';
 import { toStudentListItem } from '../lib/studentList';
 import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from './ui';
@@ -17,6 +19,7 @@ export default function TeacherStudentCreateForm({ onStudentCreated }: TeacherSt
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [classGrade, setClassGrade] = useState<ClassGrade | ''>('');
   const [temporaryPassword, setTemporaryPassword] = useState('');
   const [mode, setMode] = useState<CreateMode>('password');
   const [loading, setLoading] = useState(false);
@@ -35,6 +38,7 @@ export default function TeacherStudentCreateForm({ onStudentCreated }: TeacherSt
           firstName,
           lastName,
           email,
+          classGrade,
           temporaryPassword: mode === 'password' ? temporaryPassword : undefined,
           mode
         })
@@ -47,6 +51,7 @@ export default function TeacherStudentCreateForm({ onStudentCreated }: TeacherSt
           id: string;
           full_name: string;
           email?: string | null;
+          class_grade?: string | null;
           created_at: string;
           is_active: boolean;
           suspended_reason: string | null;
@@ -63,6 +68,7 @@ export default function TeacherStudentCreateForm({ onStudentCreated }: TeacherSt
       setFirstName('');
       setLastName('');
       setEmail('');
+      setClassGrade('');
       setTemporaryPassword('');
       onStudentCreated?.(toStudentListItem(payload.student, payload.student.submission_count));
       router.refresh();
@@ -83,10 +89,13 @@ export default function TeacherStudentCreateForm({ onStudentCreated }: TeacherSt
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <Input label="First name" value={firstName} onChange={(event) => setFirstName(event.currentTarget.value)} required />
             <Input label="Last name" value={lastName} onChange={(event) => setLastName(event.currentTarget.value)} required />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
             <Input label="Student email" type="email" value={email} onChange={(event) => setEmail(event.currentTarget.value)} required />
+            <ClassGradeSelect label="Class grade" value={classGrade} onChange={setClassGrade} required />
           </div>
 
           <div className="space-y-3">

@@ -1,4 +1,5 @@
 import { splitFullName } from './studentNames';
+import { normalizeClassGrade, type ClassGrade } from './classGrades';
 
 export type StudentListItem = {
   id: string;
@@ -6,6 +7,7 @@ export type StudentListItem = {
   last_name: string;
   full_name: string;
   email: string | null;
+  class_grade: ClassGrade | null;
   created_at: string;
   is_active: boolean;
   suspended_reason: string | null;
@@ -17,6 +19,7 @@ export function toStudentListItem(
     id: string;
     full_name: string;
     email?: string | null;
+    class_grade?: string | null;
     created_at: string;
     is_active?: boolean | null;
     suspended_reason?: string | null;
@@ -31,6 +34,7 @@ export function toStudentListItem(
     last_name: lastName,
     full_name: student.full_name,
     email: student.email ?? null,
+    class_grade: normalizeClassGrade(student.class_grade),
     created_at: student.created_at,
     is_active: student.is_active ?? true,
     suspended_reason: student.suspended_reason ?? null,

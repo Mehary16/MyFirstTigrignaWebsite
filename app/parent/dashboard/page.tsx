@@ -12,6 +12,7 @@ import {
   fetchLessonsForDisplay,
   fetchLiveClasses
 } from '../../../lib/safeQueries';
+import { filterItemsByClassGrades, normalizeClassGrade, type ClassGrade } from '../../../lib/classGrades';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 import { getUserRole } from '../../../lib/roleAuth';
 import { dashboardPathForRole } from '../../../lib/routes';
@@ -66,8 +67,16 @@ export default async function ParentDashboardPage() {
 
   const studentIds = (linksResult.data ?? []).map((link) => link.student_id);
   const { data: studentProfiles } = studentIds.length
-    ? await supabase.from('profiles').select('id, full_name').in('id', studentIds)
-    : { data: [] as { id: string; full_name: string }[] };
+    ? await supabase.from('profiles').select('id, full_name, class_grade').in('id', studentIds)
+    : { data: [] as { id: string; full_name: string; class_grade: string | null }[] };
+
+  const childGrades = (studentProfiles ?? [])
+    .map((student) => normalizeClassGrade(student.class_grade))
+    .filter((grade): grade is ClassGrade => grade !== null);
+
+  const announcements = filterItemsByClassGrades(announcementsResult.data ?? [], childGrades);
+  const liveClasses = filterItemsByClassGrades(liveClassesResult.data ?? [], childGrades);
+  const lessons = filterItemsByClassGrades(lessonsResult.data ?? [], childGrades);
 
   const children: ChildSummary[] = [];
 
@@ -94,8 +103,8 @@ export default async function ParentDashboardPage() {
   }
 
   const displayName = profile?.full_name || user.user_metadata?.full_name || 'Parent';
-  const totalLessons = (lessonsResult.data ?? []).length;
-  const upcomingClasses = (liveClassesResult.data ?? []).filter(
+  const totalLessons = lessons.length;
+  const upcomingClasses = liveClasses.filter(
     (item) => new Date(item.scheduled_at).getTime() >= Date.now() - item.duration_minutes * 60 * 1000
   ).length;
 
@@ -128,9 +137,9 @@ export default async function ParentDashboardPage() {
         />
       )}
 
-      <AnnouncementsFeed announcements={announcementsResult.data ?? []} />
+      <AnnouncementsFeed announcements={announcements} />
 
-      <LiveClassSchedule classes={liveClassesResult.data ?? []} />
+      <LiveClassSchedule classes={liveClasses} />
 
       {!children.length ? (
         <EmptyState

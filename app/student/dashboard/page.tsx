@@ -10,8 +10,9 @@ import AnnouncementsFeed from '../../../components/AnnouncementsFeed';
 import LiveClassSchedule from '../../../components/LiveClassSchedule';
 import { splitStudentMaterials } from '../../../lib/teacherMaterials';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
-import { Badge, PageHeader } from '../../../components/ui';
+import { Badge, PageHeader, Alert } from '../../../components/ui';
 import { isStudentSuspended } from '../../../lib/auth';
+import { CLASS_GRADE_LABELS, normalizeClassGrade, type ClassGrade } from '../../../lib/classGrades';
 import { getUserRole } from '../../../lib/roleAuth';
 import { dashboardPathForRole } from '../../../lib/routes';
 import {
@@ -47,7 +48,7 @@ export default async function StudentDashboardPage() {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('full_name, role, is_active')
+      .select('full_name, role, is_active, class_grade')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -65,6 +66,8 @@ export default async function StudentDashboardPage() {
       redirect('/suspended');
     }
 
+    const classGrade = normalizeClassGrade(profile?.class_grade);
+
     const [
       lessons,
       documentsResult,
@@ -75,13 +78,13 @@ export default async function StudentDashboardPage() {
       liveClassesResult,
       lessonViewsResult
     ] = await Promise.all([
-      loadLessonsForStudent(supabase),
-      fetchDocumentsForDisplay(supabase),
+      loadLessonsForStudent(supabase, classGrade),
+      fetchDocumentsForDisplay(supabase, classGrade),
       fetchStudentSubmissions(supabase, user.id),
       fetchStudentGrades(supabase, user.id),
-      fetchAssignments(supabase),
-      fetchAnnouncements(supabase),
-      fetchLiveClasses(supabase),
+      fetchAssignments(supabase, classGrade),
+      fetchAnnouncements(supabase, classGrade),
+      fetchLiveClasses(supabase, classGrade),
       fetchLessonViews(supabase, user.id)
     ]);
     const submissions = submissionsResult.data;
@@ -103,6 +106,7 @@ export default async function StudentDashboardPage() {
     ]);
 
     const displayName = profile?.full_name || user.user_metadata?.full_name || 'Student';
+    const gradeLabel = classGrade ? CLASS_GRADE_LABELS[classGrade] : null;
     const { documents: documentMaterials, media: mediaMaterials } = splitStudentMaterials(documentsResult.data ?? []);
     const submittedAssignmentIds = (submissions ?? [])
       .map((item) => item.assignment_id)
@@ -119,15 +123,26 @@ export default async function StudentDashboardPage() {
         <PageHeader
           eyebrow="Student Dashboard / ናይ ተማሃሮ ዳሽቦርድ"
           title={`Welcome, ${displayName}`}
-          description="Watch lessons, download materials, submit homework, and track your progress."
+          description={
+            gradeLabel
+              ? `Your ${gradeLabel} classroom — lessons, homework, and announcements for your class only.`
+              : 'Watch lessons, download materials, submit homework, and track your progress.'
+          }
           actions={
             <>
               <Badge>{displayName}</Badge>
+              {gradeLabel ? <Badge variant="brand">{gradeLabel}</Badge> : null}
               <Badge variant="info">{profile?.role ?? 'Student'}</Badge>
               <LogoutButton variant="primary" />
             </>
           }
         />
+
+        {!classGrade ? (
+          <Alert variant="info" title="Class grade not assigned yet">
+            Ask your teacher to assign you to Grade 1, Grade 2, or Grade 3 so you can see your class lessons and homework.
+          </Alert>
+        ) : null}
 
         <ProgressSummary
           lessonsViewed={viewedLessonIds.length}
@@ -145,7 +160,7 @@ export default async function StudentDashboardPage() {
 
         <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
           <div className="space-y-6">
-            <StudentLessonSection lessons={lessons} viewedLessonIds={viewedLessonIds} />
+            <StudentLessonSection lessons={lessons} viewedLessonIds={viewedLessonIds} gradeLabel={gradeLabel} />
 
             <StudentMaterialSection
               title="Documents & Files"
