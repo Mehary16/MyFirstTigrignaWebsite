@@ -1,9 +1,10 @@
 'use client';
 
-import { Fragment, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, UserPlus } from 'lucide-react';
 import type { StudentListItem } from '../lib/studentList';
+import { filterStudentsByGradeView, groupStudentsByGrade } from '../lib/studentList';
 import { CLASS_GRADES, type ClassGrade } from '../lib/classGrades';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
 import TeacherStudentCreateForm from './TeacherStudentCreateForm';
@@ -15,6 +16,14 @@ type TeacherStudentListProps = {
   totalCount: number;
 };
 
+type GradeView = 'all' | ClassGrade | 'unassigned';
+
+const GRADE_SECTION_STYLES: Record<ClassGrade, string> = {
+  'Grade 1': 'border-blue-200 bg-blue-50/60 text-blue-900',
+  'Grade 2': 'border-amber-200 bg-amber-50/60 text-amber-900',
+  'Grade 3': 'border-emerald-200 bg-emerald-50/60 text-emerald-900'
+};
+
 export default function TeacherStudentList({ students: initialStudents, totalCount }: TeacherStudentListProps) {
   const router = useRouter();
   const [students, setStudents] = useState(initialStudents);
@@ -23,9 +32,27 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [helpOpenId, setHelpOpenId] = useState<string | null>(null);
   const [helpMessage, setHelpMessage] = useState<string | null>(null);
+  const [gradeView, setGradeView] = useState<GradeView>('all');
 
   const activeCount = students.filter((s) => s.is_active).length;
   const suspendedCount = students.length - activeCount;
+
+  const { groups, unassigned } = useMemo(() => groupStudentsByGrade(students), [students]);
+
+  const gradeCounts = useMemo(
+    () => ({
+      'Grade 1': groups['Grade 1'].length,
+      'Grade 2': groups['Grade 2'].length,
+      'Grade 3': groups['Grade 3'].length,
+      unassigned: unassigned.length
+    }),
+    [groups, unassigned]
+  );
+
+  const filteredStudents = useMemo(
+    () => filterStudentsByGradeView(students, gradeView),
+    [students, gradeView]
+  );
 
   const updateStudentGrade = async (studentId: string, classGrade: ClassGrade) => {
     setBusyId(studentId);
@@ -163,6 +190,158 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
     }
   };
 
+  const renderStudentRows = (rows: StudentListItem[], showGradeColumn: boolean) =>
+    rows.map((student) => (
+      <Fragment key={student.id}>
+        <tr className="hover:bg-slate-50/80">
+          <td className="px-4 py-3 font-medium text-slate-900">{student.first_name}</td>
+          <td className="px-4 py-3 text-slate-700">{student.last_name}</td>
+          <td className="px-4 py-3 text-slate-600">
+            {student.email ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="break-all">{student.email}</span>
+                <button
+                  type="button"
+                  onClick={() => copyEmail(student.email!)}
+                  className="rounded-full border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  Copy
+                </button>
+              </div>
+            ) : (
+              <span className="text-slate-400">Not on file</span>
+            )}
+          </td>
+          {showGradeColumn ? (
+            <td className="px-4 py-3">
+              <select
+                value={student.class_grade ?? ''}
+                disabled={busyId === student.id}
+                onChange={(event) => updateStudentGrade(student.id, event.currentTarget.value as ClassGrade)}
+                className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-700"
+              >
+                <option value="">Not set</option>
+                {CLASS_GRADES.map((grade) => (
+                  <option key={grade} value={grade}>
+                    {grade}
+                  </option>
+                ))}
+              </select>
+            </td>
+          ) : null}
+          <td className="px-4 py-3 text-slate-600">{new Date(student.created_at).toLocaleDateString()}</td>
+          <td className="px-4 py-3 text-slate-600">{student.submission_count}</td>
+          <td className="px-4 py-3">
+            <Badge variant={student.is_active ? 'success' : 'danger'}>
+              {student.is_active ? 'Active' : 'Suspended'}
+            </Badge>
+          </td>
+          <td className="px-4 py-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setHelpOpenId((current) => (current === student.id ? null : student.id))}
+                className="rounded-full border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-800 transition hover:bg-blue-50"
+              >
+                {helpOpenId === student.id ? 'Close help' : 'Login help'}
+              </button>
+              {student.is_active ? (
+                <button
+                  type="button"
+                  disabled={busyId === student.id}
+                  onClick={() => updateStudentStatus(student.id, true)}
+                  className="rounded-full border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {busyId === student.id ? 'Saving...' : 'Suspend'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busyId === student.id}
+                  onClick={() => updateStudentStatus(student.id, false)}
+                  className="rounded-full border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {busyId === student.id ? 'Saving...' : 'Activate'}
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={busyId === student.id}
+                onClick={() => deleteStudent(student)}
+                className="rounded-full border border-slate-300 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {busyId === student.id ? 'Working...' : 'Delete'}
+              </button>
+            </div>
+          </td>
+        </tr>
+        {helpOpenId === student.id && (
+          <tr className="bg-blue-50/40">
+            <td colSpan={showGradeColumn ? 8 : 7} className="px-4 py-4">
+              <div className="rounded-2xl border border-blue-100 bg-white p-4">
+                <p className="text-sm font-semibold text-slate-900">Help this student access their portal</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Share their login email if they forgot it, then send a reset link or resend the setup invitation.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {student.email ? (
+                    <button
+                      type="button"
+                      onClick={() => copyEmail(student.email!)}
+                      className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Copy email
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={busyId === student.id || !student.is_active}
+                    onClick={() => sendAccessHelp(student.id, 'reset_password')}
+                    className="rounded-full border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {busyId === student.id ? 'Sending...' : 'Send password reset'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyId === student.id || !student.is_active}
+                    onClick={() => sendAccessHelp(student.id, 'resend_invite')}
+                    className="rounded-full border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-800 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {busyId === student.id ? 'Sending...' : 'Resend setup email'}
+                  </button>
+                </div>
+                {!student.is_active ? (
+                  <p className="mt-3 text-xs text-amber-700">Activate the account before sending login help.</p>
+                ) : null}
+              </div>
+            </td>
+          </tr>
+        )}
+      </Fragment>
+    ));
+
+  const renderStudentTable = (rows: StudentListItem[], showGradeColumn: boolean) => (
+    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+      <table className="min-w-full divide-y divide-slate-200 text-sm">
+        <thead className="bg-slate-50">
+          <tr>
+            <th className="px-4 py-3 text-left font-semibold text-slate-700">First name</th>
+            <th className="px-4 py-3 text-left font-semibold text-slate-700">Last name</th>
+            <th className="px-4 py-3 text-left font-semibold text-slate-700">Email</th>
+            {showGradeColumn ? (
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">Grade</th>
+            ) : null}
+            <th className="px-4 py-3 text-left font-semibold text-slate-700">Joined</th>
+            <th className="px-4 py-3 text-left font-semibold text-slate-700">Submissions</th>
+            <th className="px-4 py-3 text-left font-semibold text-slate-700">Status</th>
+            <th className="px-4 py-3 text-left font-semibold text-slate-700">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">{renderStudentRows(rows, showGradeColumn)}</tbody>
+      </table>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <Card variant="default" className="overflow-hidden">
@@ -198,14 +377,22 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
 
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Registered Students / ዝተመዝገቡ ተማሃሮ</h2>
-        <p className="mt-2 text-slate-600">Monitor signups, add students yourself, and suspend accounts when needed.</p>
+        <p className="mt-2 text-slate-600">
+          Students are grouped by class grade. Filter by grade or review each classroom separately.
+        </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <Card variant="muted" className="p-4">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Total</p>
           <p className="mt-1 text-2xl font-semibold text-slate-950">{students.length}</p>
         </Card>
+        {CLASS_GRADES.map((grade) => (
+          <Card key={grade} className="border-slate-200 bg-white p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{grade}</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-950">{gradeCounts[grade]}</p>
+          </Card>
+        ))}
         <Card className="border-emerald-200 bg-emerald-50 p-4">
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-700">Active</p>
           <p className="mt-1 text-2xl font-semibold text-emerald-900">{activeCount}</p>
@@ -216,156 +403,115 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
         </Card>
       </div>
 
+      {!students.length ? null : (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setGradeView('all')}
+            className={cn(
+              'rounded-full border px-4 py-2 text-sm font-semibold transition',
+              gradeView === 'all'
+                ? 'border-slate-900 bg-slate-900 text-white'
+                : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+            )}
+          >
+            All grades ({students.length})
+          </button>
+          {CLASS_GRADES.map((grade) => (
+            <button
+              key={grade}
+              type="button"
+              onClick={() => setGradeView(grade)}
+              className={cn(
+                'rounded-full border px-4 py-2 text-sm font-semibold transition',
+                gradeView === grade
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+              )}
+            >
+              {grade} ({gradeCounts[grade]})
+            </button>
+          ))}
+          {gradeCounts.unassigned > 0 ? (
+            <button
+              type="button"
+              onClick={() => setGradeView('unassigned')}
+              className={cn(
+                'rounded-full border px-4 py-2 text-sm font-semibold transition',
+                gradeView === 'unassigned'
+                  ? 'border-amber-700 bg-amber-700 text-white'
+                  : 'border-amber-300 text-amber-800 hover:bg-amber-50'
+              )}
+            >
+              No grade ({gradeCounts.unassigned})
+            </button>
+          ) : null}
+        </div>
+      )}
+
       {error ? <Alert variant="error">{error}</Alert> : null}
       {helpMessage ? <Alert variant="success">{helpMessage}</Alert> : null}
 
       {!students.length ? (
         <EmptyState title="No students registered yet." description="Add the first student above or ask them to sign up from the login page." />
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-4 py-3 text-left font-semibold text-slate-700">First name</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-700">Last name</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-700">Email</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-700">Grade</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-700">Joined</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-700">Submissions</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-700">Status</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-700">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {students.map((student) => (
-                <Fragment key={student.id}>
-                <tr>
-                  <td className="px-4 py-3 font-medium text-slate-900">{student.first_name}</td>
-                  <td className="px-4 py-3 text-slate-700">{student.last_name}</td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {student.email ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="break-all">{student.email}</span>
-                        <button
-                          type="button"
-                          onClick={() => copyEmail(student.email!)}
-                          className="rounded-full border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
-                        >
-                          Copy
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-slate-400">Not on file</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={student.class_grade ?? ''}
-                      disabled={busyId === student.id}
-                      onChange={(event) => updateStudentGrade(student.id, event.currentTarget.value as ClassGrade)}
-                      className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-700"
-                    >
-                      <option value="">Not set</option>
-                      {CLASS_GRADES.map((grade) => (
-                        <option key={grade} value={grade}>
-                          {grade}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{new Date(student.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-slate-600">{student.submission_count}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={student.is_active ? 'success' : 'danger'}>
-                      {student.is_active ? 'Active' : 'Suspended'}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setHelpOpenId((current) => (current === student.id ? null : student.id))}
-                        className="rounded-full border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-800 transition hover:bg-blue-50"
-                      >
-                        {helpOpenId === student.id ? 'Close help' : 'Login help'}
-                      </button>
-                      {student.is_active ? (
-                        <button
-                          type="button"
-                          disabled={busyId === student.id}
-                          onClick={() => updateStudentStatus(student.id, true)}
-                          className="rounded-full border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {busyId === student.id ? 'Saving...' : 'Suspend'}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={busyId === student.id}
-                          onClick={() => updateStudentStatus(student.id, false)}
-                          className="rounded-full border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {busyId === student.id ? 'Saving...' : 'Activate'}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        disabled={busyId === student.id}
-                        onClick={() => deleteStudent(student)}
-                        className="rounded-full border border-slate-300 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {busyId === student.id ? 'Working...' : 'Delete'}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                {helpOpenId === student.id && (
-                  <tr className="bg-blue-50/40">
-                    <td colSpan={8} className="px-4 py-4">
-                      <div className="rounded-2xl border border-blue-100 bg-white p-4">
-                        <p className="text-sm font-semibold text-slate-900">Help this student access their portal</p>
-                        <p className="mt-1 text-sm text-slate-600">
-                          Share their login email if they forgot it, then send a reset link or resend the setup invitation.
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {student.email ? (
-                            <button
-                              type="button"
-                              onClick={() => copyEmail(student.email!)}
-                              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                            >
-                              Copy email
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            disabled={busyId === student.id || !student.is_active}
-                            onClick={() => sendAccessHelp(student.id, 'reset_password')}
-                            className="rounded-full border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {busyId === student.id ? 'Sending...' : 'Send password reset'}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={busyId === student.id || !student.is_active}
-                            onClick={() => sendAccessHelp(student.id, 'resend_invite')}
-                            className="rounded-full border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-800 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {busyId === student.id ? 'Sending...' : 'Resend setup email'}
-                          </button>
-                        </div>
-                        {!student.is_active ? (
-                          <p className="mt-3 text-xs text-amber-700">Activate the account before sending login help.</p>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
+      ) : gradeView === 'all' ? (
+        <div className="space-y-8">
+          {CLASS_GRADES.map((grade) =>
+            groups[grade].length ? (
+              <section key={grade} className="space-y-3">
+                <div
+                  className={cn(
+                    'flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3',
+                    GRADE_SECTION_STYLES[grade]
+                  )}
+                >
+                  <div>
+                    <h3 className="text-lg font-semibold">{grade}</h3>
+                    <p className="text-sm opacity-80">
+                      {groups[grade].length} student{groups[grade].length === 1 ? '' : 's'} · sorted by last name
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGradeView(grade)}
+                    className="rounded-full border border-current/20 bg-white/70 px-4 py-1.5 text-sm font-semibold hover:bg-white"
+                  >
+                    View {grade} only
+                  </button>
+                </div>
+                {renderStudentTable(groups[grade], false)}
+              </section>
+            ) : null
+          )}
+          {unassigned.length ? (
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-amber-900">
+                <div>
+                  <h3 className="text-lg font-semibold">No grade assigned</h3>
+                  <p className="text-sm opacity-80">Assign a grade so these students can see class content.</p>
+                </div>
+              </div>
+              {renderStudentTable(unassigned, true)}
+            </section>
+          ) : null}
         </div>
+      ) : filteredStudents.length ? (
+        <section className="space-y-3">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <h3 className="text-lg font-semibold text-slate-900">
+              {gradeView === 'unassigned' ? 'Students without a grade' : gradeView}
+            </h3>
+            <p className="text-sm text-slate-600">
+              {filteredStudents.length} student{filteredStudents.length === 1 ? '' : 's'} · sorted by last name
+            </p>
+          </div>
+          {renderStudentTable(filteredStudents, true)}
+        </section>
+      ) : (
+        <EmptyState
+          title={`No students in ${gradeView === 'unassigned' ? 'this group' : gradeView}.`}
+          description="Register a student with this grade or change an existing student's grade from All grades."
+        />
       )}
     </div>
   );
