@@ -3,16 +3,17 @@ import { CLASS_GRADES, type ClassGrade } from '../../../lib/classGrades';
 import { formatNotificationStatus, notifyStudentsOfNewContent } from '../../../lib/contentNotifications';
 import { createStudentContentNotifications } from '../../../lib/inAppNotifications';
 import { isTeacherUser } from '../../../lib/auth';
+import { MATERIAL_CATEGORY_LABELS, type MaterialCategory } from '../../../lib/teacherMaterials';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
-type CreateAssignmentBody = {
+type CreateDocumentBody = {
   title?: string;
-  description?: string;
-  dueDate?: string | null;
-  classGrade?: string;
   fileUrl?: string | null;
+  externalLink?: string | null;
   fileName?: string | null;
+  classGrade?: string;
+  materialCategory?: MaterialCategory;
 };
 
 export async function POST(request: Request) {
@@ -28,14 +29,21 @@ export async function POST(request: Request) {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
 
   if (!isTeacherUser(profile, user)) {
-    return NextResponse.json({ error: 'Only teachers can create assignments.' }, { status: 403 });
+    return NextResponse.json({ error: 'Only teachers can upload materials.' }, { status: 403 });
   }
 
-  const body = (await request.json()) as CreateAssignmentBody;
+  const body = (await request.json()) as CreateDocumentBody;
   const title = body.title?.trim();
+  const fileUrl = body.fileUrl?.trim() || null;
+  const externalLink = body.externalLink?.trim() || null;
+  const materialCategory = body.materialCategory === 'media' ? 'media' : 'document';
 
   if (!title) {
-    return NextResponse.json({ error: 'Assignment title is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Material title is required.' }, { status: 400 });
+  }
+
+  if (!fileUrl && !externalLink) {
+    return NextResponse.json({ error: 'Upload a file or provide an external link.' }, { status: 400 });
   }
 
   const classGrade = body.classGrade?.trim() as ClassGrade | undefined;
@@ -43,46 +51,44 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Class grade (Grade 1, Grade 2, or Grade 3) is required.' }, { status: 400 });
   }
 
-  const dueDate = body.dueDate?.trim() ? new Date(body.dueDate).toISOString() : null;
-
   const { data, error } = await supabase
-    .from('assignments')
+    .from('documents')
     .insert({
-      teacher_id: user.id,
       title,
-      description: body.description?.trim() || null,
-      due_date: dueDate,
-      class_grade: classGrade,
-      file_url: body.fileUrl?.trim() || null,
-      file_name: body.fileName?.trim() || null
+      file_url: fileUrl,
+      external_link: externalLink,
+      material_category: materialCategory,
+      file_name: body.fileName?.trim() || null,
+      class_grade: classGrade
     })
-    .select('id, title, description, due_date, lesson_id, file_url, file_name, class_grade, created_at')
+    .select('id, title, file_url, external_link, material_category, file_name, class_grade, created_at')
     .single();
 
   if (error || !data) {
     return NextResponse.json({ error: formatDatabaseError(error?.message) }, { status: 500 });
   }
 
-  const notifications = await notifyStudentsOfNewContent(supabase, {
-    type: 'assignment',
+  const categoryLabel = MATERIAL_CATEGORY_LABELS[materialCategory].toLowerCase();
+  const notificationBody = `Your teacher added new ${categoryLabel} for ${classGrade}.`;
+
+  const emailNotifications = await notifyStudentsOfNewContent(supabase, {
+    type: 'material',
     classGrade,
     title,
-    description: data.description,
-    dueDate: data.due_date
+    description: notificationBody
   });
 
   await createStudentContentNotifications(supabase, {
     classGrade,
-    type: 'assignment',
+    type: 'material',
     title,
-    body: data.description,
+    body: notificationBody,
     sourceId: data.id
   });
 
   return NextResponse.json({
     success: true,
-    assignment: data,
-    notifications,
-    notificationMessage: formatNotificationStatus(notifications)
+    document: data,
+    notificationMessage: formatNotificationStatus(emailNotifications)
   });
 }

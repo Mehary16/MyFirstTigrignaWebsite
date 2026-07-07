@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { CLASS_GRADES, type ClassGrade } from '../../../lib/classGrades';
 import { formatNotificationStatus, notifyStudentsOfNewContent } from '../../../lib/contentNotifications';
+import { createStudentContentNotifications } from '../../../lib/inAppNotifications';
 import { isTeacherUser } from '../../../lib/auth';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
@@ -64,6 +65,14 @@ export async function POST(request: Request) {
     classGrade,
     title,
     body: announcementBody
+  });
+
+  await createStudentContentNotifications(supabase, {
+    classGrade,
+    type: 'announcement',
+    title,
+    body: announcementBody,
+    sourceId: data.id
   });
 
   return NextResponse.json({

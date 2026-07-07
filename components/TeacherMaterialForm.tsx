@@ -11,7 +11,6 @@ import {
   MEDIA_ACCEPT,
   type MaterialCategory
 } from '../lib/teacherMaterials';
-import { formatDatabaseError } from '../lib/supabaseErrors';
 import { prepareTeacherAccount } from '../lib/teacherUpload';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
 import type { ClassGrade } from '../lib/classGrades';
@@ -102,20 +101,24 @@ export default function TeacherMaterialForm({ category }: TeacherMaterialFormPro
         fileName = file.name;
       }
 
-      const { error: insertError } = await supabase.from('documents').insert([
-        {
+      const response = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           title: title.trim(),
-          file_url: fileUrl || null,
-          external_link: externalLink.trim() || null,
-          material_category: category,
-          file_name: fileName,
-          class_grade: classGrade
-        }
-      ]);
+          fileUrl: fileUrl || null,
+          externalLink: externalLink.trim() || null,
+          fileName,
+          classGrade,
+          materialCategory: category
+        })
+      });
 
-      if (insertError) {
+      const payload = (await response.json()) as { error?: string; notificationMessage?: string };
+
+      if (!response.ok) {
         setStatusType('error');
-        setStatus(`Upload failed: ${formatDatabaseError(insertError.message)}`);
+        setStatus(`Upload failed: ${payload.error ?? 'Unknown error'}`);
         return;
       }
 
@@ -124,7 +127,7 @@ export default function TeacherMaterialForm({ category }: TeacherMaterialFormPro
       setClassGrade('');
       setFile(null);
       setStatusType('success');
-      setStatus(copy.success);
+      setStatus(payload.notificationMessage ?? copy.success);
       router.refresh();
     } catch (err) {
       setStatusType('error');

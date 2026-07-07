@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 import type { ClassGrade } from './classGrades';
 import { getAuthRedirectBaseUrl } from './siteUrl';
 
-export type ContentNotificationType = 'lesson' | 'assignment' | 'announcement';
+export type ContentNotificationType = 'lesson' | 'assignment' | 'announcement' | 'live_class' | 'material';
 
 export type ContentNotificationPayload = {
   type: ContentNotificationType;
@@ -12,6 +12,7 @@ export type ContentNotificationPayload = {
   description?: string | null;
   body?: string | null;
   dueDate?: string | null;
+  scheduledAt?: string | null;
 };
 
 export type ContentNotificationResult = {
@@ -25,7 +26,17 @@ export type ContentNotificationResult = {
 const TYPE_LABELS: Record<ContentNotificationType, string> = {
   lesson: 'New lesson',
   assignment: 'New homework',
-  announcement: 'New announcement'
+  announcement: 'New announcement',
+  live_class: 'New live class',
+  material: 'New reading material'
+};
+
+const TYPE_PHRASES: Record<ContentNotificationType, string> = {
+  lesson: 'lesson',
+  assignment: 'homework',
+  announcement: 'announcement',
+  live_class: 'live class',
+  material: 'reading material'
 };
 
 function getResendClient() {
@@ -45,20 +56,35 @@ function formatDueDate(value: string | null | undefined) {
   return date.toLocaleDateString(undefined, { dateStyle: 'medium' });
 }
 
+function formatScheduledAt(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
 function buildEmailContent(payload: ContentNotificationPayload) {
   const label = TYPE_LABELS[payload.type];
+  const phrase = TYPE_PHRASES[payload.type];
   const dashboardUrl = `${getAuthRedirectBaseUrl()}/student/dashboard`;
   const dueLine = payload.type === 'assignment' ? formatDueDate(payload.dueDate) : null;
-  const details = payload.type === 'announcement' ? payload.body : payload.description;
+  const scheduledLine = payload.type === 'live_class' ? formatScheduledAt(payload.scheduledAt) : null;
+  const details =
+    payload.type === 'announcement'
+      ? payload.body
+      : payload.type === 'live_class' || payload.type === 'material'
+        ? payload.description
+        : payload.description;
 
   const subject = `${label} for ${payload.classGrade}: ${payload.title}`;
   const textLines = [
     `Hello,`,
     ``,
-    `Your teacher posted a new ${payload.type} for ${payload.classGrade}.`,
+    `Your teacher posted a new ${phrase} for ${payload.classGrade}.`,
     ``,
     `Title: ${payload.title}`,
     dueLine ? `Due date: ${dueLine}` : null,
+    scheduledLine ? `Scheduled for: ${scheduledLine}` : null,
     details ? `` : null,
     details ? details : null,
     ``,
@@ -77,6 +103,7 @@ function buildEmailContent(payload: ContentNotificationPayload) {
       <p>Your teacher posted a <strong>${escapeHtml(label.toLowerCase())}</strong> for <strong>${escapeHtml(payload.classGrade)}</strong>.</p>
       <p style="margin: 16px 0;"><strong>${escapeHtml(payload.title)}</strong></p>
       ${dueLine ? `<p style="margin: 0 0 16px; color: #334155;">Due date: ${escapeHtml(dueLine)}</p>` : ''}
+      ${scheduledLine ? `<p style="margin: 0 0 16px; color: #334155;">Scheduled for: ${escapeHtml(scheduledLine)}</p>` : ''}
       ${htmlDetails}
       <p>
         <a href="${dashboardUrl}" style="display: inline-block; background: #047857; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 999px; font-weight: 600;">
