@@ -1,7 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, type ComponentProps } from 'react';
+import { useEffect, useMemo, useState, type ComponentProps } from 'react';
+import { CLASS_GRADES, type ClassGrade } from '../lib/classGrades';
+import { filterStudentsByGradeView } from '../lib/studentList';
+import { cn } from '../lib/cn';
 
 export type GradeRow = {
   id: string;
@@ -16,7 +19,10 @@ export type GradeRow = {
 export type StudentOption = {
   id: string;
   full_name: string;
+  class_grade: ClassGrade | null;
 };
+
+type GradeView = 'all' | ClassGrade | 'unassigned';
 
 type TeacherGradeManagerProps = {
   students: StudentOption[];
@@ -40,6 +46,7 @@ function toDateInputValue(iso: string) {
 export default function TeacherGradeManager({ students, initialGrades }: TeacherGradeManagerProps) {
   const router = useRouter();
   const [grades, setGrades] = useState(initialGrades);
+  const [gradeView, setGradeView] = useState<GradeView>('all');
   const [studentId, setStudentId] = useState(students[0]?.id ?? '');
   const [title, setTitle] = useState('');
   const [gradeValue, setGradeValue] = useState('');
@@ -53,6 +60,42 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
   const [editFeedback, setEditFeedback] = useState('');
   const [editDate, setEditDate] = useState('');
   const [savingId, setSavingId] = useState<string | null>(null);
+
+  const gradeCounts = useMemo(
+    () => ({
+      'Grade 1': students.filter((student) => student.class_grade === 'Grade 1').length,
+      'Grade 2': students.filter((student) => student.class_grade === 'Grade 2').length,
+      'Grade 3': students.filter((student) => student.class_grade === 'Grade 3').length,
+      unassigned: students.filter((student) => !student.class_grade).length
+    }),
+    [students]
+  );
+
+  const filteredStudents = useMemo(
+    () => filterStudentsByGradeView(students, gradeView),
+    [students, gradeView]
+  );
+
+  const filteredStudentIds = useMemo(
+    () => new Set(filteredStudents.map((student) => student.id)),
+    [filteredStudents]
+  );
+
+  const filteredGrades = useMemo(
+    () => grades.filter((grade) => filteredStudentIds.has(grade.student_id)),
+    [grades, filteredStudentIds]
+  );
+
+  useEffect(() => {
+    if (!filteredStudents.length) {
+      setStudentId('');
+      return;
+    }
+
+    if (!filteredStudents.some((student) => student.id === studentId)) {
+      setStudentId(filteredStudents[0].id);
+    }
+  }, [filteredStudents, studentId]);
 
   const startEdit = (grade: GradeRow) => {
     setEditingId(grade.id);
@@ -277,6 +320,52 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
         </p>
       </div>
 
+      {students.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setGradeView('all')}
+            className={cn(
+              'rounded-full border px-4 py-2 text-sm font-semibold transition',
+              gradeView === 'all'
+                ? 'border-slate-900 bg-slate-900 text-white'
+                : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+            )}
+          >
+            All grades ({students.length})
+          </button>
+          {CLASS_GRADES.map((grade) => (
+            <button
+              key={grade}
+              type="button"
+              onClick={() => setGradeView(grade)}
+              className={cn(
+                'rounded-full border px-4 py-2 text-sm font-semibold transition',
+                gradeView === grade
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+              )}
+            >
+              {grade} ({gradeCounts[grade]})
+            </button>
+          ))}
+          {gradeCounts.unassigned > 0 ? (
+            <button
+              type="button"
+              onClick={() => setGradeView('unassigned')}
+              className={cn(
+                'rounded-full border px-4 py-2 text-sm font-semibold transition',
+                gradeView === 'unassigned'
+                  ? 'border-amber-700 bg-amber-700 text-white'
+                  : 'border-amber-300 text-amber-800 hover:bg-amber-50'
+              )}
+            >
+              No grade ({gradeCounts.unassigned})
+            </button>
+          ) : null}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-slate-700">Student</label>
@@ -284,13 +373,18 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
             value={studentId}
             onChange={(event) => setStudentId(event.currentTarget.value)}
             className="mt-2 w-full rounded-2xl border border-slate-300 bg-white p-3 outline-none"
+            disabled={!filteredStudents.length}
           >
-            {students.map((student) => (
+            {filteredStudents.map((student) => (
               <option key={student.id} value={student.id}>
                 {student.full_name}
+                {student.class_grade ? ` (${student.class_grade})` : ''}
               </option>
             ))}
           </select>
+          {gradeView !== 'all' && !filteredStudents.length ? (
+            <p className="mt-2 text-sm text-amber-700">No students in this class grade.</p>
+          ) : null}
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700">Assignment / lesson</label>
@@ -322,7 +416,7 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
         <div className="md:col-span-2">
           <button
             type="submit"
-            disabled={loading || !students.length}
+            disabled={loading || !filteredStudents.length}
             className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400"
           >
             {loading ? 'Saving...' : 'Save grade'}
@@ -343,8 +437,8 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
-            {grades.length ? (
-              grades.map((grade) => {
+            {filteredGrades.length ? (
+              filteredGrades.map((grade) => {
                 const isEditing = editingId === grade.id;
                 const isSaving = savingId === grade.id;
 
@@ -436,7 +530,9 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
             ) : (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
-                  No grades recorded yet.
+                  {gradeView === 'all'
+                    ? 'No grades recorded yet.'
+                    : `No grades recorded for ${gradeView === 'unassigned' ? 'students without a class grade' : gradeView}.`}
                 </td>
               </tr>
             )}
