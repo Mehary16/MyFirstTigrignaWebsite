@@ -207,7 +207,7 @@ export default async function StudentDashboardPage() {
 
             <StudentSubmissionList studentId={user.id} initialSubmissions={submissions ?? []} />
 
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
+            <section id="student-grades" className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
               <h2 className="text-2xl font-semibold text-slate-950">Your Grades</h2>
               <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
                 <table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -222,7 +222,7 @@ export default async function StudentDashboardPage() {
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {grades?.length ? (
                       grades.map((grade) => (
-                        <tr key={grade.id}>
+                        <tr key={grade.id} id={`grade-${grade.id}`}>
                           <td className="px-4 py-3 text-slate-900">{grade.title}</td>
                           <td className="px-4 py-3 font-semibold text-amber-800">{grade.grade}</td>
                           <td className="px-4 py-3 text-slate-600">{grade.feedback ?? '—'}</td>

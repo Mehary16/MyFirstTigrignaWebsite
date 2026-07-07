@@ -195,6 +195,83 @@ export async function notifyStudentsOfNewContent(
   return { configured: true, sent, skipped, failed, errors };
 }
 
+export async function notifyStudentOfGrade(
+  supabase: SupabaseClient,
+  studentId: string,
+  payload: { title: string; grade: string; feedback?: string | null; updated?: boolean }
+): Promise<ContentNotificationResult> {
+  const resend = getResendClient();
+  if (!resend) {
+    return { configured: false, sent: 0, skipped: 0, failed: 0, errors: [] };
+  }
+
+  const { data: student, error } = await supabase
+    .from('profiles')
+    .select('id, email, is_active')
+    .eq('id', studentId)
+    .eq('role', 'Student')
+    .maybeSingle();
+
+  if (error) {
+    return { configured: true, sent: 0, skipped: 0, failed: 0, errors: [error.message] };
+  }
+
+  if (!student || student.is_active === false) {
+    return { configured: true, sent: 0, skipped: 1, failed: 0, errors: [] };
+  }
+
+  if (!student.email?.trim()) {
+    return { configured: true, sent: 0, skipped: 1, failed: 0, errors: [] };
+  }
+
+  const label = payload.updated ? 'Grade updated' : 'New grade';
+  const dashboardUrl = `${getAuthRedirectBaseUrl()}/student/dashboard?focus=grades`;
+  const subject = `${label}: ${payload.title}`;
+  const details = payload.feedback?.trim() || null;
+  const text = [
+    'Hello,',
+    '',
+    `Your teacher posted a grade for "${payload.title}".`,
+    '',
+    `Grade: ${payload.grade}`,
+    details ? `Feedback: ${details}` : null,
+    '',
+    `Sign in to view it: ${dashboardUrl}`,
+    '',
+    '— Tigrigna Learning Portal'
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #0f172a; max-width: 560px;">
+      <p>Hello,</p>
+      <p>Your teacher posted a <strong>${escapeHtml(label.toLowerCase())}</strong> for <strong>${escapeHtml(payload.title)}</strong>.</p>
+      <p style="margin: 16px 0;"><strong>Grade: ${escapeHtml(payload.grade)}</strong></p>
+      ${details ? `<p style="margin: 0 0 16px; color: #334155; white-space: pre-wrap;">${escapeHtml(details)}</p>` : ''}
+      <p>
+        <a href="${dashboardUrl}" style="display: inline-block; background: #047857; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 999px; font-weight: 600;">
+          Open student dashboard
+        </a>
+      </p>
+    </div>
+  `;
+
+  const { error: sendError } = await resend.emails.send({
+    from: getFromAddress(),
+    to: student.email.trim(),
+    subject,
+    text,
+    html
+  });
+
+  if (sendError) {
+    return { configured: true, sent: 0, skipped: 0, failed: 1, errors: [sendError.message] };
+  }
+
+  return { configured: true, sent: 1, skipped: 0, failed: 0, errors: [] };
+}
+
 export function formatNotificationStatus(result: ContentNotificationResult) {
   if (!result.configured) {
     return 'Email not sent (add RESEND_API_KEY and EMAIL_FROM to your server environment).';
