@@ -6,8 +6,10 @@ import { formatDatabaseError } from '../../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
 
 type UpdateGradeBody = {
+  title?: string;
   grade?: string;
   feedback?: string | null;
+  gradedAt?: string | null;
 };
 
 type RouteContext = {
@@ -32,10 +34,11 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const { id } = await context.params;
   const body = (await request.json()) as UpdateGradeBody;
+  const title = body.title?.trim();
   const grade = body.grade?.trim();
 
-  if (!grade) {
-    return NextResponse.json({ error: 'Grade is required.' }, { status: 400 });
+  if (!title || !grade) {
+    return NextResponse.json({ error: 'Assignment title and grade are required.' }, { status: 400 });
   }
 
   const { data: existing, error: existingError } = await supabase
@@ -54,11 +57,29 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const feedback = body.feedback?.trim() || null;
 
+  let createdAt: string | undefined;
+  if (body.gradedAt?.trim()) {
+    const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(body.gradedAt.trim());
+    if (!dateMatch) {
+      return NextResponse.json({ error: 'Date must be YYYY-MM-DD.' }, { status: 400 });
+    }
+    const year = Number(dateMatch[1]);
+    const month = Number(dateMatch[2]);
+    const day = Number(dateMatch[3]);
+    const parsed = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    if (Number.isNaN(parsed.getTime())) {
+      return NextResponse.json({ error: 'Date is invalid.' }, { status: 400 });
+    }
+    createdAt = parsed.toISOString();
+  }
+
   const { data, error } = await supabase
     .from('grades')
     .update({
+      title,
       grade,
       feedback,
+      ...(createdAt ? { created_at: createdAt } : {}),
       updated_at: new Date().toISOString()
     })
     .eq('id', id)

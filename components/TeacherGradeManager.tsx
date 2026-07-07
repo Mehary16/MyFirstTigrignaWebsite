@@ -29,6 +29,14 @@ function studentNameFromGrade(grade: GradeRow) {
   return grade.profiles.full_name;
 }
 
+function toDateInputValue(iso: string) {
+  const date = new Date(iso);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function TeacherGradeManager({ students, initialGrades }: TeacherGradeManagerProps) {
   const router = useRouter();
   const [grades, setGrades] = useState(initialGrades);
@@ -40,26 +48,32 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
   const [loading, setLoading] = useState(false);
   const [excelBusy, setExcelBusy] = useState<'export' | 'import' | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
   const [editGradeValue, setEditGradeValue] = useState('');
   const [editFeedback, setEditFeedback] = useState('');
+  const [editDate, setEditDate] = useState('');
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const startEdit = (grade: GradeRow) => {
     setEditingId(grade.id);
+    setEditTitle(grade.title);
     setEditGradeValue(grade.grade);
     setEditFeedback(grade.feedback ?? '');
+    setEditDate(toDateInputValue(grade.created_at));
     setStatus(null);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
+    setEditTitle('');
     setEditGradeValue('');
     setEditFeedback('');
+    setEditDate('');
   };
 
   const handleEditSave = async (gradeId: string) => {
-    if (!editGradeValue.trim()) {
-      setStatus('Grade is required.');
+    if (!editTitle.trim() || !editGradeValue.trim() || !editDate) {
+      setStatus('Assignment, grade, and date are required.');
       return;
     }
 
@@ -71,8 +85,10 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          title: editTitle.trim(),
           grade: editGradeValue.trim(),
-          feedback: editFeedback.trim() || null
+          feedback: editFeedback.trim() || null,
+          gradedAt: editDate
         })
       });
 
@@ -92,8 +108,10 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
           grade.id === gradeId
             ? {
                 ...grade,
+                title: payload.grade!.title,
                 grade: payload.grade!.grade,
-                feedback: payload.grade!.feedback
+                feedback: payload.grade!.feedback,
+                created_at: payload.grade!.created_at
               }
             : grade
         )
@@ -333,7 +351,18 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
                 return (
                   <tr key={grade.id}>
                     <td className="px-4 py-3 font-medium text-slate-900">{studentNameFromGrade(grade)}</td>
-                    <td className="px-4 py-3 text-slate-600">{grade.title}</td>
+                    <td className="px-4 py-3">
+                      {isEditing ? (
+                        <input
+                          value={editTitle}
+                          onChange={(event) => setEditTitle(event.currentTarget.value)}
+                          className="w-full min-w-[8rem] rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-slate-500"
+                          placeholder="Assignment"
+                        />
+                      ) : (
+                        <span className="text-slate-600">{grade.title}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {isEditing ? (
                         <input
@@ -359,7 +388,18 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
                         <span className="text-slate-600">{grade.feedback ?? '—'}</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-500">{new Date(grade.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={editDate}
+                          onChange={(event) => setEditDate(event.currentTarget.value)}
+                          className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-slate-500"
+                        />
+                      ) : (
+                        <span className="text-slate-500">{new Date(grade.created_at).toLocaleDateString()}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {isEditing ? (
                         <div className="flex flex-wrap gap-2">
