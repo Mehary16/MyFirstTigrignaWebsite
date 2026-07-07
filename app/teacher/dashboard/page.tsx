@@ -90,7 +90,7 @@ export default async function TeacherDashboardPage({
     toStudentListItem(student, submissionCountByStudent[student.id] ?? 0)
   );
 
-  const studentOptions = studentList.map(({ id, full_name }) => ({ id, full_name }));
+  const studentOptions = studentList.map(({ id, full_name, class_grade }) => ({ id, full_name, class_grade }));
   const studentNameById = Object.fromEntries(studentOptions.map((student) => [student.id, student.full_name]));
 
   const grades: GradeRow[] = (gradeRows ?? []).map((grade) => ({

@@ -72,8 +72,8 @@ export function groupStudentsByGrade(students: StudentListItem[]) {
   return { groups, unassigned };
 }
 
-export function filterStudentsByGradeView(
-  students: StudentListItem[],
+export function filterStudentsByGradeView<T extends { class_grade: ClassGrade | null }>(
+  students: T[],
   view: 'all' | ClassGrade | 'unassigned'
 ) {
   if (view === 'all') return students;
