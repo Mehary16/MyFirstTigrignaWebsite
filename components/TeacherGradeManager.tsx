@@ -1,8 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useState, type ComponentProps } from 'react';
-import { createBrowserSupabaseClient } from '../lib/supabaseClient';
+import { useState, type ComponentProps } from 'react';
 
 export type GradeRow = {
   id: string;
@@ -32,7 +31,6 @@ function studentNameFromGrade(grade: GradeRow) {
 
 export default function TeacherGradeManager({ students, initialGrades }: TeacherGradeManagerProps) {
   const router = useRouter();
-  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [grades, setGrades] = useState(initialGrades);
   const [studentId, setStudentId] = useState(students[0]?.id ?? '');
   const [title, setTitle] = useState('');
@@ -41,6 +39,72 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [excelBusy, setExcelBusy] = useState<'export' | 'import' | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editGradeValue, setEditGradeValue] = useState('');
+  const [editFeedback, setEditFeedback] = useState('');
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  const startEdit = (grade: GradeRow) => {
+    setEditingId(grade.id);
+    setEditGradeValue(grade.grade);
+    setEditFeedback(grade.feedback ?? '');
+    setStatus(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditGradeValue('');
+    setEditFeedback('');
+  };
+
+  const handleEditSave = async (gradeId: string) => {
+    if (!editGradeValue.trim()) {
+      setStatus('Grade is required.');
+      return;
+    }
+
+    setSavingId(gradeId);
+    setStatus(null);
+
+    try {
+      const response = await fetch(`/api/grades/${gradeId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grade: editGradeValue.trim(),
+          feedback: editFeedback.trim() || null
+        })
+      });
+
+      const payload = (await response.json()) as {
+        error?: string;
+        grade?: GradeRow;
+        notificationMessage?: string;
+      };
+
+      if (!response.ok || !payload.grade) {
+        setStatus(payload.error ?? 'Could not update grade.');
+        return;
+      }
+
+      setGrades((current) =>
+        current.map((grade) =>
+          grade.id === gradeId
+            ? {
+                ...grade,
+                grade: payload.grade!.grade,
+                feedback: payload.grade!.feedback
+              }
+            : grade
+        )
+      );
+      cancelEdit();
+      setStatus(payload.notificationMessage ?? 'Grade updated.');
+      router.refresh();
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   const handleExportExcel = async () => {
     setExcelBusy('export');
@@ -245,7 +309,6 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
           >
             {loading ? 'Saving...' : 'Save grade'}
           </button>
-          {status && <p className="mt-2 text-sm text-slate-600">{status}</p>}
         </div>
       </form>
 
@@ -258,22 +321,81 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
               <th className="px-4 py-3 text-left font-semibold text-slate-700">Grade</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-700">Feedback</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-700">Date</th>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
             {grades.length ? (
-              grades.map((grade) => (
-                <tr key={grade.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{studentNameFromGrade(grade)}</td>
-                  <td className="px-4 py-3 text-slate-600">{grade.title}</td>
-                  <td className="px-4 py-3 font-semibold text-amber-800">{grade.grade}</td>
-                  <td className="px-4 py-3 text-slate-600">{grade.feedback ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-500">{new Date(grade.created_at).toLocaleDateString()}</td>
-                </tr>
-              ))
+              grades.map((grade) => {
+                const isEditing = editingId === grade.id;
+                const isSaving = savingId === grade.id;
+
+                return (
+                  <tr key={grade.id}>
+                    <td className="px-4 py-3 font-medium text-slate-900">{studentNameFromGrade(grade)}</td>
+                    <td className="px-4 py-3 text-slate-600">{grade.title}</td>
+                    <td className="px-4 py-3">
+                      {isEditing ? (
+                        <input
+                          value={editGradeValue}
+                          onChange={(event) => setEditGradeValue(event.currentTarget.value)}
+                          className="w-full min-w-[5rem] rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-slate-500"
+                          placeholder="Grade"
+                        />
+                      ) : (
+                        <span className="font-semibold text-amber-800">{grade.grade}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {isEditing ? (
+                        <textarea
+                          rows={2}
+                          value={editFeedback}
+                          onChange={(event) => setEditFeedback(event.currentTarget.value)}
+                          className="w-full min-w-[10rem] rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-slate-500"
+                          placeholder="Feedback (optional)"
+                        />
+                      ) : (
+                        <span className="text-slate-600">{grade.feedback ?? '—'}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">{new Date(grade.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">
+                      {isEditing ? (
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={isSaving}
+                            onClick={() => handleEditSave(grade.id)}
+                            className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700 disabled:bg-slate-400"
+                          >
+                            {isSaving ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSaving}
+                            onClick={cancelEdit}
+                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEdit(grade)}
+                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
                   No grades recorded yet.
                 </td>
               </tr>
@@ -281,6 +403,7 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
           </tbody>
         </table>
       </div>
+      {status && <p className="text-sm text-slate-600">{status}</p>}
     </div>
   );
 }
