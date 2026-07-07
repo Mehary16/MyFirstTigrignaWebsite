@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, UserPlus } from 'lucide-react';
 import type { StudentListItem } from '../lib/studentList';
@@ -32,7 +32,13 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [helpOpenId, setHelpOpenId] = useState<string | null>(null);
   const [helpMessage, setHelpMessage] = useState<string | null>(null);
+  const [excelBusy, setExcelBusy] = useState<'export' | 'import' | 'template' | null>(null);
+  const [excelStatus, setExcelStatus] = useState<string | null>(null);
   const [gradeView, setGradeView] = useState<GradeView>('all');
+
+  useEffect(() => {
+    setStudents(initialStudents);
+  }, [initialStudents]);
 
   const activeCount = students.filter((s) => s.is_active).length;
   const suspendedCount = students.length - activeCount;
@@ -147,6 +153,123 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
   const handleStudentCreated = (student: StudentListItem) => {
     setStudents((current) => [student, ...current]);
     setError(null);
+  };
+
+  const downloadExcelFile = async (url: string, fallbackName: string) => {
+    const response = await fetch(url);
+    if (!response.ok) {
+      const payload = (await response.json()) as { error?: string };
+      throw new Error(payload.error ?? 'Could not download Excel file.');
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') ?? '';
+    const match = disposition.match(/filename="([^"]+)"/);
+    const filename = match?.[1] ?? fallbackName;
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(objectUrl);
+  };
+
+  const handleExportExcel = async () => {
+    setExcelBusy('export');
+    setExcelStatus(null);
+    setError(null);
+
+    try {
+      const gradeParam =
+        gradeView === 'Grade 1' || gradeView === 'Grade 2' || gradeView === 'Grade 3'
+          ? `?grade=${encodeURIComponent(gradeView)}`
+          : '';
+      const stamp = new Date().toISOString().slice(0, 10);
+      await downloadExcelFile(`/api/students/export${gradeParam}`, `students-${stamp}.xlsx`);
+      setExcelStatus(
+        gradeView === 'Grade 1' || gradeView === 'Grade 2' || gradeView === 'Grade 3'
+          ? `${gradeView} students exported to Excel.`
+          : 'Student roster exported to Excel.'
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not export students.');
+    } finally {
+      setExcelBusy(null);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    setExcelBusy('template');
+    setExcelStatus(null);
+    setError(null);
+
+    try {
+      const stamp = new Date().toISOString().slice(0, 10);
+      await downloadExcelFile('/api/students/export?template=1', `student-import-template-${stamp}.xlsx`);
+      setExcelStatus('Import template downloaded.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not download template.');
+    } finally {
+      setExcelBusy(null);
+    }
+  };
+
+  const handleImportExcel = async (event: { currentTarget: HTMLInputElement }) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    if (!file) return;
+
+    setExcelBusy('import');
+    setExcelStatus(null);
+    setError(null);
+
+    try {
+      const body = new FormData();
+      body.append('file', file);
+
+      const response = await fetch('/api/students/import', {
+        method: 'POST',
+        body
+      });
+
+      const payload = (await response.json()) as {
+        error?: string;
+        created?: number;
+        updated?: number;
+        errors?: string[];
+      };
+
+      if (!response.ok || payload.error) {
+        setError(payload.error ?? 'Could not import students.');
+        if (payload.errors?.length) {
+          setExcelStatus(payload.errors.slice(0, 3).join(' '));
+        }
+        return;
+      }
+
+      const parts = [
+        payload.created ? `${payload.created} created` : null,
+        payload.updated ? `${payload.updated} updated` : null
+      ].filter(Boolean);
+
+      setExcelStatus(
+        parts.length
+          ? `Import complete: ${parts.join(', ')}.`
+          : 'Import complete.'
+      );
+
+      if (payload.errors?.length) {
+        setExcelStatus(
+          `${parts.length ? `Import complete: ${parts.join(', ')}. ` : ''}${payload.errors.slice(0, 3).join(' ')}`
+        );
+      }
+
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not import students.');
+    } finally {
+      setExcelBusy(null);
+    }
   };
 
   const copyEmail = async (email: string) => {
@@ -378,7 +501,40 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Registered Students / ዝተመዝገቡ ተማሃሮ</h2>
         <p className="mt-2 text-slate-600">
-          Students are grouped by class grade. Filter by grade or review each classroom separately.
+          Students are grouped by class grade. Export the roster to Excel, edit grades in bulk, or import new students.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            type="button"
+            disabled={excelBusy !== null}
+            onClick={handleExportExcel}
+            className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-emerald-400"
+          >
+            {excelBusy === 'export' ? 'Exporting...' : 'Export to Excel'}
+          </button>
+          <label className="inline-flex cursor-pointer items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            {excelBusy === 'import' ? 'Importing...' : 'Import from Excel'}
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              disabled={excelBusy !== null}
+              onChange={handleImportExcel}
+              className="hidden"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={excelBusy !== null}
+            onClick={handleDownloadTemplate}
+            className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {excelBusy === 'template' ? 'Downloading...' : 'Download import template'}
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          Keep the <strong>Student ID</strong> column when updating existing students. Leave it empty for new students
+          and include a <strong>Temporary Password</strong> (8+ characters). Use <strong>Class Grade</strong>: Grade 1,
+          Grade 2, or Grade 3.
         </p>
       </div>
 
@@ -450,6 +606,7 @@ export default function TeacherStudentList({ students: initialStudents, totalCou
       )}
 
       {error ? <Alert variant="error">{error}</Alert> : null}
+      {excelStatus ? <Alert variant="success">{excelStatus}</Alert> : null}
       {helpMessage ? <Alert variant="success">{helpMessage}</Alert> : null}
 
       {!students.length ? (
