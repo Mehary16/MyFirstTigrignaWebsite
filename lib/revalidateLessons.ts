@@ -10,4 +10,5 @@ export function revalidateLessonCaches(lessonId?: string) {
   }
 
   revalidatePath('/student/dashboard');
+  revalidatePath('/teacher/dashboard');
 }

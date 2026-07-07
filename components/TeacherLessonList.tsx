@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ComponentProps } from 'react';
+import { useEffect, useState, type ComponentProps } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { normalizeClassGrade, type ClassGrade } from '../lib/classGrades';
@@ -24,6 +24,10 @@ type TeacherLessonListProps = {
 export default function TeacherLessonList({ initialLessons }: TeacherLessonListProps) {
   const router = useRouter();
   const [lessons, setLessons] = useState(initialLessons);
+
+  useEffect(() => {
+    setLessons(initialLessons);
+  }, [initialLessons]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
