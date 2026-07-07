@@ -6,13 +6,14 @@ import { getVideoEmbedUrl } from '../lib/videoEmbed';
 
 type StudentLessonPlayerProps = {
   lessonId: string;
-  studentId: string;
+  studentId?: string;
   title: string;
   description: string | null;
   videoUrl: string;
   category: string | null;
   externalLink: string | null;
-  initiallyViewed: boolean;
+  initiallyViewed?: boolean;
+  preview?: boolean;
 };
 
 export default function StudentLessonPlayer({
@@ -23,12 +24,15 @@ export default function StudentLessonPlayer({
   videoUrl,
   category,
   externalLink,
-  initiallyViewed
+  initiallyViewed = false,
+  preview = false
 }: StudentLessonPlayerProps) {
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const embedUrl = getVideoEmbedUrl(videoUrl);
 
   const markViewed = async () => {
+    if (preview || !studentId) return;
+
     await supabase.from('lesson_views').upsert(
       { student_id: studentId, lesson_id: lessonId, viewed_at: new Date().toISOString() },
       { onConflict: 'student_id,lesson_id' }
@@ -69,7 +73,7 @@ export default function StudentLessonPlayer({
       <div className="p-6">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="font-ethiopic-display text-2xl font-semibold text-slate-950 sm:text-3xl">{title}</h1>
-          {initiallyViewed && (
+          {!preview && initiallyViewed && (
             <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Viewed</span>
           )}
         </div>

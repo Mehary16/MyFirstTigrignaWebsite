@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, type ComponentProps } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import StudentLessonPlayer from './StudentLessonPlayer';
 import { normalizeClassGrade, type ClassGrade } from '../lib/classGrades';
 import ClassGradeSelect from './ClassGradeSelect';
 
@@ -37,8 +37,10 @@ export default function TeacherLessonList({ initialLessons }: TeacherLessonListP
   const [editExternalLink, setEditExternalLink] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const startEdit = (lesson: LessonRow) => {
+    setOpenId(null);
     setEditingId(lesson.id);
     setEditTitle(lesson.title);
     setEditDescription(lesson.description ?? '');
@@ -200,13 +202,13 @@ export default function TeacherLessonList({ initialLessons }: TeacherLessonListP
                   {lesson.description && <p className="mt-2 text-sm text-slate-600">{lesson.description}</p>}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Link
-                    href={`/student/lessons/${lesson.id}`}
-                    target="_blank"
+                  <button
+                    type="button"
+                    onClick={() => setOpenId((current) => (current === lesson.id ? null : lesson.id))}
                     className="rounded-full border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50"
                   >
-                    Preview
-                  </Link>
+                    {openId === lesson.id ? 'Close' : 'Open'}
+                  </button>
                   <button
                     type="button"
                     onClick={() => startEdit(lesson)}
@@ -224,6 +226,19 @@ export default function TeacherLessonList({ initialLessons }: TeacherLessonListP
                   </button>
                 </div>
               </div>
+              {openId === lesson.id && (
+                <div className="mt-4">
+                  <StudentLessonPlayer
+                    lessonId={lesson.id}
+                    title={lesson.title}
+                    description={lesson.description}
+                    videoUrl={lesson.video_url}
+                    category={lesson.category}
+                    externalLink={lesson.external_link}
+                    preview
+                  />
+                </div>
+              )}
             </article>
           )
         )}
