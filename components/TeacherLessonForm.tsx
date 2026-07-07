@@ -47,7 +47,7 @@ export default function TeacherLessonForm() {
         })
       });
 
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as { error?: string; notificationMessage?: string };
 
       if (!response.ok) {
         setStatus(payload.error ?? 'Error creating lesson.');
@@ -61,7 +61,7 @@ export default function TeacherLessonForm() {
       setLevel('');
       setVideoUrl('');
       setExternalLink('');
-      setStatus('Lesson created successfully.');
+      setStatus(payload.notificationMessage ?? 'Lesson created successfully.');
       router.refresh();
     } finally {
       setLoading(false);

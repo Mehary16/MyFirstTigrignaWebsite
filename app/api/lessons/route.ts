@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { CLASS_GRADES } from '../../../lib/classGrades';
+import { formatNotificationStatus, notifyStudentsOfNewContent } from '../../../lib/contentNotifications';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { requireTeacherApi } from '../../../lib/lessonApiAuth';
 import { revalidateLessonCaches } from '../../../lib/revalidateLessons';
@@ -52,5 +53,17 @@ export async function POST(request: Request) {
 
   revalidateLessonCaches(data.id);
 
-  return NextResponse.json({ success: true, id: data.id });
+  const notifications = await notifyStudentsOfNewContent(supabase, {
+    type: 'lesson',
+    classGrade: level as (typeof CLASS_GRADES)[number],
+    title,
+    description: body.description?.trim() || null
+  });
+
+  return NextResponse.json({
+    success: true,
+    id: data.id,
+    notifications,
+    notificationMessage: formatNotificationStatus(notifications)
+  });
 }

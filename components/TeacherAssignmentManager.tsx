@@ -73,38 +73,41 @@ export default function TeacherAssignmentManager({ initialAssignments }: Teacher
         fileName = uploaded.fileName;
       }
 
-      const { data, error } = await supabase
-        .from('assignments')
-        .insert([
-          {
-            teacher_id: userData.user.id,
-            title: title.trim(),
-            description: description.trim() || null,
-            due_date: dueDate ? new Date(dueDate).toISOString() : null,
-            class_grade: classGrade,
-            file_url: fileUrl,
-            file_name: fileName
-          }
-        ])
-        .select(ASSIGNMENT_SELECT)
-        .single();
+      const response = await fetch('/api/assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim() || null,
+          dueDate: dueDate || null,
+          classGrade,
+          fileUrl,
+          fileName
+        })
+      });
 
-      if (error) {
+      const payload = (await response.json()) as {
+        error?: string;
+        assignment?: AssignmentRow;
+        notificationMessage?: string;
+      };
+
+      if (!response.ok || !payload.assignment) {
         const hint =
-          error.message.includes('file_url') || error.message.includes('file_name')
+          payload.error?.includes('file_url') || payload.error?.includes('file_name')
             ? ' Run supabase/FIX_ASSIGNMENT_ANNOUNCEMENT_ATTACHMENTS.sql in Supabase SQL Editor, then try again.'
             : '';
-        setStatus(`Could not create assignment: ${error.message}${hint}`);
+        setStatus(`Could not create assignment: ${payload.error ?? 'Unknown error'}${hint}`);
         return;
       }
 
-      setAssignments((current) => [data as AssignmentRow, ...current]);
+      setAssignments((current) => [payload.assignment!, ...current]);
       setTitle('');
       setDescription('');
       setDueDate('');
       setClassGrade('');
       setCreateFile(null);
-      setStatus('Assignment created.');
+      setStatus(payload.notificationMessage ?? 'Assignment created.');
       router.refresh();
     } catch (uploadError) {
       setStatus(uploadError instanceof Error ? uploadError.message : 'Could not upload the attachment.');
