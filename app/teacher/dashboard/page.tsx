@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import type { MaterialRow } from '../../../lib/teacherMaterials';
+import DashboardScrollTarget from '../../../components/DashboardScrollTarget';
 import type { StudentListItem } from '../../../lib/studentList';
 import { toStudentListItem } from '../../../lib/studentList';
 import { type GradeRow } from '../../../components/TeacherGradeManager';
@@ -16,7 +18,12 @@ import { countUnreadNotifications, fetchNotificationsForUser } from '../../../li
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
-export default async function TeacherDashboardPage() {
+export default async function TeacherDashboardPage({
+  searchParams
+}: {
+  searchParams: Promise<{ tab?: string; submission?: string }>;
+}) {
+  const { tab, submission } = await searchParams;
   const supabase = await createServerSupabaseClient();
   const {
     data: { user }
@@ -95,6 +102,9 @@ export default async function TeacherDashboardPage() {
 
   return (
     <section className="space-y-8">
+      <Suspense fallback={null}>
+        <DashboardScrollTarget />
+      </Suspense>
       <DatabaseSetupAlert message={setupMessage} />
 
       <PageHeader
@@ -124,6 +134,8 @@ export default async function TeacherDashboardPage() {
         assignments={assignments}
         liveClasses={liveClasses}
         announcements={announcements}
+        initialTab={tab}
+        highlightSubmissionId={submission}
       />
     </section>
   );

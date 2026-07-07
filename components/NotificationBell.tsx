@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Bell } from 'lucide-react';
 import type { InAppNotification } from '../lib/inAppNotifications';
 import { formatNotificationTime, notificationTypeLabel } from '../lib/inAppNotifications';
+import { resolveNotificationHref } from '../lib/notificationLinks';
 import { cn } from '../lib/cn';
 
 type NotificationBellProps = {
@@ -75,7 +76,7 @@ export default function NotificationBell({
     }
 
     setOpen(false);
-    router.push(notification.link_path || '/');
+    router.push(resolveNotificationHref(notification));
   };
 
   const markAllRead = async () => {

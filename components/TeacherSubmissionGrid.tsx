@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
 import { formatDatabaseError } from '../lib/supabaseErrors';
+import { highlightScrollTarget } from '../lib/notificationLinks';
 import { getSubmissionViewLabel, type SubmissionType } from '../lib/submissionMedia';
 
 type SubmissionRow = {
@@ -35,7 +36,11 @@ function getAssignmentTitle(assignments: SubmissionRow['assignments']) {
   return assignments.title;
 }
 
-export default function TeacherSubmissionGrid() {
+export default function TeacherSubmissionGrid({
+  highlightSubmissionId
+}: {
+  highlightSubmissionId?: string | null;
+}) {
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,6 +97,19 @@ export default function TeacherSubmissionGrid() {
     loadSubmissions();
   }, [supabase]);
 
+  useEffect(() => {
+    if (!highlightSubmissionId || loading) return;
+
+    const timeout = window.setTimeout(() => {
+      const element = document.getElementById(`submission-${highlightSubmissionId}`);
+      if (element) {
+        highlightScrollTarget(element);
+      }
+    }, 200);
+
+    return () => window.clearTimeout(timeout);
+  }, [highlightSubmissionId, loading, submissions.length]);
+
   const saveFeedback = async (submissionId: string) => {
     setSavingId(submissionId);
     const feedback = feedbackDrafts[submissionId]?.trim() || null;
@@ -145,7 +163,11 @@ export default function TeacherSubmissionGrid() {
           const assignmentTitle = getAssignmentTitle(submission.assignments);
           const mediaUrl = submission.video_url;
           return (
-            <article key={submission.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+            <article
+              key={submission.id}
+              id={`submission-${submission.id}`}
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-4 shadow-sm"
+            >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-slate-900">{studentName}</p>

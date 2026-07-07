@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import HomeworkSubmissionForm from '../../../components/StudentHomeworkForm';
+import DashboardScrollTarget from '../../../components/DashboardScrollTarget';
 import StudentSubmissionList from '../../../components/StudentSubmissionList';
 import LogoutButton from '../../../components/LogoutButton';
 import StudentMaterialSection from '../../../components/StudentMaterialSection';
@@ -126,6 +128,9 @@ export default async function StudentDashboardPage() {
 
     return (
       <section className="space-y-8">
+        <Suspense fallback={null}>
+          <DashboardScrollTarget />
+        </Suspense>
         <DatabaseSetupAlert message={setupMessage} />
 
         <PageHeader
@@ -175,6 +180,7 @@ export default async function StudentDashboardPage() {
             <StudentLessonSection lessons={lessons} viewedLessonIds={viewedLessonIds} gradeLabel={gradeLabel} />
 
             <StudentMaterialSection
+              sectionId="student-materials-documents"
               title="Documents & Files"
               description="PDFs, Word, Excel, PowerPoint, images, and other files from your teacher."
               emptyMessage="No documents uploaded yet."
@@ -182,6 +188,7 @@ export default async function StudentDashboardPage() {
             />
 
             <StudentMaterialSection
+              sectionId="student-materials-media"
               title="Video & Audio"
               description="Lesson recordings, clips, and audio materials from your teacher."
               emptyMessage="No video or audio uploaded yet."

@@ -88,18 +88,20 @@ type StudentMaterialSectionProps = {
   description: string;
   emptyMessage: string;
   materials: MaterialRow[];
+  sectionId?: string;
 };
 
 export default function StudentMaterialSection({
   title,
   description,
   emptyMessage,
-  materials
+  materials,
+  sectionId
 }: StudentMaterialSectionProps) {
   const [openId, setOpenId] = useState<string | null>(null);
 
   return (
-    <Card variant="elevated">
+    <Card variant="elevated" id={sectionId}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
@@ -108,7 +110,7 @@ export default function StudentMaterialSection({
         {materials.length ? (
           <div className="grid gap-4">
             {materials.map((material) => (
-              <article key={material.id} className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4">
+              <article key={material.id} id={`material-${material.id}`} className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-slate-950">{material.title}</h3>
