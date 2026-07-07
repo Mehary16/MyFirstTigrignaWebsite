@@ -197,17 +197,40 @@ export async function notifyStudentsOfNewContent(
 
 export function formatNotificationStatus(result: ContentNotificationResult) {
   if (!result.configured) {
-    return 'Content saved. Email notifications are not configured (add RESEND_API_KEY).';
+    return 'Email not sent (add RESEND_API_KEY and EMAIL_FROM to your server environment).';
   }
 
   const parts: string[] = [];
   if (result.sent) parts.push(`Email sent to ${result.sent} student${result.sent === 1 ? '' : 's'}`);
   if (result.skipped) parts.push(`${result.skipped} skipped (no email or inactive)`);
-  if (result.failed) parts.push(`${result.failed} failed`);
+  if (result.failed) parts.push(`${result.failed} email${result.failed === 1 ? '' : 's'} failed`);
 
   if (!parts.length) {
-    return 'Content saved. No students with email addresses were found for this grade.';
+    return 'No student emails were found for that grade.';
   }
 
   return parts.join('. ') + '.';
+}
+
+export function formatCombinedNotificationStatus(
+  email: ContentNotificationResult,
+  inApp: { configured: boolean; created: number; error?: string },
+  savedLabel = 'Content saved'
+) {
+  const parts = [`${savedLabel}.`];
+
+  if (!inApp.configured) {
+    parts.push(
+      inApp.error ??
+        'In-app alerts need supabase/FIX_NOTIFICATIONS.sql and SUPABASE_SERVICE_ROLE_KEY.'
+    );
+  } else if (inApp.created > 0) {
+    parts.push(`In-app alert sent to ${inApp.created} student${inApp.created === 1 ? '' : 's'}.`);
+  } else {
+    parts.push(inApp.error ?? 'No students received an in-app alert for that grade.');
+  }
+
+  parts.push(formatNotificationStatus(email));
+
+  return parts.join(' ');
 }

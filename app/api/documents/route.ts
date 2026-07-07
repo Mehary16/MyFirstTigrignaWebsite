@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { CLASS_GRADES, type ClassGrade } from '../../../lib/classGrades';
-import { formatNotificationStatus, notifyStudentsOfNewContent } from '../../../lib/contentNotifications';
+import { formatCombinedNotificationStatus, notifyStudentsOfNewContent } from '../../../lib/contentNotifications';
 import { createStudentContentNotifications } from '../../../lib/inAppNotifications';
 import { isTeacherUser } from '../../../lib/auth';
 import { MATERIAL_CATEGORY_LABELS, type MaterialCategory } from '../../../lib/teacherMaterials';
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     description: notificationBody
   });
 
-  await createStudentContentNotifications(supabase, {
+  const inAppNotifications = await createStudentContentNotifications(supabase, {
     classGrade,
     type: 'material',
     title,
@@ -89,6 +89,10 @@ export async function POST(request: Request) {
   return NextResponse.json({
     success: true,
     document: data,
-    notificationMessage: formatNotificationStatus(emailNotifications)
+    notificationMessage: formatCombinedNotificationStatus(
+      emailNotifications,
+      inAppNotifications,
+      'Material saved'
+    )
   });
 }

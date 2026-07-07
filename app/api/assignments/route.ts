@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { CLASS_GRADES, type ClassGrade } from '../../../lib/classGrades';
-import { formatNotificationStatus, notifyStudentsOfNewContent } from '../../../lib/contentNotifications';
+import { formatCombinedNotificationStatus, notifyStudentsOfNewContent } from '../../../lib/contentNotifications';
 import { createStudentContentNotifications } from '../../../lib/inAppNotifications';
 import { isTeacherUser } from '../../../lib/auth';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: formatDatabaseError(error?.message) }, { status: 500 });
   }
 
-  const notifications = await notifyStudentsOfNewContent(supabase, {
+  const emailNotifications = await notifyStudentsOfNewContent(supabase, {
     type: 'assignment',
     classGrade,
     title,
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     dueDate: data.due_date
   });
 
-  await createStudentContentNotifications(supabase, {
+  const inAppNotifications = await createStudentContentNotifications(supabase, {
     classGrade,
     type: 'assignment',
     title,
@@ -82,7 +82,12 @@ export async function POST(request: Request) {
   return NextResponse.json({
     success: true,
     assignment: data,
-    notifications,
-    notificationMessage: formatNotificationStatus(notifications)
+    emailNotifications,
+    inAppNotifications,
+    notificationMessage: formatCombinedNotificationStatus(
+      emailNotifications,
+      inAppNotifications,
+      'Assignment saved'
+    )
   });
 }

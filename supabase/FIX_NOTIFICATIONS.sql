@@ -50,10 +50,7 @@ as $$
 declare
   inserted_count integer;
 begin
-  if not exists (
-    select 1 from public.profiles
-    where id = auth.uid() and role = 'Teacher'
-  ) then
+  if auth.uid() is not null and not public.is_teacher() then
     raise exception 'Only teachers can notify students.';
   end if;
 
