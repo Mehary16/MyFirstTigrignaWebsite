@@ -120,48 +120,46 @@ export default function TeacherGradeManager({ students, initialGrades }: Teacher
     }
 
     setLoading(true);
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
 
-    if (!user) {
-      setStatus('You must be logged in as a teacher.');
+    try {
+      const response = await fetch('/api/grades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId,
+          title: title.trim(),
+          grade: gradeValue.trim(),
+          feedback: feedback.trim() || null
+        })
+      });
+
+      const payload = (await response.json()) as {
+        error?: string;
+        grade?: GradeRow;
+        notificationMessage?: string;
+      };
+
+      if (!response.ok || !payload.grade) {
+        setStatus(payload.error ?? 'Could not save grade.');
+        return;
+      }
+
+      const studentName = students.find((student) => student.id === studentId)?.full_name ?? 'Student';
+      setGrades((current) => [
+        {
+          ...payload.grade!,
+          profiles: { full_name: studentName }
+        },
+        ...current
+      ]);
+      setTitle('');
+      setGradeValue('');
+      setFeedback('');
+      setStatus(payload.notificationMessage ?? 'Grade saved.');
+      router.refresh();
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { data, error } = await supabase
-      .from('grades')
-      .insert({
-        student_id: studentId,
-        teacher_id: user.id,
-        title: title.trim(),
-        grade: gradeValue.trim(),
-        feedback: feedback.trim() || null
-      })
-      .select('id, student_id, title, grade, feedback, created_at')
-      .single();
-
-    setLoading(false);
-
-    if (error) {
-      setStatus(error.message);
-      return;
-    }
-
-    const studentName = students.find((student) => student.id === studentId)?.full_name ?? 'Student';
-    setGrades((current) => [
-      {
-        ...(data as GradeRow),
-        profiles: { full_name: studentName }
-      },
-      ...current
-    ]);
-    setTitle('');
-    setGradeValue('');
-    setFeedback('');
-    setStatus('Grade saved.');
-    router.refresh();
   };
 
   return (

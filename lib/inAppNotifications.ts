@@ -9,7 +9,8 @@ export type InAppNotificationType =
   | 'announcement'
   | 'submission'
   | 'live_class'
-  | 'material';
+  | 'material'
+  | 'grade';
 
 export type InAppNotification = {
   id: string;
@@ -285,6 +286,70 @@ export async function createTeacherSubmissionNotifications(
   return { configured: true, created: typeof data === 'number' ? data : 0 };
 }
 
+export async function createStudentGradeNotification(payload: {
+  studentId: string;
+  gradeId: string;
+  title: string;
+  grade: string;
+  feedback?: string | null;
+  updated?: boolean;
+}): Promise<InAppNotificationResult> {
+  const admin = createAdminSupabaseClient();
+  if (!admin) {
+    return { configured: false, created: 0, error: 'SUPABASE_SERVICE_ROLE_KEY is not configured.' };
+  }
+
+  const { data: student, error: studentError } = await admin
+    .from('profiles')
+    .select('id, is_active')
+    .eq('id', payload.studentId)
+    .eq('role', 'Student')
+    .maybeSingle();
+
+  if (studentError) {
+    if (isMissingNotificationsTable(studentError.message)) {
+      return {
+        configured: false,
+        created: 0,
+        error: 'Run supabase/FIX_NOTIFICATIONS.sql in Supabase SQL Editor.'
+      };
+    }
+    return { configured: true, created: 0, error: studentError.message };
+  }
+
+  if (!student || student.is_active === false) {
+    return { configured: true, created: 0, error: 'Student is not active.' };
+  }
+
+  const actionLabel = payload.updated ? 'Grade updated' : 'New grade';
+  const notificationTitle = `${actionLabel}: ${payload.title}`;
+  const notificationBody = `You received ${payload.grade} for ${payload.title}.${
+    payload.feedback?.trim() ? ` Feedback: ${payload.feedback.trim()}` : ''
+  }`;
+
+  const { error: insertError } = await admin.from('notifications').insert({
+    recipient_id: payload.studentId,
+    type: 'grade',
+    title: notificationTitle,
+    body: notificationBody,
+    link_path: buildNotificationLink('grade', payload.gradeId),
+    source_id: payload.gradeId
+  });
+
+  if (insertError) {
+    if (isMissingNotificationsTable(insertError.message)) {
+      return {
+        configured: false,
+        created: 0,
+        error: 'Run supabase/FIX_NOTIFICATIONS.sql and FIX_NOTIFICATIONS_GRADES.sql in Supabase.'
+      };
+    }
+    return { configured: true, created: 0, error: insertError.message };
+  }
+
+  return { configured: true, created: 1 };
+}
+
 export async function fetchNotificationsForUser(supabase: SupabaseClient, userId: string, limit = 20) {
   const { data, error } = await supabase
     .from('notifications')
@@ -334,6 +399,8 @@ export function notificationTypeLabel(type: InAppNotificationType) {
       return 'Live class';
     case 'material':
       return 'Reading material';
+    case 'grade':
+      return 'Grade';
     default:
       return 'Update';
   }

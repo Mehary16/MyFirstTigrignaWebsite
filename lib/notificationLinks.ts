@@ -26,6 +26,10 @@ export function buildNotificationLink(type: InAppNotificationType, sourceId?: st
       return sourceId
         ? `/teacher/dashboard?tab=homework&submission=${sourceId}`
         : '/teacher/dashboard?tab=homework';
+    case 'grade':
+      return sourceId
+        ? `/student/dashboard?focus=grade&id=${sourceId}`
+        : '/student/dashboard?focus=grades';
     default:
       return '/';
   }
@@ -53,7 +57,8 @@ export function getScrollTargetId(searchParams: URLSearchParams) {
       assignment: `assignment-${itemId}`,
       announcement: `announcement-${itemId}`,
       'live-class': `live-class-${itemId}`,
-      material: `material-${itemId}`
+      material: `material-${itemId}`,
+      grade: `grade-${itemId}`
     };
     return itemTargets[focus] ?? null;
   }
@@ -65,7 +70,8 @@ export function getScrollTargetId(searchParams: URLSearchParams) {
     assignments: 'student-assignments',
     announcements: 'student-announcements',
     'live-classes': 'student-live-classes',
-    materials: 'student-materials-documents'
+    materials: 'student-materials-documents',
+    grades: 'student-grades'
   };
 
   return sectionTargets[focus] ?? null;

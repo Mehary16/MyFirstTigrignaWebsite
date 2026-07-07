@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { isTeacherUser } from '../../../../lib/auth';
 import { parseGradesWorkbook } from '../../../../lib/gradesExcel';
+import { createStudentGradeNotification } from '../../../../lib/inAppNotifications';
+import { notifyStudentOfGrade } from '../../../../lib/contentNotifications';
 import { formatDatabaseError } from '../../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
 
@@ -80,34 +82,67 @@ export async function POST(request: Request) {
           updated_at: new Date().toISOString()
         })
         .eq('id', row.gradeId)
-        .select('id');
+        .select('id')
+        .single();
 
       if (error) {
         errors.push(`Row ${rowNumber}: ${formatDatabaseError(error.message)}`);
         continue;
       }
 
-      if (!data?.length) {
+      if (!data) {
         errors.push(`Row ${rowNumber}: Grade ID "${row.gradeId}" was not found.`);
         continue;
       }
+
+      await createStudentGradeNotification({
+        studentId,
+        gradeId: data.id,
+        title: row.title,
+        grade: row.grade,
+        feedback: row.feedback,
+        updated: true
+      });
+      await notifyStudentOfGrade(supabase, studentId, {
+        title: row.title,
+        grade: row.grade,
+        feedback: row.feedback,
+        updated: true
+      });
 
       updated += 1;
       continue;
     }
 
-    const { error } = await supabase.from('grades').insert({
-      student_id: studentId,
-      teacher_id: user.id,
+    const { data: createdGrade, error } = await supabase
+      .from('grades')
+      .insert({
+        student_id: studentId,
+        teacher_id: user.id,
+        title: row.title,
+        grade: row.grade,
+        feedback: row.feedback
+      })
+      .select('id')
+      .single();
+
+    if (error || !createdGrade) {
+      errors.push(`Row ${rowNumber}: ${formatDatabaseError(error?.message)}`);
+      continue;
+    }
+
+    await createStudentGradeNotification({
+      studentId,
+      gradeId: createdGrade.id,
       title: row.title,
       grade: row.grade,
       feedback: row.feedback
     });
-
-    if (error) {
-      errors.push(`Row ${rowNumber}: ${formatDatabaseError(error.message)}`);
-      continue;
-    }
+    await notifyStudentOfGrade(supabase, studentId, {
+      title: row.title,
+      grade: row.grade,
+      feedback: row.feedback
+    });
 
     created += 1;
   }

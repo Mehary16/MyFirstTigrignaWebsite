@@ -4,7 +4,7 @@
 create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
   recipient_id uuid not null references public.profiles(id) on delete cascade,
-  type text not null check (type in ('lesson', 'assignment', 'announcement', 'submission', 'live_class', 'material')),
+  type text not null check (type in ('lesson', 'assignment', 'announcement', 'submission', 'live_class', 'material', 'grade')),
   title text not null,
   body text,
   link_path text not null default '/student/dashboard',
