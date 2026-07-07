@@ -36,9 +36,16 @@ type TeacherDashboardShellProps = {
   assignments: AssignmentRow[];
   liveClasses: LiveClassRow[];
   announcements: AnnouncementRow[];
+  initialTab?: string | null;
+  highlightSubmissionId?: string | null;
 };
 
 type TeacherTab = 'overview' | 'students' | 'homework' | 'teaching' | 'grades' | 'communication';
+
+function parseTeacherTab(value?: string | null): TeacherTab {
+  const tabs: TeacherTab[] = ['overview', 'students', 'homework', 'teaching', 'grades', 'communication'];
+  return tabs.includes(value as TeacherTab) ? (value as TeacherTab) : 'overview';
+}
 
 type TabConfig = {
   id: TeacherTab;
@@ -87,11 +94,17 @@ export default function TeacherDashboardShell({
   lessons,
   assignments,
   liveClasses,
-  announcements
+  announcements,
+  initialTab,
+  highlightSubmissionId
 }: TeacherDashboardShellProps) {
-  const [activeTab, setActiveTab] = useState<TeacherTab>('overview');
+  const [activeTab, setActiveTab] = useState<TeacherTab>(() => parseTeacherTab(initialTab));
   const [showQuickActions, setShowQuickActions] = useState(false);
   const quickActionsRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setActiveTab(parseTeacherTab(initialTab));
+  }, [initialTab]);
 
   const overview = useMemo(() => {
     const activeStudents = studentList.filter((student) => student.is_active).length;
@@ -314,7 +327,7 @@ export default function TeacherDashboardShell({
             <TeacherAssignmentManager initialAssignments={assignments} />
           </SectionCard>
           <SectionCard title="Submission Review" description="Open student work and leave helpful feedback quickly.">
-            <TeacherSubmissionGrid />
+            <TeacherSubmissionGrid highlightSubmissionId={highlightSubmissionId} />
           </SectionCard>
         </div>
       )}

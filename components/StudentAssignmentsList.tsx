@@ -13,7 +13,7 @@ export default function StudentAssignmentsList({ assignments, submittedAssignmen
   if (!assignments.length) return null;
 
   return (
-    <section className="rounded-[2rem] border border-amber-100 bg-amber-50/40 p-6">
+    <section id="student-assignments" className="rounded-[2rem] border border-amber-100 bg-amber-50/40 p-6">
       <h2 className="text-xl font-semibold text-slate-950">Assigned Homework</h2>
       <p className="mt-1 text-sm text-slate-600">Submit your work using the form below and select the matching assignment.</p>
       <div className="mt-4 space-y-3">
@@ -24,7 +24,7 @@ export default function StudentAssignmentsList({ assignments, submittedAssignmen
           const downloadHref = getAttachmentDownloadHref(assignment);
 
           return (
-            <article key={assignment.id} className="rounded-2xl border border-amber-100 bg-white p-4">
+            <article key={assignment.id} id={`assignment-${assignment.id}`} className="rounded-2xl border border-amber-100 bg-white p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-semibold text-slate-900">{assignment.title}</h3>
                 {isSubmitted && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Submitted</span>}

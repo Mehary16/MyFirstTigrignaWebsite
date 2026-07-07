@@ -20,7 +20,7 @@ export default function StudentLessonSection({ lessons, viewedLessonIds, gradeLa
   const viewedSet = new Set(viewedLessonIds);
 
   return (
-    <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
+    <section id="student-lessons" className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-slate-950">Video Lessons</h2>

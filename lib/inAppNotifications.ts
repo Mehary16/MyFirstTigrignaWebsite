@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ClassGrade } from './classGrades';
+import { buildNotificationLink } from './notificationLinks';
 import { createAdminSupabaseClient } from './supabaseAdmin';
 
 export type InAppNotificationType =
@@ -115,12 +116,13 @@ async function insertNotificationsWithAdmin(
   }
 
   const copy = buildStudentNotificationCopy(payload);
+  const linkPath = buildNotificationLink(payload.type, payload.sourceId);
   const rows = students.map((student) => ({
     recipient_id: student.id,
     type: payload.type,
     title: copy.title,
     body: copy.body,
-    link_path: '/student/dashboard',
+    link_path: linkPath,
     source_id: payload.sourceId ?? null,
     class_grade: payload.classGrade
   }));
@@ -152,13 +154,14 @@ async function insertNotificationsWithRpc(
   }
 ): Promise<InAppNotificationResult> {
   const copy = buildStudentNotificationCopy(payload);
+  const linkPath = buildNotificationLink(payload.type, payload.sourceId);
 
   const { data, error } = await supabase.rpc('notify_students_in_grade', {
     p_class_grade: payload.classGrade,
     p_type: payload.type,
     p_title: copy.title,
     p_body: copy.body,
-    p_link_path: '/student/dashboard',
+    p_link_path: linkPath,
     p_source_id: payload.sourceId ?? null
   });
 
@@ -243,7 +246,7 @@ export async function createTeacherSubmissionNotifications(
       type: 'submission' as const,
       title,
       body,
-      link_path: '/teacher/dashboard',
+      link_path: buildNotificationLink('submission', payload.submissionId),
       source_id: payload.submissionId
     }));
 
