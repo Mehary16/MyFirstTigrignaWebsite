@@ -10,6 +10,7 @@ import AnnouncementsFeed from '../../../components/AnnouncementsFeed';
 import LiveClassSchedule from '../../../components/LiveClassSchedule';
 import { splitStudentMaterials } from '../../../lib/teacherMaterials';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
+import NotificationBell from '../../../components/NotificationBell';
 import { Badge, PageHeader, Alert } from '../../../components/ui';
 import { isStudentSuspended } from '../../../lib/auth';
 import { CLASS_GRADE_LABELS, normalizeClassGrade, type ClassGrade } from '../../../lib/classGrades';
@@ -26,6 +27,7 @@ import {
   firstQueryError
 } from '../../../lib/safeQueries';
 import { loadLessonsForStudent } from '../../../lib/loadLessonsForStudent';
+import { countUnreadNotifications, fetchNotificationsForUser } from '../../../lib/inAppNotifications';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
@@ -76,7 +78,9 @@ export default async function StudentDashboardPage() {
       assignmentsResult,
       announcementsResult,
       liveClassesResult,
-      lessonViewsResult
+      lessonViewsResult,
+      notificationsResult,
+      unreadNotificationsResult
     ] = await Promise.all([
       loadLessonsForStudent(supabase, classGrade),
       fetchDocumentsForDisplay(supabase, classGrade),
@@ -85,7 +89,9 @@ export default async function StudentDashboardPage() {
       fetchAssignments(supabase, classGrade),
       fetchAnnouncements(supabase, classGrade),
       fetchLiveClasses(supabase, classGrade),
-      fetchLessonViews(supabase, user.id)
+      fetchLessonViews(supabase, user.id),
+      fetchNotificationsForUser(supabase, user.id),
+      countUnreadNotifications(supabase, user.id)
     ]);
     const submissions = submissionsResult.data;
     const grades = gradesResult.data;
@@ -93,6 +99,8 @@ export default async function StudentDashboardPage() {
     const announcements = announcementsResult.data;
     const liveClasses = liveClassesResult.data;
     const viewedLessonIds = lessonViewsResult.data;
+    const notifications = notificationsResult.data;
+    const unreadNotificationCount = unreadNotificationsResult.count;
 
     const setupMessage = firstQueryError([
       profileError,
@@ -130,6 +138,10 @@ export default async function StudentDashboardPage() {
           }
           actions={
             <>
+              <NotificationBell
+                initialNotifications={notifications}
+                initialUnreadCount={unreadNotificationCount}
+              />
               <Badge>{displayName}</Badge>
               {gradeLabel ? <Badge variant="brand">{gradeLabel}</Badge> : null}
               <Badge variant="info">{profile?.role ?? 'Student'}</Badge>

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { CLASS_GRADES } from '../../../lib/classGrades';
+import { formatCombinedNotificationStatus, formatNotificationStatus, notifyStudentsOfNewContent } from '../../../lib/contentNotifications';
+import { createStudentContentNotifications } from '../../../lib/inAppNotifications';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { requireTeacherApi } from '../../../lib/lessonApiAuth';
 import { revalidateLessonCaches } from '../../../lib/revalidateLessons';
@@ -52,5 +54,26 @@ export async function POST(request: Request) {
 
   revalidateLessonCaches(data.id);
 
-  return NextResponse.json({ success: true, id: data.id });
+  const emailNotifications = await notifyStudentsOfNewContent(supabase, {
+    type: 'lesson',
+    classGrade: level as (typeof CLASS_GRADES)[number],
+    title,
+    description: body.description?.trim() || null
+  });
+
+  const inAppNotifications = await createStudentContentNotifications(supabase, {
+    classGrade: level as (typeof CLASS_GRADES)[number],
+    type: 'lesson',
+    title,
+    body: body.description?.trim() || null,
+    sourceId: data.id
+  });
+
+  return NextResponse.json({
+    success: true,
+    id: data.id,
+    emailNotifications,
+    inAppNotifications,
+    notificationMessage: formatCombinedNotificationStatus(emailNotifications, inAppNotifications, 'Lesson saved')
+  });
 }

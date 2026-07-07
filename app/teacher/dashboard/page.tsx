@@ -4,6 +4,7 @@ import type { StudentListItem } from '../../../lib/studentList';
 import { toStudentListItem } from '../../../lib/studentList';
 import { type GradeRow } from '../../../components/TeacherGradeManager';
 import TeacherDashboardShell from '../../../components/TeacherDashboardShell';
+import NotificationBell from '../../../components/NotificationBell';
 import LogoutButton from '../../../components/LogoutButton';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
 import { Badge, PageHeader } from '../../../components/ui';
@@ -11,6 +12,7 @@ import { isTeacherUser } from '../../../lib/auth';
 import { getUserRole } from '../../../lib/roleAuth';
 import { dashboardPathForRole } from '../../../lib/routes';
 import { fetchAssignments, fetchAnnouncements, fetchLessonsForDisplay, fetchLiveClasses } from '../../../lib/safeQueries';
+import { countUnreadNotifications, fetchNotificationsForUser } from '../../../lib/inAppNotifications';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
@@ -35,7 +37,7 @@ export default async function TeacherDashboardPage() {
     redirect(dashboardPathForRole(role));
   }
 
-  const [studentsResult, submissionsResult, gradesResult, documentsResult, lessonsResult, assignmentsResult, liveClassesResult, announcementsResult] =
+  const [studentsResult, submissionsResult, gradesResult, documentsResult, lessonsResult, assignmentsResult, liveClassesResult, announcementsResult, notificationsResult, unreadNotificationsResult] =
     await Promise.all([
       supabase
         .from('profiles')
@@ -51,7 +53,9 @@ export default async function TeacherDashboardPage() {
       fetchLessonsForDisplay(supabase),
       fetchAssignments(supabase),
       fetchLiveClasses(supabase),
-      fetchAnnouncements(supabase)
+      fetchAnnouncements(supabase),
+      fetchNotificationsForUser(supabase, user.id),
+      countUnreadNotifications(supabase, user.id)
     ]);
 
   const students = studentsResult.data;
@@ -63,6 +67,8 @@ export default async function TeacherDashboardPage() {
   const assignments = assignmentsResult.data ?? [];
   const liveClasses = liveClassesResult.data ?? [];
   const announcements = announcementsResult.data ?? [];
+  const notifications = notificationsResult.data;
+  const unreadNotificationCount = unreadNotificationsResult.count;
 
   const setupMessage = [submissionsResult.error, gradesResult.error, documentsResult.error, lessonsResult.error, assignmentsResult.error]
     .filter(Boolean)
@@ -97,6 +103,10 @@ export default async function TeacherDashboardPage() {
         description={`Welcome, ${displayName}. Create lessons, assign homework, schedule live classes, post announcements, review submissions, and manage grades.`}
         actions={
           <>
+            <NotificationBell
+              initialNotifications={notifications}
+              initialUnreadCount={unreadNotificationCount}
+            />
             <Badge variant="role">Teacher</Badge>
             <Badge>{displayName}</Badge>
             <LogoutButton />

@@ -66,37 +66,40 @@ export default function TeacherAnnouncementManager({ initialAnnouncements }: Tea
         fileName = uploaded.fileName;
       }
 
-      const { data, error } = await supabase
-        .from('announcements')
-        .insert([
-          {
-            teacher_id: userData.user.id,
-            title: title.trim(),
-            body: body.trim(),
-            class_grade: classGrade,
-            file_url: fileUrl,
-            file_name: fileName
-          }
-        ])
-        .select(ANNOUNCEMENT_SELECT)
-        .single();
+      const response = await fetch('/api/announcements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          body: body.trim(),
+          classGrade,
+          fileUrl,
+          fileName
+        })
+      });
 
-      if (error) {
-        const hint = error.message.includes('announcements')
+      const payload = (await response.json()) as {
+        error?: string;
+        announcement?: AnnouncementRow;
+        notificationMessage?: string;
+      };
+
+      if (!response.ok || !payload.announcement) {
+        const hint = payload.error?.includes('announcements')
           ? ' Run supabase/FIX_ANNOUNCEMENTS.sql in Supabase SQL Editor, then try again.'
-          : error.message.includes('file_url') || error.message.includes('file_name')
+          : payload.error?.includes('file_url') || payload.error?.includes('file_name')
             ? ' Run supabase/FIX_ASSIGNMENT_ANNOUNCEMENT_ATTACHMENTS.sql in Supabase SQL Editor, then try again.'
             : '';
-        setStatus(`Could not post announcement: ${error.message}${hint}`);
+        setStatus(`Could not post announcement: ${payload.error ?? 'Unknown error'}${hint}`);
         return;
       }
 
-      setAnnouncements((current) => [data as AnnouncementRow, ...current]);
+      setAnnouncements((current) => [payload.announcement!, ...current]);
       setTitle('');
       setBody('');
       setClassGrade('');
       setCreateFile(null);
-      setStatus('Announcement posted.');
+      setStatus(payload.notificationMessage ?? 'Announcement posted.');
       router.refresh();
     } catch (uploadError) {
       setStatus(uploadError instanceof Error ? uploadError.message : 'Could not upload the attachment.');

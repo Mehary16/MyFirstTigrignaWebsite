@@ -49,37 +49,39 @@ export default function TeacherLiveClassManager({ initialClasses }: TeacherLiveC
     }
 
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
+      const response = await fetch('/api/live-classes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          meetingUrl: meetingUrl.trim(),
+          scheduledAt,
+          durationMinutes: Number(duration) || 60,
+          notes: notes.trim() || null,
+          classGrade
+        })
+      });
 
-      const { data, error } = await supabase
-        .from('live_classes')
-        .insert([
-          {
-            teacher_id: userData.user.id,
-            title: title.trim(),
-            meeting_url: meetingUrl.trim(),
-            scheduled_at: new Date(scheduledAt).toISOString(),
-            duration_minutes: Number(duration) || 60,
-            notes: notes.trim() || null,
-            class_grade: classGrade
-          }
-        ])
-        .select(LIVE_CLASS_SELECT)
-        .single();
+      const payload = (await response.json()) as {
+        error?: string;
+        liveClass?: LiveClassRow;
+        notificationMessage?: string;
+      };
 
-      if (error) {
-        setStatus(`Could not schedule class: ${error.message}`);
+      if (!response.ok || !payload.liveClass) {
+        setStatus(`Could not schedule class: ${payload.error ?? 'Unknown error'}`);
         return;
       }
 
-      setClasses((current) => [data as LiveClassRow, ...current].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)));
+      setClasses((current) =>
+        [payload.liveClass!, ...current].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
+      );
       setTitle('');
       setMeetingUrl('');
       setScheduledAt('');
       setNotes('');
       setClassGrade('');
-      setStatus('Live class scheduled.');
+      setStatus(payload.notificationMessage ?? 'Live class scheduled.');
       router.refresh();
     } finally {
       setLoading(false);
