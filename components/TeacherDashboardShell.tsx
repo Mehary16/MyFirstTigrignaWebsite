@@ -21,6 +21,7 @@ import TeacherParentLinkForm from './TeacherParentLinkForm';
 import TeacherAssignmentManager, { type AssignmentRow } from './TeacherAssignmentManager';
 import TeacherLiveClassManager, { type LiveClassRow } from './TeacherLiveClassManager';
 import TeacherAnnouncementManager, { type AnnouncementRow } from './TeacherAnnouncementManager';
+import TeacherCommandBar from './TeacherCommandBar';
 import type { MaterialRow } from '../lib/teacherMaterials';
 import Button from './ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState } from './ui';
@@ -208,7 +209,16 @@ export default function TeacherDashboardShell({
             </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <TeacherCommandBar
+          students={studentList}
+          lessons={lessons}
+          assignments={assignments}
+          grades={grades}
+          announcements={announcements}
+          onNavigate={setActiveTab}
+        />
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {TABS.map((tab) => (
             <button
               key={tab.id}

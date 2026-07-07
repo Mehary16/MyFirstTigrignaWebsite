@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import AuthNav from '../components/AuthNav';
 import AuthUrlErrorHandler from '../components/AuthUrlErrorHandler';
+import SiteHeader from '../components/SiteHeader';
 import { notoEthiopic, notoSerifEthiopic, plusJakarta } from './fonts';
 
 export const metadata: Metadata = {
@@ -18,20 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen font-sans text-slate-900 antialiased">
         <AuthUrlErrorHandler />
         <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8">
-          <header className="mb-8 rounded-[2rem] border border-amber-100/80 bg-white/90 px-5 py-4 shadow-card-lg backdrop-blur">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="font-ethiopic text-lg font-medium uppercase tracking-[0.2em] text-amber-800">
-                  ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ
-                </p>
-                <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Tigrigna Learning Portal</h1>
-                <p className="mt-1 max-w-xl text-sm text-slate-600">
-                  A bilingual space for lessons, reading materials, and homework submissions.
-                </p>
-              </div>
-              <AuthNav />
-            </div>
-          </header>
+          <SiteHeader nav={<AuthNav />} />
 
           <main className="flex-1">{children}</main>
 
