@@ -414,9 +414,6 @@ export default function LoginPage() {
               ))}
             </div>
           </div>
-          {accountType === 'Student' && (
-            <ClassGradeSelect value={classGrade} onChange={setClassGrade} />
-          )}
           <Input
             label={copy.fullName}
             type="text"
@@ -424,6 +421,19 @@ export default function LoginPage() {
             onChange={(event) => setFullName(event.currentTarget.value)}
             required
           />
+          {accountType === 'Student' && (
+            <ClassGradeSelect
+              label={locale === 'ti' ? 'ደረጃ ትምህርቲ' : 'Class grade'}
+              placeholder={locale === 'ti' ? 'ደረጃ ትምህርቲ ምረጽ/ጺ' : 'Select grade'}
+              value={classGrade}
+              onChange={setClassGrade}
+              optionLabels={
+                locale === 'ti'
+                  ? { 'Grade 1': '1ይ ክፍሊ', 'Grade 2': '2ይ ክፍሊ', 'Grade 3': '3ይ ክፍሊ' }
+                  : undefined
+              }
+            />
+          )}
           </>
         )}
 

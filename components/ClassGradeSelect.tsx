@@ -3,22 +3,26 @@ import { cn } from '../lib/cn';
 
 type ClassGradeSelectProps = {
   label?: string;
+  placeholder?: string;
   value: ClassGrade | '';
   onChange: (value: ClassGrade | '') => void;
   required?: boolean;
   disabled?: boolean;
   className?: string;
   optional?: boolean;
+  optionLabels?: Partial<Record<ClassGrade, string>>;
 };
 
 export default function ClassGradeSelect({
   label = 'Class grade',
+  placeholder = 'Select grade',
   value,
   onChange,
   required = true,
   disabled,
   className,
-  optional = false
+  optional = false,
+  optionLabels
 }: ClassGradeSelectProps) {
   return (
     <div>
@@ -33,10 +37,10 @@ export default function ClassGradeSelect({
           className
         )}
       >
-        {optional ? <option value="">All grades (optional)</option> : <option value="">Select grade</option>}
+        {optional ? <option value="">All grades (optional)</option> : <option value="">{placeholder}</option>}
         {CLASS_GRADES.map((grade) => (
           <option key={grade} value={grade}>
-            {CLASS_GRADE_LABELS[grade]}
+            {optionLabels?.[grade] ?? CLASS_GRADE_LABELS[grade]}
           </option>
         ))}
       </select>
