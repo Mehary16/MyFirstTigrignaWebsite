@@ -61,7 +61,7 @@ export default function AboutPage() {
         </div>
       </div>
 
-      <Card padding="none" className="relative overflow-hidden border-brand-900/20 bg-brand-900 text-white shadow-card-lg">
+      <Card padding="none" className="relative overflow-hidden border-brand-900/20 !bg-brand-900 text-white shadow-card-lg">
         <div className="relative h-56 sm:h-64">
           <Image
             src="/images/home-featured-two-students-tigrinya.png"
@@ -71,21 +71,21 @@ export default function AboutPage() {
             className="object-cover object-center"
             sizes="(max-width: 1024px) 100vw, 896px"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-brand-900/95 via-brand-900/40 to-brand-900/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-brand-900/95 via-brand-900/55 to-brand-900/30" />
           <EritreanHeritagePattern className="absolute bottom-0 left-0 right-0 h-10 text-amber-300/30" />
         </div>
 
-        <div className="relative px-6 pb-8 pt-6 sm:px-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-300">{copy.heroEyebrow}</p>
+        <div className="relative bg-brand-900 px-6 pb-8 pt-6 sm:px-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-200">{copy.heroEyebrow}</p>
           <h1
             className={cn(
-              'mt-3 text-3xl font-semibold leading-tight sm:text-4xl',
+              'mt-3 text-3xl font-semibold leading-tight text-white sm:text-4xl',
               locale === 'ti' ? 'font-ethiopic-display' : 'font-semibold'
             )}
           >
             {copy.heroTitle}
           </h1>
-          <p className="mt-2 font-ethiopic text-lg text-amber-100">{copy.heroSubtitle}</p>
+          <p className="mt-2 font-ethiopic text-lg font-medium text-white/95">{copy.heroSubtitle}</p>
         </div>
       </Card>
 
