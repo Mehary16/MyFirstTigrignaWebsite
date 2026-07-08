@@ -64,6 +64,28 @@ export async function POST(request: Request) {
 
   await ensureLessonMaterialsBucket();
 
+  // Supabase Storage uses `contentType` to decide whether the browser can render inline.
+  // Some clients provide an empty/incorrect `file.type`, so we fall back to extension mapping.
+  const extensionToContentType: Partial<Record<string, string>> = {
+    pdf: 'application/pdf',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ppt: 'application/vnd.ms-powerpoint',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    txt: 'text/plain',
+    csv: 'text/csv',
+    rtf: 'application/rtf',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    gif: 'image/gif'
+  };
+
+  const contentType = file.type || extensionToContentType[extension] || 'application/octet-stream';
+
   const safeName = file.name.replace(/[^\w.\-]+/g, '_');
   const filePath = `attachments/${user.id}/${Date.now()}-${safeName}`;
 
@@ -72,7 +94,7 @@ export async function POST(request: Request) {
     .upload(filePath, file, {
       cacheControl: '3600',
       upsert: false,
-      contentType: file.type || 'application/octet-stream'
+      contentType
     });
 
   if (uploadError) {
