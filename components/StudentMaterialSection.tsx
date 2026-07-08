@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FileText } from 'lucide-react';
 import {
   getFileExtension,
@@ -99,17 +99,56 @@ export default function StudentMaterialSection({
   sectionId
 }: StudentMaterialSectionProps) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+
+  const filteredMaterials = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return materials;
+
+    return materials.filter((m) => {
+      const haystack = [m.title, m.file_name ?? '', m.external_link ?? '']
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [materials, query]);
+
+  useEffect(() => {
+    if (!openId) return;
+    if (!filteredMaterials.some((m) => m.id === openId)) setOpenId(null);
+  }, [openId, filteredMaterials]);
+
+  const showEmptySearch = materials.length > 0 && filteredMaterials.length === 0;
 
   return (
     <Card variant="elevated" id={sectionId}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
+        <div className="pt-2">
+          <label className="sr-only" htmlFor={`${sectionId ?? title}-search`}>
+            Search materials
+          </label>
+          <input
+            id={`${sectionId ?? title}-search`}
+            value={query}
+            onChange={(e) => setQuery(e.currentTarget.value)}
+            placeholder="Search materials..."
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm focus:border-slate-500"
+          />
+        </div>
       </CardHeader>
       <CardContent>
         {materials.length ? (
+          showEmptySearch ? (
+            <EmptyState
+              icon={FileText}
+              title="No matching materials"
+              description="Try a different keyword."
+            />
+          ) : (
           <div className="grid gap-4">
-            {materials.map((material) => (
+            {filteredMaterials.map((material) => (
               <article key={material.id} id={`material-${material.id}`} className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -153,8 +192,13 @@ export default function StudentMaterialSection({
               </article>
             ))}
           </div>
+          )
         ) : (
-          <EmptyState icon={FileText} title={emptyMessage} description="Your teacher will share materials here when they are ready." />
+          <EmptyState
+            icon={FileText}
+            title={emptyMessage}
+            description="Your teacher will share materials here when they are ready."
+          />
         )}
       </CardContent>
     </Card>
