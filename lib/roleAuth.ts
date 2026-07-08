@@ -1,11 +1,13 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import type { UserRole } from './routes';
 import { createAdminSupabaseClient } from './supabaseAdmin';
+import { normalizeClassGrade, type ClassGrade } from './classGrades';
 
 export type ProfileRow = {
   full_name: string;
   role: string;
   is_active?: boolean | null;
+  class_grade?: ClassGrade | null;
   suspended_reason?: string | null;
 };
 
@@ -90,6 +92,7 @@ export async function syncUserRole(
   options?: {
     accountType?: 'Student' | 'Parent';
     fullName?: string;
+    classGrade?: ClassGrade | null;
   }
 ): Promise<{ role: UserRole | null; error?: string }> {
   const admin = createAdminSupabaseClient();
@@ -105,7 +108,7 @@ export async function syncUserRole(
   const user = userData.user;
   const { data: existingProfile } = await admin
     .from('profiles')
-    .select('role, full_name, is_active')
+    .select('role, full_name, is_active, class_grade')
     .eq('id', userId)
     .maybeSingle();
 
@@ -131,12 +134,19 @@ export async function syncUserRole(
     user.email?.split('@')[0] ??
     'User';
 
+  const classGradeFromMetadata = normalizeClassGrade(user.user_metadata?.class_grade as string | undefined);
+  const classGradeForProfile =
+    role === 'Student'
+      ? options?.classGrade ?? classGradeFromMetadata ?? existingProfile?.class_grade ?? null
+      : existingProfile?.class_grade ?? null;
+
   const { error: profileError } = await admin.from('profiles').upsert({
     id: userId,
     full_name: fullName,
     role,
     email: user.email?.trim().toLowerCase() ?? null,
-    is_active: existingProfile?.is_active ?? true
+    is_active: existingProfile?.is_active ?? true,
+    class_grade: classGradeForProfile
   });
 
   if (profileError) {

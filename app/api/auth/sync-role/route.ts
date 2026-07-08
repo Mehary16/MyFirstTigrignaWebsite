@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server';
 import { dashboardPathForRole } from '../../../../lib/routes';
 import { syncUserRole } from '../../../../lib/roleAuth';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
+import { normalizeClassGrade, type ClassGrade } from '../../../../lib/classGrades';
 
 type SyncRoleBody = {
   accountType?: 'Student' | 'Parent';
   fullName?: string;
+  classGrade?: ClassGrade | string | null;
 };
 
 export async function POST(request: Request) {
@@ -20,10 +22,12 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => ({}))) as SyncRoleBody;
   const accountType = body.accountType === 'Parent' ? 'Parent' : body.accountType === 'Student' ? 'Student' : undefined;
+  const classGrade = body.classGrade ? normalizeClassGrade(body.classGrade as string | undefined) : null;
 
   const { role, error } = await syncUserRole(user.id, {
     accountType,
-    fullName: body.fullName?.trim()
+    fullName: body.fullName?.trim(),
+    classGrade
   });
 
   if (!role) {

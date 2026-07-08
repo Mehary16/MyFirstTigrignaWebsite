@@ -12,7 +12,24 @@ export default function SiteHeader({ nav }: SiteHeaderProps) {
   const [compact, setCompact] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setCompact(window.scrollY > 56);
+    const compactThreshold = 80;
+    const expandedThreshold = 32;
+    const onScroll = () => {
+      const nextScrollY = window.scrollY;
+
+      setCompact((current) => {
+        if (!current && nextScrollY > compactThreshold) {
+          return true;
+        }
+
+        if (current && nextScrollY < expandedThreshold) {
+          return false;
+        }
+
+        return current;
+      });
+    };
+
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -21,7 +38,7 @@ export default function SiteHeader({ nav }: SiteHeaderProps) {
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 border border-amber-100/80 bg-white/90 backdrop-blur transition-all duration-300 ease-out',
+        'sticky top-0 z-50 border border-amber-100/80 bg-white/90 backdrop-blur transition-[padding,border-radius,box-shadow,margin] duration-300 ease-out',
         compact ? 'mb-5 rounded-full px-4 py-2.5 shadow-card' : 'mb-8 rounded-[2rem] px-5 py-4 shadow-card-lg'
       )}
     >

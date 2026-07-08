@@ -41,7 +41,7 @@ export default function HomeHero({ dashboardHref, dashboardLabel, isLoggedIn }: 
                 Login / መእተዊ
               </Link>
             )}
-            <Link href="/login" className="link-button-secondary px-6 py-3.5 text-base">
+            <Link href="/login?mode=signup&accountType=Student" className="link-button-secondary px-6 py-3.5 text-base">
               Create account
             </Link>
           </div>
