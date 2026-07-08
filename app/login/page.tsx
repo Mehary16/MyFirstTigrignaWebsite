@@ -9,6 +9,7 @@ import { createBrowserSupabaseClient } from '../../lib/supabaseClient';
 import { resolveDashboardPath } from '../../lib/resolveDashboard';
 import { syncRoleAndGetDashboardPath } from '../../lib/clientRoleSync';
 import { getEmailConfirmRedirectUrl } from '../../lib/siteUrl';
+import { TIGRINYA_ALPHABET } from '../../lib/tigrinyaAlphabet';
 import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -108,6 +109,7 @@ const LOCALE_STORAGE_KEY = 'login-locale';
 export default function LoginPage() {
   const router = useRouter();
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
+  const alphabetPreview = useMemo(() => TIGRINYA_ALPHABET.slice(0, 8), []);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -284,6 +286,38 @@ export default function LoginPage() {
             <li>{copy.roleTeachers}</li>
             <li>{copy.roleParents}</li>
           </ul>
+
+          <div className="mt-8 border-t border-white/10 pt-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-300">
+                  {locale === 'ti' ? 'ፊደላት ትግርኛ' : 'Tigrinya Alphabet'}
+                </p>
+                <p className="mt-1 text-sm text-white/70">
+                  {locale === 'ti'
+                    ? 'ንምምሃር ዝሕግዙ መበገሲ ፊደላት'
+                    : 'Starter fidel letters shown in Tigrinya script.'}
+                </p>
+              </div>
+              <span className="rounded-full border border-amber-200/40 bg-amber-100/20 px-3 py-1 text-xs font-medium text-amber-100">
+                8
+              </span>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {alphabetPreview.map((entry) => (
+                <div
+                  key={`${entry.char}-${entry.transliteration}`}
+                  className="rounded-2xl border border-amber-200/30 bg-amber-50/95 px-3 py-4 text-center shadow-sm"
+                >
+                  <p className="font-ethiopic-display text-3xl font-semibold text-brand-900">{entry.char}</p>
+                  <p className="mt-1 text-xs font-medium text-amber-800">
+                    {locale === 'ti' ? 'ፊደል' : 'Fidel'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </Card>
 
