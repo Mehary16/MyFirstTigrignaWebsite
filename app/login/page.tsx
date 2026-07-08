@@ -13,9 +13,11 @@ import { TIGRINYA_ALPHABET } from '../../lib/tigrinyaAlphabet';
 import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import ClassGradeSelect from '../../components/ClassGradeSelect';
 import Input from '../../components/ui/Input';
 import EritreanHeritagePattern from '../../components/EritreanHeritagePattern';
 import { cn } from '../../lib/cn';
+import type { ClassGrade } from '../../lib/classGrades';
 
 type LoginLocale = 'en' | 'ti';
 
@@ -115,6 +117,7 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState('');
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
   const [accountType, setAccountType] = useState<'Student' | 'Parent'>('Student');
+  const [classGrade, setClassGrade] = useState<ClassGrade | ''>('Grade 1');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -132,14 +135,31 @@ export default function LoginPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const modeParam = params.get('mode');
+    const accountTypeParam = params.get('accountType');
     const errorParam = params.get('error');
+
+    if (modeParam === 'signup') {
+      setMode('signUp');
+    } else if (modeParam === 'signin') {
+      setMode('signIn');
+    }
+
+    if (accountTypeParam === 'Student' || accountTypeParam === 'Parent') {
+      setAccountType(accountTypeParam);
+    }
+
     if (errorParam === 'email-confirmation-failed') {
       setError(copy.emailConfirmFailed);
-      window.history.replaceState({}, '', '/login');
+      params.delete('error');
+      const nextQuery = params.toString();
+      window.history.replaceState({}, '', nextQuery ? `/login?${nextQuery}` : '/login');
     }
     if (errorParam === 'password-reset-failed') {
       setError(copy.passwordResetFailed);
-      window.history.replaceState({}, '', '/login');
+      params.delete('error');
+      const nextQuery = params.toString();
+      window.history.replaceState({}, '', nextQuery ? `/login?${nextQuery}` : '/login');
     }
   }, [copy.emailConfirmFailed, copy.passwordResetFailed]);
 
@@ -148,7 +168,7 @@ export default function LoginPage() {
     window.localStorage.setItem(LOCALE_STORAGE_KEY, next);
   };
 
-  const redirectAuthenticatedUser = async (options?: { accountType?: 'Student' | 'Parent'; fullName?: string }) => {
+  const redirectAuthenticatedUser = async (options?: { accountType?: 'Student' | 'Parent'; fullName?: string; classGrade?: ClassGrade | null }) => {
     const syncedPath = await syncRoleAndGetDashboardPath(options);
     if (syncedPath) {
       router.replace(syncedPath);
@@ -185,6 +205,11 @@ export default function LoginPage() {
 
     try {
       if (mode === 'signUp') {
+        if (accountType === 'Student' && !classGrade) {
+          setError('Please select a class grade.');
+          return;
+        }
+
         let emailRedirectTo: string;
         try {
           emailRedirectTo = getEmailConfirmRedirectUrl();
@@ -204,7 +229,8 @@ export default function LoginPage() {
             emailRedirectTo,
             data: {
               full_name: fullName,
-              role: accountType
+              role: accountType,
+              ...(accountType === 'Student' ? { class_grade: classGrade || undefined } : {})
             }
           }
         });
@@ -220,7 +246,11 @@ export default function LoginPage() {
             return;
           }
 
-          await redirectAuthenticatedUser({ accountType, fullName });
+          await redirectAuthenticatedUser({
+            accountType,
+            fullName,
+            classGrade: accountType === 'Student' ? (classGrade || null) : null
+          });
           return;
         }
 
@@ -391,6 +421,19 @@ export default function LoginPage() {
             onChange={(event) => setFullName(event.currentTarget.value)}
             required
           />
+          {accountType === 'Student' && (
+            <ClassGradeSelect
+              label={locale === 'ti' ? 'ደረጃ ትምህርቲ' : 'Class grade'}
+              placeholder={locale === 'ti' ? 'ደረጃ ትምህርቲ ምረጽ/ጺ' : 'Select grade'}
+              value={classGrade}
+              onChange={setClassGrade}
+              optionLabels={
+                locale === 'ti'
+                  ? { 'Grade 1': '1ይ ክፍሊ', 'Grade 2': '2ይ ክፍሊ', 'Grade 3': '3ይ ክፍሊ' }
+                  : undefined
+              }
+            />
+          )}
           </>
         )}
 
