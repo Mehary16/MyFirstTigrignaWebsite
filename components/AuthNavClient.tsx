@@ -11,12 +11,18 @@ type AuthNavClientProps = {
 export default function AuthNavClient({ isLoggedIn }: AuthNavClientProps) {
   const pathname = usePathname();
   const onLoginPage = pathname === '/login';
+  const onAboutPage = pathname === '/about';
 
   return (
     <nav className="flex flex-wrap items-center gap-3 text-sm font-medium">
       <Link href="/" className="link-button-secondary">
         Home
       </Link>
+      {!onAboutPage ? (
+        <Link href="/about" className="link-button-secondary">
+          About Us
+        </Link>
+      ) : null}
       {isLoggedIn ? (
         <LogoutButton variant="primary" />
       ) : (
