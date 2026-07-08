@@ -24,10 +24,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="flex-1">{children}</main>
 
           <footer className="mt-12 border-t border-slate-200/80 pt-4 text-sm text-slate-500">
-            <p className="font-ethiopic">ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ</p>
-            <p className="font-ethiopic">መምህር መሓሪ ኣይንኣለም</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Contact us</p>
+            <p className="mt-2 font-ethiopic text-slate-600">ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ</p>
+            <p className="font-ethiopic text-slate-600">መምህር መሓሪ ኣይንኣለም</p>
             <p className="mt-1">
-              ኢሜል:{' '}
+              <span className="font-ethiopic">ኢሜል:</span>{' '}
               <a
                 href="mailto:mehary.aynealem1@gmail.com"
                 className="text-slate-700 underline-offset-2 hover:text-brand-800 hover:underline"

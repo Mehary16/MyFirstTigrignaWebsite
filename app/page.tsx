@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { BookOpen, GraduationCap, Users } from 'lucide-react';
+import { BookOpen, GraduationCap, Mail, Users } from 'lucide-react';
 import HomeHero from '../components/HomeHero';
 import { createServerSupabaseClient } from '../lib/supabaseServer';
 import { dashboardPathForRole } from '../lib/routes';
@@ -212,6 +212,34 @@ export default async function HomePage() {
           </CardContent>
         </Card>
       </div>
+
+      <section className="rounded-[2.5rem] border border-amber-100/80 bg-white/70 p-8 shadow-card-lg backdrop-blur">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-800">Contact us</p>
+            <h2 className="font-ethiopic-display text-2xl font-semibold text-slate-950 sm:text-3xl">
+              ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ
+            </h2>
+            <p className="text-sm text-slate-600">
+              Questions about lessons, accounts, or the portal? Reach out anytime.
+            </p>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:min-w-[18rem]">
+            <p className="font-ethiopic text-base font-semibold text-slate-950">መምህር መሓሪ ኣይንኣለም</p>
+            <p className="mt-3 flex items-center gap-2 text-sm text-slate-700">
+              <Mail className="h-4 w-4 shrink-0 text-amber-700" aria-hidden />
+              <span className="font-ethiopic">ኢሜል:</span>{' '}
+              <a
+                href="mailto:mehary.aynealem1@gmail.com"
+                className="font-medium text-brand-800 underline-offset-2 hover:underline"
+              >
+                mehary.aynealem1@gmail.com
+              </a>
+            </p>
+          </div>
+        </div>
+      </section>
     </section>
   );
 }
