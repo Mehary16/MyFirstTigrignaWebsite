@@ -72,7 +72,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+      <section className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
         <div className="space-y-4">
           <h2 className="text-2xl font-semibold tracking-tight text-slate-950">A Tigrigna learning portal that feels modern</h2>
           <p className="text-sm leading-relaxed text-slate-600">
@@ -91,21 +91,30 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-[2.5rem] border border-amber-100/80 bg-slate-50 shadow-card-lg">
-          <Image
-            src="/images/home-featured-two-students-tigrinya.png"
-            alt="Eritrean boy and girl reading a Tigrinya alphabet book together"
-            width={900}
-            height={520}
-            className="h-full w-full object-cover"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-white/70 via-white/20 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm">
-              <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden />
-              Learn in Tigrinya. Track progress. Stay organized.
-            </div>
+        <div className="space-y-4">
+          <div className="relative overflow-hidden rounded-[2.5rem] border border-amber-100/80 bg-slate-50 shadow-card-lg">
+            <Image
+              src="/images/home-featured-two-students-tigrinya.png"
+              alt="Eritrean boy and girl reading a Tigrinya alphabet book together"
+              width={1200}
+              height={720}
+              className="h-auto min-h-[280px] w-full object-cover object-center sm:min-h-[360px] lg:min-h-[420px]"
+              priority
+              sizes="(max-width: 1024px) 100vw, 55vw"
+            />
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/90 bg-white px-4 py-3 shadow-sm sm:px-5 sm:py-4">
+            <ul className="space-y-1.5 text-xs leading-relaxed text-slate-800 sm:space-y-2 sm:text-sm">
+              <li className="font-ethiopic text-sm font-semibold text-slate-950 sm:text-base">
+                ቋንቋኻ ፡ መንነትካ እዩ፣
+              </li>
+              <li className="font-medium text-slate-900">Bridge the gap between generations.</li>
+              <li className="font-ethiopic font-semibold text-slate-950">ታሪኽካ ባዕልኻ ኣንብቦ.</li>
+              <li className="text-slate-700">
+                Master one of the world&apos;s oldest surviving indigenous scripts.
+              </li>
+            </ul>
           </div>
         </div>
       </section>
