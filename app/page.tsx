@@ -74,9 +74,12 @@ export default async function HomePage() {
 
       <section className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
         <div className="space-y-4">
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-950">A Tigrigna learning portal that feels modern</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+            Tigrigna learning portal - Connecting to Roots &amp; Heritage (For Diaspora Kids)
+          </h2>
           <p className="text-sm leading-relaxed text-slate-600">
-            Everything is grouped by your class grade—so students see only their lessons and homework, while teachers manage the classroom in one place.
+            You aren&apos;t just learning a language; you are inheriting a civilization. Tigrinya is one of the
+            closest living relatives to Ge&apos;ez, an ancient Semitic language that dates back thousands of years.
           </p>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -91,7 +94,7 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-0">
           <div className="relative overflow-hidden rounded-[2.5rem] border border-amber-100/80 bg-slate-50 shadow-card-lg">
             <Image
               src="/images/home-featured-two-students-tigrinya.png"
@@ -102,19 +105,28 @@ export default async function HomePage() {
               priority
               sizes="(max-width: 1024px) 100vw, 55vw"
             />
+
+            <div className="absolute inset-x-3 bottom-3 sm:inset-x-4 sm:bottom-4">
+              <div className="rounded-2xl border border-[#078930]/50 bg-[#078930]/95 px-4 py-2.5 shadow-sm backdrop-blur-sm sm:px-5 sm:py-3">
+                <p className="font-ethiopic text-sm font-semibold text-white sm:text-base">
+                  ቋንቋኻ ፡ መንነትካ ኢዩ፣
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200/90 bg-white px-4 py-3 shadow-sm sm:px-5 sm:py-4">
-            <ul className="space-y-1.5 text-xs leading-relaxed text-slate-800 sm:space-y-2 sm:text-sm">
-              <li className="font-ethiopic text-sm font-semibold text-slate-950 sm:text-base">
-                ቋንቋኻ ፡ መንነትካ እዩ፣
-              </li>
-              <li className="font-medium text-slate-900">Bridge the gap between generations.</li>
-              <li className="font-ethiopic font-semibold text-slate-950">ታሪኽካ ባዕልኻ ኣንብቦ.</li>
-              <li className="text-slate-700">
+          <div className="-mt-2 space-y-1.5 sm:-mt-3 sm:space-y-2">
+            <div className="rounded-2xl border border-[#DA121A]/40 bg-[#DA121A]/10 px-4 py-2.5 shadow-sm sm:px-5 sm:py-3">
+              <p className="text-xs font-medium text-[#9B0F0F] sm:text-sm">Bridge the gap between generations.</p>
+            </div>
+            <div className="rounded-2xl border border-[#4189DD]/40 bg-[#4189DD]/10 px-4 py-2.5 shadow-sm sm:px-5 sm:py-3">
+              <p className="font-ethiopic text-sm font-semibold text-[#1E4F8C] sm:text-base">ታሪኽካ ባዕልኻ ኣንብቦ.</p>
+            </div>
+            <div className="rounded-2xl border border-[#F7D020]/50 bg-[#F7D020]/15 px-4 py-2.5 shadow-sm sm:px-5 sm:py-3">
+              <p className="text-xs font-medium text-[#8A6B00] sm:text-sm">
                 Master one of the world&apos;s oldest surviving indigenous scripts.
-              </li>
-            </ul>
+              </p>
+            </div>
           </div>
         </div>
       </section>
