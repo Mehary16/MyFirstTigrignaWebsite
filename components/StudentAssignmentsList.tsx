@@ -105,16 +105,8 @@ export default function StudentAssignmentsList({ assignments, submittedAssignmen
                     onClick={() => setOpenId((current) => (current === assignment.id ? null : assignment.id))}
                     className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                   >
-                    {openId === assignment.id ? 'Close homework' : 'Open homework'}
+                    {openId === assignment.id ? 'Close' : 'Open'}
                   </button>
-                  <a
-                    href={openHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    Open in new tab
-                  </a>
                   {downloadHref && (
                     <a
                       href={downloadHref}
