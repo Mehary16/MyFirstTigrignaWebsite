@@ -4,15 +4,18 @@ import ProgressSummary from '../../../components/ProgressSummary';
 import AnnouncementsFeed from '../../../components/AnnouncementsFeed';
 import LiveClassSchedule from '../../../components/LiveClassSchedule';
 import ParentHomeworkView from '../../../components/ParentHomeworkView';
+import DashboardTodayStrip from '../../../components/DashboardTodayStrip';
 import { Badge, Card, EmptyState, PageHeader } from '../../../components/ui';
 import {
   fetchAnnouncements,
+  fetchAssignments,
   fetchChildSubmissionsForParent,
   fetchLessonViews,
   fetchLessonsForDisplay,
   fetchLiveClasses
 } from '../../../lib/safeQueries';
 import { filterItemsByClassGrades, normalizeClassGrade, type ClassGrade } from '../../../lib/classGrades';
+import { buildParentTodaySummary, countHomeworkMissing } from '../../../lib/dashboardToday';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 import { getUserRole } from '../../../lib/roleAuth';
 import { dashboardPathForRole } from '../../../lib/routes';
@@ -20,6 +23,7 @@ import { dashboardPathForRole } from '../../../lib/routes';
 type ChildSummary = {
   id: string;
   full_name: string;
+  class_grade: ClassGrade | null;
   submission_count: number;
   grades: {
     id: string;
@@ -30,6 +34,8 @@ type ChildSummary = {
   }[];
   submissions: Awaited<ReturnType<typeof fetchChildSubmissionsForParent>>['data'];
   lessonsViewed: number;
+  totalLessons: number;
+  homeworkMissing: number;
 };
 
 export default async function ParentDashboardPage() {
@@ -81,24 +87,36 @@ export default async function ParentDashboardPage() {
   const children: ChildSummary[] = [];
 
   for (const student of studentProfiles ?? []) {
-    const [{ count: submissionCount }, { data: grades }, submissionsResult, lessonViewsResult] = await Promise.all([
-      supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('student_id', student.id),
-      supabase
-        .from('grades')
-        .select('id, title, grade, feedback, created_at')
-        .eq('student_id', student.id)
-        .order('created_at', { ascending: false }),
-      fetchChildSubmissionsForParent(supabase, student.id),
-      fetchLessonViews(supabase, student.id)
-    ]);
+    const classGrade = normalizeClassGrade(student.class_grade);
+    const [{ count: submissionCount }, { data: grades }, submissionsResult, lessonViewsResult, assignmentsResult, childLessonsResult] =
+      await Promise.all([
+        supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('student_id', student.id),
+        supabase
+          .from('grades')
+          .select('id, title, grade, feedback, created_at')
+          .eq('student_id', student.id)
+          .order('created_at', { ascending: false }),
+        fetchChildSubmissionsForParent(supabase, student.id),
+        fetchLessonViews(supabase, student.id),
+        fetchAssignments(supabase, classGrade),
+        fetchLessonsForDisplay(supabase, classGrade)
+      ]);
+
+    const submittedAssignmentIds = (submissionsResult.data ?? [])
+      .map((item) => item.assignment_id)
+      .filter((id): id is string => Boolean(id));
+    const childTotalLessons = childLessonsResult.data?.length ?? 0;
 
     children.push({
       id: student.id,
       full_name: student.full_name,
+      class_grade: classGrade,
       submission_count: submissionCount ?? 0,
       grades: grades ?? [],
       submissions: submissionsResult.data,
-      lessonsViewed: lessonViewsResult.data.length
+      lessonsViewed: lessonViewsResult.data.length,
+      totalLessons: childTotalLessons,
+      homeworkMissing: countHomeworkMissing(assignmentsResult.data ?? [], submittedAssignmentIds)
     });
   }
 
@@ -111,6 +129,9 @@ export default async function ParentDashboardPage() {
   const totalSubmissions = children.reduce((sum, child) => sum + child.submission_count, 0);
   const totalGrades = children.reduce((sum, child) => sum + child.grades.length, 0);
   const totalLessonsViewed = children.reduce((sum, child) => sum + child.lessonsViewed, 0);
+  const parentTodaySummaries = children.map((child) =>
+    buildParentTodaySummary(child.full_name, child.lessonsViewed, child.totalLessons, child.homeworkMissing)
+  );
 
   return (
     <section className="space-y-8">
@@ -125,6 +146,13 @@ export default async function ParentDashboardPage() {
           </>
         }
       />
+
+      {children.length > 0 ? (
+        <DashboardTodayStrip
+          summary={parentTodaySummaries[0] ?? ''}
+          summaries={parentTodaySummaries.length > 1 ? parentTodaySummaries : undefined}
+        />
+      ) : null}
 
       {children.length > 0 && (
         <ProgressSummary
@@ -153,7 +181,7 @@ export default async function ParentDashboardPage() {
               <div>
                 <h2 className="text-2xl font-semibold text-slate-950">{child.full_name}</h2>
                 <p className="text-sm text-slate-600">
-                  {child.lessonsViewed}/{totalLessons} lessons viewed Â· {child.submission_count} homework submission(s)
+                  {child.lessonsViewed}/{child.totalLessons} lessons viewed · {child.submission_count} homework submission(s)
                 </p>
               </div>
               <Badge variant="brand">{child.grades.length} grade record(s)</Badge>
