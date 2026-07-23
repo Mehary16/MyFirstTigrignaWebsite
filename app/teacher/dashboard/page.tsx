@@ -9,6 +9,7 @@ import TeacherDashboardShell from '../../../components/TeacherDashboardShell';
 import NotificationBell from '../../../components/NotificationBell';
 import LogoutButton from '../../../components/LogoutButton';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
+import DashboardTodayStrip from '../../../components/DashboardTodayStrip';
 import { Badge, PageHeader } from '../../../components/ui';
 import { isTeacherUser } from '../../../lib/auth';
 import { getUserRole } from '../../../lib/roleAuth';
@@ -17,6 +18,7 @@ import { fetchAssignments, fetchAnnouncements, fetchLessonsForDisplay, fetchLive
 import { countUnreadNotifications, fetchNotificationsForUser } from '../../../lib/inAppNotifications';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
+import { buildTeacherTodaySummary, countInactiveStudentsThisWeek, countSubmissionsToReview } from '../../../lib/dashboardToday';
 
 export default async function TeacherDashboardPage({
   searchParams
@@ -44,14 +46,17 @@ export default async function TeacherDashboardPage({
     redirect(dashboardPathForRole(role));
   }
 
-  const [studentsResult, submissionsResult, gradesResult, documentsResult, lessonsResult, assignmentsResult, liveClassesResult, announcementsResult, notificationsResult, unreadNotificationsResult] =
+  const [studentsResult, submissionsResult, gradesResult, documentsResult, lessonsResult, assignmentsResult, liveClassesResult, announcementsResult, notificationsResult, unreadNotificationsResult, lessonViewsResult] =
     await Promise.all([
       supabase
         .from('profiles')
         .select('id, full_name, email, class_grade, created_at, is_active, suspended_reason', { count: 'exact' })
         .eq('role', 'Student')
         .order('created_at', { ascending: false }),
-      supabase.from('submissions').select('student_id'),
+      supabase
+        .from('submissions')
+        .select('id, student_id, teacher_feedback, created_at')
+        .order('created_at', { ascending: false }),
       supabase.from('grades').select('id, student_id, title, grade, feedback, created_at').order('created_at', { ascending: false }),
       supabase
         .from('documents')
@@ -62,12 +67,14 @@ export default async function TeacherDashboardPage({
       fetchLiveClasses(supabase),
       fetchAnnouncements(supabase),
       fetchNotificationsForUser(supabase, user.id),
-      countUnreadNotifications(supabase, user.id)
+      countUnreadNotifications(supabase, user.id),
+      supabase.from('lesson_views').select('student_id, viewed_at')
     ]);
 
   const students = studentsResult.data;
   const studentCount = studentsResult.count;
   const submissionRows = submissionsResult.data;
+  const lessonViewRows = lessonViewsResult.error ? [] : lessonViewsResult.data ?? [];
   const gradeRows = gradesResult.data;
   const documents = (documentsResult.data ?? []) as MaterialRow[];
   const lessons = lessonsResult.data ?? [];
@@ -100,6 +107,11 @@ export default async function TeacherDashboardPage({
 
   const displayName = profile?.full_name || user.user_metadata?.full_name || 'Teacher';
 
+  const activeStudentIds = (students ?? []).filter((student) => student.is_active !== false).map((student) => student.id);
+  const submissionsToReview = countSubmissionsToReview(submissionRows ?? []);
+  const inactiveStudents = countInactiveStudentsThisWeek(activeStudentIds, submissionRows ?? [], lessonViewRows);
+  const todaySummary = buildTeacherTodaySummary(submissionsToReview, inactiveStudents);
+
   return (
     <section className="space-y-8">
       <Suspense fallback={null}>
@@ -121,6 +133,17 @@ export default async function TeacherDashboardPage({
             <Badge>{displayName}</Badge>
             <LogoutButton />
           </>
+        }
+      />
+
+      <DashboardTodayStrip
+        summary={todaySummary}
+        action={
+          submissionsToReview > 0
+            ? { label: 'Review homework', href: '/teacher/dashboard?tab=homework' }
+            : inactiveStudents > 0
+              ? { label: 'View students', href: '/teacher/dashboard?tab=students' }
+              : undefined
         }
       />
 
