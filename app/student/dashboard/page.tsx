@@ -8,6 +8,7 @@ import StudentMaterialSection from '../../../components/StudentMaterialSection';
 import StudentLessonSection from '../../../components/StudentLessonSection';
 import StudentAssignmentsList from '../../../components/StudentAssignmentsList';
 import ProgressSummary from '../../../components/ProgressSummary';
+import DashboardTodayStrip from '../../../components/DashboardTodayStrip';
 import AnnouncementsFeed from '../../../components/AnnouncementsFeed';
 import LiveClassSchedule from '../../../components/LiveClassSchedule';
 import { splitStudentMaterials } from '../../../lib/teacherMaterials';
@@ -32,6 +33,12 @@ import { loadLessonsForStudent } from '../../../lib/loadLessonsForStudent';
 import { countUnreadNotifications, fetchNotificationsForUser } from '../../../lib/inAppNotifications';
 import { formatDatabaseError } from '../../../lib/supabaseErrors';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
+import {
+  buildStudentTodaySummary,
+  countHomeworkDueThisWeek,
+  countLessonsNotViewed,
+  findContinueLesson
+} from '../../../lib/dashboardToday';
 
 export default async function StudentDashboardPage() {
   try {
@@ -126,6 +133,15 @@ export default async function StudentDashboardPage() {
       (item) => new Date(item.scheduled_at).getTime() >= now - item.duration_minutes * 60 * 1000
     ).length;
 
+    const homeworkDueThisWeek = countHomeworkDueThisWeek(assignments ?? [], submittedAssignmentIds);
+    const lessonsNotViewed = countLessonsNotViewed(lessons.length, viewedLessonIds);
+    const continueLesson = findContinueLesson(lessons, viewedLessonIds);
+    const todaySummary = buildStudentTodaySummary({
+      homeworkDueThisWeek,
+      lessonsNotViewed,
+      continueLessonTitle: continueLesson?.title ?? null
+    });
+
     return (
       <section className="space-y-8">
         <Suspense fallback={null}>
@@ -152,6 +168,22 @@ export default async function StudentDashboardPage() {
               <Badge variant="info">{profile?.role ?? 'Student'}</Badge>
               <LogoutButton variant="primary" />
             </>
+          }
+        />
+
+        <DashboardTodayStrip
+          summary={todaySummary}
+          action={
+            continueLesson
+              ? {
+                  label: 'Continue lesson',
+                  href: `/student/lessons/${continueLesson.id}`
+                }
+              : lessonsNotViewed > 0
+                ? { label: 'View lessons', href: '#student-lessons' }
+                : homeworkDueThisWeek > 0
+                  ? { label: 'View homework', href: '#student-assignments' }
+                  : undefined
           }
         />
 
