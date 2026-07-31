@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ClassGrade } from './classGrades';
-import { buildNotificationLink } from './notificationLinks';
+import { buildNotificationLink, buildParentNotificationLink } from './notificationLinks';
+import {
+  isNotificationTypeEnabled,
+  readPreferencesFromUserMetadata
+} from './notificationPreferences';
 import { createAdminSupabaseClient } from './supabaseAdmin';
 
 export type InAppNotificationType =
@@ -76,6 +80,182 @@ function buildStudentNotificationCopy(payload: {
   };
 }
 
+const PARENT_CONTENT_TYPES = new Set<InAppNotificationType>(['announcement', 'live_class']);
+
+async function filterRecipientsByNotificationPreferences(
+  admin: NonNullable<ReturnType<typeof createAdminSupabaseClient>>,
+  recipientIds: string[],
+  type: InAppNotificationType
+) {
+  if (!recipientIds.length) return [];
+
+  const enabledIds: string[] = [];
+
+  for (const recipientId of recipientIds) {
+    const { data, error } = await admin.auth.admin.getUserById(recipientId);
+    if (error || !data.user) {
+      enabledIds.push(recipientId);
+      continue;
+    }
+
+    const preferences = readPreferencesFromUserMetadata(data.user.user_metadata ?? {});
+    if (isNotificationTypeEnabled(preferences, type)) {
+      enabledIds.push(recipientId);
+    }
+  }
+
+  return enabledIds;
+}
+
+async function createParentContentNotifications(payload: {
+  classGrade: ClassGrade;
+  type: 'announcement' | 'live_class';
+  title: string;
+  body?: string | null;
+  sourceId?: string | null;
+}): Promise<InAppNotificationResult> {
+  const admin = createAdminSupabaseClient();
+  if (!admin) {
+    return { configured: false, created: 0, error: 'SUPABASE_SERVICE_ROLE_KEY is not configured.' };
+  }
+
+  const { data: links, error: linksError } = await admin
+    .from('parent_student_links')
+    .select('parent_id, student:profiles!parent_student_links_student_id_fkey(id, class_grade, role, is_active)')
+    .eq('student.class_grade', payload.classGrade);
+
+  if (linksError) {
+    if (isMissingNotificationsTable(linksError.message)) {
+      return {
+        configured: false,
+        created: 0,
+        error: 'Run supabase/FIX_NOTIFICATIONS.sql in Supabase SQL Editor.'
+      };
+    }
+
+    const { data: fallbackLinks, error: fallbackError } = await admin.from('parent_student_links').select('parent_id, student_id');
+
+    if (fallbackError) {
+      return { configured: true, created: 0, error: fallbackError.message };
+    }
+
+    const studentIds = [...new Set((fallbackLinks ?? []).map((link) => link.student_id))];
+    if (!studentIds.length) {
+      return { configured: true, created: 0 };
+    }
+
+    const { data: students, error: studentsError } = await admin
+      .from('profiles')
+      .select('id, class_grade, is_active, role')
+      .in('id', studentIds)
+      .eq('role', 'Student')
+      .eq('class_grade', payload.classGrade)
+      .or('is_active.eq.true,is_active.is.null');
+
+    if (studentsError) {
+      return { configured: true, created: 0, error: studentsError.message };
+    }
+
+    const eligibleStudentIds = new Set((students ?? []).map((student) => student.id));
+    const parentIds = [
+      ...new Set(
+        (fallbackLinks ?? [])
+          .filter((link) => eligibleStudentIds.has(link.student_id))
+          .map((link) => link.parent_id)
+      )
+    ];
+
+    if (!parentIds.length) {
+      return { configured: true, created: 0 };
+    }
+
+    const enabledParentIds = await filterRecipientsByNotificationPreferences(admin, parentIds, payload.type);
+    if (!enabledParentIds.length) {
+      return { configured: true, created: 0 };
+    }
+
+    const copy = buildStudentNotificationCopy(payload);
+    const linkPath = buildParentNotificationLink(payload.type, payload.sourceId);
+    const rows = enabledParentIds.map((parentId) => ({
+      recipient_id: parentId,
+      type: payload.type,
+      title: copy.title,
+      body: copy.body,
+      link_path: linkPath,
+      source_id: payload.sourceId ?? null,
+      class_grade: payload.classGrade
+    }));
+
+    const { error: insertError } = await admin.from('notifications').insert(rows);
+    if (insertError) {
+      if (isMissingNotificationsTable(insertError.message)) {
+        return {
+          configured: false,
+          created: 0,
+          error: 'Run supabase/FIX_NOTIFICATIONS.sql in Supabase SQL Editor.'
+        };
+      }
+      return { configured: true, created: 0, error: insertError.message };
+    }
+
+    return { configured: true, created: rows.length };
+  }
+
+  const parentIds = [
+    ...new Set(
+      (links ?? [])
+        .filter((link) => {
+          const student = link.student as
+            | { id: string; class_grade: string | null; role: string; is_active: boolean | null }
+            | { id: string; class_grade: string | null; role: string; is_active: boolean | null }[]
+            | null;
+          const studentRow = Array.isArray(student) ? student[0] : student;
+          return (
+            studentRow?.role === 'Student' &&
+            studentRow.class_grade === payload.classGrade &&
+            studentRow.is_active !== false
+          );
+        })
+        .map((link) => link.parent_id)
+    )
+  ];
+
+  if (!parentIds.length) {
+    return { configured: true, created: 0 };
+  }
+
+  const enabledParentIds = await filterRecipientsByNotificationPreferences(admin, parentIds, payload.type);
+  if (!enabledParentIds.length) {
+    return { configured: true, created: 0 };
+  }
+
+  const copy = buildStudentNotificationCopy(payload);
+  const linkPath = buildParentNotificationLink(payload.type, payload.sourceId);
+  const rows = enabledParentIds.map((parentId) => ({
+    recipient_id: parentId,
+    type: payload.type,
+    title: copy.title,
+    body: copy.body,
+    link_path: linkPath,
+    source_id: payload.sourceId ?? null,
+    class_grade: payload.classGrade
+  }));
+
+  const { error: insertError } = await admin.from('notifications').insert(rows);
+  if (insertError) {
+    if (isMissingNotificationsTable(insertError.message)) {
+      return {
+        configured: false,
+        created: 0,
+        error: 'Run supabase/FIX_NOTIFICATIONS.sql in Supabase SQL Editor.'
+      };
+    }
+    return { configured: true, created: 0, error: insertError.message };
+  }
+
+  return { configured: true, created: rows.length };
+}
+
 async function insertNotificationsWithAdmin(
   payload: {
     classGrade: ClassGrade;
@@ -118,8 +298,15 @@ async function insertNotificationsWithAdmin(
 
   const copy = buildStudentNotificationCopy(payload);
   const linkPath = buildNotificationLink(payload.type, payload.sourceId);
-  const rows = students.map((student) => ({
-    recipient_id: student.id,
+  const recipientIds = students.map((student) => student.id);
+  const enabledRecipientIds = await filterRecipientsByNotificationPreferences(admin, recipientIds, payload.type);
+
+  if (!enabledRecipientIds.length) {
+    return { configured: true, created: 0 };
+  }
+
+  const rows = enabledRecipientIds.map((recipientId) => ({
+    recipient_id: recipientId,
     type: payload.type,
     title: copy.title,
     body: copy.body,
@@ -199,12 +386,23 @@ export async function createStudentContentNotifications(
     sourceId?: string | null;
   }
 ): Promise<InAppNotificationResult> {
-  const adminResult = await insertNotificationsWithAdmin(payload);
-  if (adminResult.configured || adminResult.error?.includes('FIX_NOTIFICATIONS.sql')) {
-    return adminResult;
+  let result = await insertNotificationsWithAdmin(payload);
+
+  if (!result.configured && !result.error?.includes('FIX_NOTIFICATIONS.sql')) {
+    result = await insertNotificationsWithRpc(supabase, payload);
   }
 
-  return insertNotificationsWithRpc(supabase, payload);
+  if (PARENT_CONTENT_TYPES.has(payload.type)) {
+    await createParentContentNotifications({
+      classGrade: payload.classGrade,
+      type: payload.type as 'announcement' | 'live_class',
+      title: payload.title,
+      body: payload.body,
+      sourceId: payload.sourceId
+    });
+  }
+
+  return result;
 }
 
 export async function createTeacherSubmissionNotifications(
@@ -251,7 +449,18 @@ export async function createTeacherSubmissionNotifications(
       source_id: payload.submissionId
     }));
 
-    const { error: insertError } = await admin.from('notifications').insert(rows);
+    const enabledTeacherIds = await filterRecipientsByNotificationPreferences(
+      admin,
+      teachers.map((teacher) => teacher.id),
+      'submission'
+    );
+    const filteredRows = rows.filter((row) => enabledTeacherIds.includes(row.recipient_id));
+
+    if (!filteredRows.length) {
+      return { configured: true, created: 0 };
+    }
+
+    const { error: insertError } = await admin.from('notifications').insert(filteredRows);
     if (insertError) {
       if (isMissingNotificationsTable(insertError.message)) {
         return {
@@ -263,7 +472,7 @@ export async function createTeacherSubmissionNotifications(
       return { configured: true, created: 0, error: insertError.message };
     }
 
-    return { configured: true, created: rows.length };
+    return { configured: true, created: filteredRows.length };
   }
 
   const { data, error } = await supabase.rpc('notify_teachers_of_submission', {

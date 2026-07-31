@@ -1,6 +1,32 @@
 import type { InAppNotification, InAppNotificationType } from './inAppNotifications';
 
-const GENERIC_LINK_PATHS = new Set(['/student/dashboard', '/teacher/dashboard', '/']);
+const GENERIC_LINK_PATHS = new Set(['/student/dashboard', '/teacher/dashboard', '/parent/dashboard', '/']);
+
+export function buildParentNotificationLink(
+  type: Extract<InAppNotificationType, 'announcement' | 'live_class' | 'grade' | 'assignment'>,
+  sourceId?: string | null
+) {
+  switch (type) {
+    case 'announcement':
+      return sourceId
+        ? `/parent/dashboard?focus=announcement&id=${sourceId}`
+        : '/parent/dashboard?focus=announcements';
+    case 'live_class':
+      return sourceId
+        ? `/parent/dashboard?focus=live-class&id=${sourceId}`
+        : '/parent/dashboard?focus=live-classes';
+    case 'grade':
+      return sourceId
+        ? `/parent/dashboard?focus=grade&id=${sourceId}`
+        : '/parent/dashboard?focus=grades';
+    case 'assignment':
+      return sourceId
+        ? `/parent/dashboard?focus=assignment&id=${sourceId}`
+        : '/parent/dashboard?focus=assignments';
+    default:
+      return '/parent/dashboard';
+  }
+}
 
 export function buildNotificationLink(type: InAppNotificationType, sourceId?: string | null) {
   switch (type) {

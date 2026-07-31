@@ -77,7 +77,7 @@ export async function middleware(request: NextRequest) {
     data: { user }
   } = await supabase.auth.getUser();
 
-  if (!user && isProtectedPath(pathname)) {
+  if (!user && (isProtectedPath(pathname) || pathname === '/settings')) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.search = '';
@@ -164,5 +164,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/login', '/reset-password', '/change-password', '/student/:path*', '/parent/:path*', '/teacher/:path*', '/suspended']
+  matcher: ['/', '/login', '/reset-password', '/change-password', '/settings', '/student/:path*', '/parent/:path*', '/teacher/:path*', '/suspended']
 };

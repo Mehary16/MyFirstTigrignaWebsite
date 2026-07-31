@@ -1,11 +1,15 @@
 ﻿import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import LogoutButton from '../../../components/LogoutButton';
 import ProgressSummary from '../../../components/ProgressSummary';
 import AnnouncementsFeed from '../../../components/AnnouncementsFeed';
 import LiveClassSchedule from '../../../components/LiveClassSchedule';
 import ParentHomeworkView from '../../../components/ParentHomeworkView';
 import DashboardTodayStrip from '../../../components/DashboardTodayStrip';
+import DashboardScrollTarget from '../../../components/DashboardScrollTarget';
+import NotificationBell from '../../../components/NotificationBell';
 import { Badge, Card, EmptyState, PageHeader } from '../../../components/ui';
+import { countUnreadNotifications, fetchNotificationsForUser } from '../../../lib/inAppNotifications';
 import {
   fetchAnnouncements,
   fetchAssignments,
@@ -64,11 +68,14 @@ export default async function ParentDashboardPage() {
     redirect(dashboardPathForRole(role));
   }
 
-  const [linksResult, announcementsResult, liveClassesResult, lessonsResult] = await Promise.all([
+  const [linksResult, announcementsResult, liveClassesResult, lessonsResult, notificationsResult, unreadNotificationsResult] =
+    await Promise.all([
     supabase.from('parent_student_links').select('student_id').eq('parent_id', user.id),
     fetchAnnouncements(supabase),
     fetchLiveClasses(supabase),
-    fetchLessonsForDisplay(supabase)
+    fetchLessonsForDisplay(supabase),
+    fetchNotificationsForUser(supabase, user.id),
+    countUnreadNotifications(supabase, user.id)
   ]);
 
   const studentIds = (linksResult.data ?? []).map((link) => link.student_id);
@@ -83,6 +90,8 @@ export default async function ParentDashboardPage() {
   const announcements = filterItemsByClassGrades(announcementsResult.data ?? [], childGrades);
   const liveClasses = filterItemsByClassGrades(liveClassesResult.data ?? [], childGrades);
   const lessons = filterItemsByClassGrades(lessonsResult.data ?? [], childGrades);
+  const notifications = notificationsResult.data ?? [];
+  const unreadNotificationCount = unreadNotificationsResult.count ?? 0;
 
   const children: ChildSummary[] = [];
 
@@ -135,12 +144,19 @@ export default async function ParentDashboardPage() {
 
   return (
     <section className="space-y-8">
+      <Suspense fallback={null}>
+        <DashboardScrollTarget />
+      </Suspense>
       <PageHeader
         eyebrow="Parent Dashboard / ናይ ወለዲ ዳሽቦርድ"
         title={`Welcome, ${displayName}`}
         description="See how your children are doing in Tigrigna class."
         actions={
           <>
+            <NotificationBell
+              initialNotifications={notifications}
+              initialUnreadCount={unreadNotificationCount}
+            />
             <Badge>{displayName}</Badge>
             <LogoutButton />
           </>
