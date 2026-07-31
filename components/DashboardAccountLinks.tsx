@@ -7,13 +7,20 @@ export default function DashboardAccountLinks() {
       <Link
         href="/settings#password"
         className="link-button-secondary inline-flex items-center gap-2 px-3 py-2 text-sm"
+        aria-label="Change password"
+        title="Change password"
       >
         <KeyRound className="h-4 w-4" aria-hidden />
-        Change password
+        <span className="hidden sm:inline">Change password</span>
       </Link>
-      <Link href="/settings" className="link-button-secondary inline-flex items-center gap-2 px-3 py-2 text-sm">
+      <Link
+        href="/settings"
+        className="link-button-secondary inline-flex items-center gap-2 px-3 py-2 text-sm"
+        aria-label="Account settings"
+        title="Settings"
+      >
         <Settings className="h-4 w-4" aria-hidden />
-        Settings
+        <span className="hidden sm:inline">Settings</span>
       </Link>
     </>
   );

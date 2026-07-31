@@ -32,7 +32,7 @@ export default function PageHeader({ eyebrow, title, description, actions, class
           </h1>
           {description ? <p className="text-base leading-relaxed text-slate-600">{description}</p> : null}
         </div>
-        {actions ? <div className="flex flex-wrap items-center gap-3">{actions}</div> : null}
+        {actions ? <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:max-w-xl md:justify-end">{actions}</div> : null}
       </div>
     </Card>
   );

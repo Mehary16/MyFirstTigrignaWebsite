@@ -8,6 +8,7 @@ import { type GradeRow } from '../../../components/TeacherGradeManager';
 import TeacherDashboardShell from '../../../components/TeacherDashboardShell';
 import NotificationBell from '../../../components/NotificationBell';
 import DashboardAccountLinks from '../../../components/DashboardAccountLinks';
+import DashboardHeaderActions from '../../../components/DashboardHeaderActions';
 import LogoutButton from '../../../components/LogoutButton';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
 import DashboardTodayStrip from '../../../components/DashboardTodayStrip';
@@ -125,16 +126,24 @@ export default async function TeacherDashboardPage({
         title="ናይ ተማሃሮ ንጥፈታት መከታተሊ"
         description={`Welcome, ${displayName}. Create lessons, assign homework, schedule live classes, post announcements, review submissions, and manage grades.`}
         actions={
-          <>
-            <NotificationBell
-              initialNotifications={notifications}
-              initialUnreadCount={unreadNotificationCount}
-            />
-            <Badge variant="role">Teacher</Badge>
-            <Badge>{displayName}</Badge>
-            <DashboardAccountLinks />
-            <LogoutButton />
-          </>
+          <DashboardHeaderActions
+            primary={
+              <>
+                <NotificationBell
+                  initialNotifications={notifications}
+                  initialUnreadCount={unreadNotificationCount}
+                />
+                <Badge variant="role">Teacher</Badge>
+                <Badge>{displayName}</Badge>
+              </>
+            }
+            secondary={
+              <>
+                <DashboardAccountLinks />
+                <LogoutButton />
+              </>
+            }
+          />
         }
       />
 
