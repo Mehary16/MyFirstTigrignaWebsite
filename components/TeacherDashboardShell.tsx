@@ -22,7 +22,9 @@ import TeacherAssignmentManager, { type AssignmentRow } from './TeacherAssignmen
 import TeacherLiveClassManager, { type LiveClassRow } from './TeacherLiveClassManager';
 import TeacherAnnouncementManager, { type AnnouncementRow } from './TeacherAnnouncementManager';
 import TeacherCommandBar from './TeacherCommandBar';
+import TeacherPlatformReadiness from './TeacherPlatformReadiness';
 import type { MaterialRow } from '../lib/teacherMaterials';
+import { PLATFORM_READINESS_INTRO } from '../lib/helpCopy';
 import Button from './ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState } from './ui';
 import { cn } from '../lib/cn';
@@ -243,6 +245,7 @@ export default function TeacherDashboardShell({
 
       <div key={activeTab} className="animate-fade-in">
       {activeTab === 'overview' && (
+        <div className="space-y-6">
         <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-6">
             <SectionCard title="Recent Assignments" description="The latest homework tasks you created for students.">
@@ -317,6 +320,14 @@ export default function TeacherDashboardShell({
               )}
             </SectionCard>
           </div>
+        </div>
+
+        <SectionCard
+          title={PLATFORM_READINESS_INTRO.title}
+          description="How the portal is built today — visible to teachers only on this Overview tab."
+        >
+          <TeacherPlatformReadiness />
+        </SectionCard>
         </div>
       )}
 

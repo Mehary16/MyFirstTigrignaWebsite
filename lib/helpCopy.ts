@@ -112,6 +112,47 @@ export const HELP_SECTIONS: HelpSection[] = [
   }
 ];
 
+export type PlatformReadinessRow = {
+  area: string;
+  readiness: string;
+  summary: string;
+};
+
+/** Visible on /help — plain table (no charts). Updated when platform capabilities change. */
+export const PLATFORM_READINESS: PlatformReadinessRow[] = [
+  {
+    area: 'User experience (UX)',
+    readiness: 'High',
+    summary: 'Role-based dashboards, mobile navigation, Help, Settings, notifications, and bilingual UI.'
+  },
+  {
+    area: 'Security',
+    readiness: 'Good',
+    summary: 'Login, roles, database row-level security, legal pages, and account settings. MFA/SSO can be added in Supabase.'
+  },
+  {
+    area: 'Content management',
+    readiness: 'Good',
+    summary: 'Teachers manage lessons, homework, grades, announcements, and files from the Teacher Dashboard.'
+  },
+  {
+    area: 'Performance',
+    readiness: 'Moderate',
+    summary: 'Built on Next.js with image and font optimization. Large classes may need further tuning.'
+  },
+  {
+    area: 'Scalability',
+    readiness: 'Moderate',
+    summary: 'Suited to a single school or classroom. Multi-school or very high traffic would need extra infrastructure.'
+  }
+];
+
+export const PLATFORM_READINESS_INTRO = {
+  title: 'Platform readiness',
+  description:
+    'Teacher-only summary of portal strengths and growth areas. Update lib/helpCopy.ts when capabilities change.'
+};
+
 export const HELP_SUPPORT = {
   title: 'Help & Support',
   subtitle: 'Answers to common questions about the Tigrigna Learning Portal.',
