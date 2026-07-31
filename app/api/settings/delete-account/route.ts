@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { writeAuditLog } from '../../../../lib/auditLog';
+import { enforceRateLimit, rateLimitResponse } from '../../../../lib/apiRateLimit';
 import { createAdminSupabaseClient } from '../../../../lib/supabaseAdmin';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
 
@@ -10,6 +12,18 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: 'You must be logged in.' }, { status: 401 });
+  }
+
+  const rateLimit = enforceRateLimit({
+    request,
+    scope: 'settings-delete-account',
+    userId: user.id,
+    limit: 5,
+    windowMs: 60_000
+  });
+
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
   }
 
   const body = (await request.json()) as { confirmation?: string };
@@ -30,6 +44,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: profileError.message }, { status: 500 });
     }
   }
+
+  await writeAuditLog({
+    action: 'account.deleted',
+    actorId: user.id,
+    targetId: user.id,
+    metadata: { email: user.email }
+  });
 
   await supabase.auth.signOut();
 

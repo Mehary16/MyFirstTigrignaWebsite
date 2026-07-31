@@ -13,6 +13,7 @@ import AnnouncementsFeed from '../../../components/AnnouncementsFeed';
 import LiveClassSchedule from '../../../components/LiveClassSchedule';
 import { splitStudentMaterials } from '../../../lib/teacherMaterials';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
+import DashboardAccountLinks from '../../../components/DashboardAccountLinks';
 import NotificationBell from '../../../components/NotificationBell';
 import { Badge, PageHeader, Alert } from '../../../components/ui';
 import { isStudentSuspended } from '../../../lib/auth';
@@ -166,6 +167,7 @@ export default async function StudentDashboardPage() {
               <Badge>{displayName}</Badge>
               {gradeLabel ? <Badge variant="brand">{gradeLabel}</Badge> : null}
               <Badge variant="info">{profile?.role ?? 'Student'}</Badge>
+              <DashboardAccountLinks />
               <LogoutButton variant="primary" />
             </>
           }

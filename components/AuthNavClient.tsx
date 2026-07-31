@@ -1,8 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import LogoutButton from './LogoutButton';
+import AuthNavLinks from './AuthNavLinks';
+import MobileNavMenu from './MobileNavMenu';
 
 type AuthNavClientProps = {
   isLoggedIn: boolean;
@@ -12,40 +12,16 @@ type AuthNavClientProps = {
 
 export default function AuthNavClient({ isLoggedIn, dashboardHref, dashboardLabel }: AuthNavClientProps) {
   const pathname = usePathname();
-  const onLoginPage = pathname === '/login';
-  const onAboutPage = pathname === '/about';
-  const onSettingsPage = pathname === '/settings';
-  const onDashboard = Boolean(dashboardHref && pathname.startsWith(dashboardHref));
+  const sharedProps = { isLoggedIn, dashboardHref, dashboardLabel, pathname };
 
   return (
-    <nav className="flex flex-wrap items-center gap-3 text-sm font-medium">
-      <Link href="/" className="link-button-secondary">
-        Home
-      </Link>
-      {!onAboutPage ? (
-        <Link href="/about" className="link-button-secondary">
-          About Us
-        </Link>
-      ) : null}
-      {isLoggedIn && dashboardHref && dashboardLabel && !onDashboard ? (
-        <Link href={dashboardHref} className="link-button-secondary">
-          {dashboardLabel}
-        </Link>
-      ) : null}
-      {isLoggedIn && !onSettingsPage ? (
-        <Link href="/settings" className="link-button-secondary">
-          Settings
-        </Link>
-      ) : null}
-      {isLoggedIn ? (
-        <LogoutButton variant="primary" />
-      ) : (
-        !onLoginPage && (
-          <Link href="/login" className="link-button-primary px-4 py-2 text-sm">
-            Login / መእተዊ
-          </Link>
-        )
-      )}
-    </nav>
+    <>
+      <nav className="hidden flex-wrap items-center gap-3 text-sm font-medium lg:flex">
+        <AuthNavLinks {...sharedProps} layout="inline" />
+      </nav>
+      <MobileNavMenu>
+        <AuthNavLinks {...sharedProps} layout="stacked" />
+      </MobileNavMenu>
+    </>
   );
 }

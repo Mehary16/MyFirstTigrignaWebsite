@@ -7,6 +7,7 @@ import { toStudentListItem } from '../../../lib/studentList';
 import { type GradeRow } from '../../../components/TeacherGradeManager';
 import TeacherDashboardShell from '../../../components/TeacherDashboardShell';
 import NotificationBell from '../../../components/NotificationBell';
+import DashboardAccountLinks from '../../../components/DashboardAccountLinks';
 import LogoutButton from '../../../components/LogoutButton';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
 import DashboardTodayStrip from '../../../components/DashboardTodayStrip';
@@ -131,6 +132,7 @@ export default async function TeacherDashboardPage({
             />
             <Badge variant="role">Teacher</Badge>
             <Badge>{displayName}</Badge>
+            <DashboardAccountLinks />
             <LogoutButton />
           </>
         }

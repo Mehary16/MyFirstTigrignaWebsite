@@ -7,6 +7,7 @@ import LiveClassSchedule from '../../../components/LiveClassSchedule';
 import ParentHomeworkView from '../../../components/ParentHomeworkView';
 import DashboardTodayStrip from '../../../components/DashboardTodayStrip';
 import DashboardScrollTarget from '../../../components/DashboardScrollTarget';
+import DashboardAccountLinks from '../../../components/DashboardAccountLinks';
 import NotificationBell from '../../../components/NotificationBell';
 import { Badge, Card, EmptyState, PageHeader } from '../../../components/ui';
 import { countUnreadNotifications, fetchNotificationsForUser } from '../../../lib/inAppNotifications';
@@ -158,6 +159,7 @@ export default async function ParentDashboardPage() {
               initialUnreadCount={unreadNotificationCount}
             />
             <Badge>{displayName}</Badge>
+            <DashboardAccountLinks />
             <LogoutButton />
           </>
         }
