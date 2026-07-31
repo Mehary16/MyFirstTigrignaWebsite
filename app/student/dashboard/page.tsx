@@ -14,6 +14,8 @@ import LiveClassSchedule from '../../../components/LiveClassSchedule';
 import { splitStudentMaterials } from '../../../lib/teacherMaterials';
 import DatabaseSetupAlert from '../../../components/DatabaseSetupAlert';
 import DashboardAccountLinks from '../../../components/DashboardAccountLinks';
+import DashboardHeaderActions from '../../../components/DashboardHeaderActions';
+import DashboardSectionNav from '../../../components/DashboardSectionNav';
 import NotificationBell from '../../../components/NotificationBell';
 import { Badge, PageHeader, Alert } from '../../../components/ui';
 import { isStudentSuspended } from '../../../lib/auth';
@@ -159,18 +161,35 @@ export default async function StudentDashboardPage() {
               : 'Watch lessons, download materials, submit homework, and track your progress.'
           }
           actions={
-            <>
-              <NotificationBell
-                initialNotifications={notifications}
-                initialUnreadCount={unreadNotificationCount}
-              />
-              <Badge>{displayName}</Badge>
-              {gradeLabel ? <Badge variant="brand">{gradeLabel}</Badge> : null}
-              <Badge variant="info">{profile?.role ?? 'Student'}</Badge>
-              <DashboardAccountLinks />
-              <LogoutButton variant="primary" />
-            </>
+            <DashboardHeaderActions
+              primary={
+                <>
+                  <NotificationBell
+                    initialNotifications={notifications}
+                    initialUnreadCount={unreadNotificationCount}
+                  />
+                  <Badge>{displayName}</Badge>
+                  {gradeLabel ? <Badge variant="brand">{gradeLabel}</Badge> : null}
+                  <Badge variant="info">{profile?.role ?? 'Student'}</Badge>
+                </>
+              }
+              secondary={
+                <>
+                  <DashboardAccountLinks />
+                  <LogoutButton variant="primary" />
+                </>
+              }
+            />
           }
+        />
+
+        <DashboardSectionNav
+          links={[
+            { id: 'student-announcements', label: 'Announcements' },
+            { id: 'student-assignments', label: 'Homework' },
+            { id: 'student-lessons', label: 'Lessons' },
+            { id: 'student-grades', label: 'Grades' }
+          ]}
         />
 
         <DashboardTodayStrip

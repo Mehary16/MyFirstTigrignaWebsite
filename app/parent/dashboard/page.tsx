@@ -8,6 +8,8 @@ import ParentHomeworkView from '../../../components/ParentHomeworkView';
 import DashboardTodayStrip from '../../../components/DashboardTodayStrip';
 import DashboardScrollTarget from '../../../components/DashboardScrollTarget';
 import DashboardAccountLinks from '../../../components/DashboardAccountLinks';
+import DashboardHeaderActions from '../../../components/DashboardHeaderActions';
+import DashboardSectionNav from '../../../components/DashboardSectionNav';
 import NotificationBell from '../../../components/NotificationBell';
 import { Badge, Card, EmptyState, PageHeader } from '../../../components/ui';
 import { countUnreadNotifications, fetchNotificationsForUser } from '../../../lib/inAppNotifications';
@@ -153,16 +155,31 @@ export default async function ParentDashboardPage() {
         title={`Welcome, ${displayName}`}
         description="See how your children are doing in Tigrigna class."
         actions={
-          <>
-            <NotificationBell
-              initialNotifications={notifications}
-              initialUnreadCount={unreadNotificationCount}
-            />
-            <Badge>{displayName}</Badge>
-            <DashboardAccountLinks />
-            <LogoutButton />
-          </>
+          <DashboardHeaderActions
+            primary={
+              <>
+                <NotificationBell
+                  initialNotifications={notifications}
+                  initialUnreadCount={unreadNotificationCount}
+                />
+                <Badge>{displayName}</Badge>
+              </>
+            }
+            secondary={
+              <>
+                <DashboardAccountLinks />
+                <LogoutButton />
+              </>
+            }
+          />
         }
+      />
+
+      <DashboardSectionNav
+        links={[
+          { id: 'student-announcements', label: 'Announcements' },
+          { id: 'student-live-classes', label: 'Live classes' }
+        ]}
       />
 
       {children.length > 0 ? (

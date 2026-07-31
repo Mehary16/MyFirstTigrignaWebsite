@@ -47,7 +47,7 @@ export default function SiteHeader({ nav }: SiteHeaderProps) {
           <p
             className={cn(
               'font-ethiopic font-medium uppercase tracking-[0.2em] text-amber-800 transition-all duration-300',
-              compact ? 'text-xs tracking-[0.16em]' : 'text-lg'
+              compact ? 'hidden sm:block sm:text-xs sm:tracking-[0.16em]' : 'text-lg'
             )}
           >
             ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ

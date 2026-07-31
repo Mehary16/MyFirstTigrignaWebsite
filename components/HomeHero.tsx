@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, GraduationCap, Sparkles, Users } from 'lucide-react';
+import { BookOpen, GraduationCap, HelpCircle, Languages, Sparkles, Users } from 'lucide-react';
 
 type HomeHeroProps = {
   dashboardHref?: string;
@@ -44,6 +44,13 @@ export default function HomeHero({ dashboardHref, dashboardLabel, isLoggedIn }: 
             <Link href="/login?mode=signup&accountType=Student" className="link-button-secondary px-6 py-3.5 text-base">
               Create account
             </Link>
+            <Link
+              href="/resources/alphabet"
+              className="link-button-secondary inline-flex items-center gap-2 px-6 py-3.5 text-base"
+            >
+              <Languages className="h-4 w-4" aria-hidden />
+              Explore alphabet
+            </Link>
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
@@ -55,11 +62,18 @@ export default function HomeHero({ dashboardHref, dashboardLabel, isLoggedIn }: 
                 {item}
               </span>
             ))}
+            <Link
+              href="/help"
+              className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
+            >
+              <HelpCircle className="h-3.5 w-3.5" aria-hidden />
+              Need help?
+            </Link>
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-          <div className="rounded-3xl border border-sky-100 bg-sky-50/80 p-5 transition hover:-translate-y-0.5 hover:shadow-card">
+          <div className="rounded-3xl border border-sky-100 bg-sky-50/80 p-5 transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-card">
             <div className="flex items-center gap-3">
               <div className="rounded-2xl bg-white p-2.5 text-sky-700 shadow-sm">
                 <BookOpen className="h-5 w-5" aria-hidden />

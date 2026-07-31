@@ -2,6 +2,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { BookOpen, GraduationCap, Mail, Users } from 'lucide-react';
 import HomeHero from '../components/HomeHero';
+import HomeExploreStrip from '../components/HomeExploreStrip';
+import SectionHeading from '../components/SectionHeading';
 import { createServerSupabaseClient } from '../lib/supabaseServer';
 import { dashboardPathForRole } from '../lib/routes';
 import { getUserRole } from '../lib/roleAuth';
@@ -15,9 +17,10 @@ export default async function HomePage() {
 
   let dashboardHref = '/login';
   let dashboardLabel = 'Login to your dashboard';
+  let role: Awaited<ReturnType<typeof getUserRole>> | null = null;
 
   if (user) {
-    const role = await getUserRole(supabase, user);
+    role = await getUserRole(supabase, user);
     dashboardHref = dashboardPathForRole(role);
     dashboardLabel =
       role === 'Teacher' ? 'Teacher Dashboard' : role === 'Parent' ? 'Parent Dashboard' : 'Student Dashboard';
@@ -31,16 +34,17 @@ export default async function HomePage() {
         dashboardLabel={user ? dashboardLabel : undefined}
       />
 
-      <section className="rounded-[2.5rem] border border-amber-100/80 bg-white/70 p-8 shadow-card-lg backdrop-blur">
-        <div className="max-w-3xl">
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-950">How it works</h2>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            A simple flow for students, teachers, and parents—so learning stays organized and easy to follow.
-          </p>
-        </div>
+      <HomeExploreStrip />
+
+      <section className="surface-panel p-8">
+        <SectionHeading
+          eyebrow="Simple steps"
+          title="How it works"
+          description="A simple flow for students, teachers, and parents—so learning stays organized and easy to follow."
+        />
 
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <div className="rounded-[2rem] border border-slate-200 bg-slate-50/50 p-5">
+          <div className="rounded-[2rem] border border-slate-200 bg-slate-50/50 p-5 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-900 text-sm font-semibold text-white">
                 1
@@ -50,7 +54,7 @@ export default async function HomePage() {
             <p className="mt-3 text-sm text-slate-600">Student, Teacher, or Parent—each opens a clean dashboard.</p>
           </div>
 
-          <div className="rounded-[2rem] border border-slate-200 bg-slate-50/50 p-5">
+          <div className="rounded-[2rem] border border-slate-200 bg-slate-50/50 p-5 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500 text-sm font-semibold text-white">
                 2
@@ -60,7 +64,7 @@ export default async function HomePage() {
             <p className="mt-3 text-sm text-slate-600">Watch lessons, practice Tigrinya, and upload homework.</p>
           </div>
 
-          <div className="rounded-[2rem] border border-slate-200 bg-slate-50/50 p-5">
+          <div className="rounded-[2rem] border border-slate-200 bg-slate-50/50 p-5 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold text-white">
                 3
@@ -131,10 +135,11 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <div className="space-y-1">
-        <h2 className="text-xl font-semibold text-slate-900">Get your dashboard</h2>
-        <p className="text-sm text-slate-600">Pick the role you want, then sign in or create an account.</p>
-      </div>
+      <SectionHeading
+        eyebrow="Your portal"
+        title="Get your dashboard"
+        description="Pick the role you want, then sign in or create an account."
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card variant="elevated" className="group flex h-full flex-col transition hover:-translate-y-0.5 hover:shadow-card-lg">
@@ -158,6 +163,10 @@ export default async function HomePage() {
               <Link href="/login?accountType=Student" className="link-button-secondary mt-6 inline-flex px-4 py-2 text-sm">
                 Student login
               </Link>
+            ) : role === 'Student' ? (
+              <Link href="/student/dashboard" className="link-button-primary mt-6 inline-flex px-4 py-2 text-sm">
+                Go to Student Dashboard
+              </Link>
             ) : null}
           </CardContent>
         </Card>
@@ -173,18 +182,22 @@ export default async function HomePage() {
             <CardTitle className="text-xl">Teacher</CardTitle>
             <CardDescription>Create lessons, review submissions, and manage grades.</CardDescription>
           </CardHeader>
-          {!user ? (
-            <CardContent className="flex flex-1 flex-col justify-between">
-              <ul className="space-y-2 text-sm text-slate-600">
-                <li>• Publish lessons and classroom materials</li>
-                <li>• Review homework and provide feedback</li>
-                <li>• Post grades per class grade</li>
-              </ul>
+          <CardContent className="flex flex-1 flex-col justify-between">
+            <ul className="space-y-2 text-sm text-slate-600">
+              <li>• Publish lessons and classroom materials</li>
+              <li>• Review homework and provide feedback</li>
+              <li>• Post grades per class grade</li>
+            </ul>
+            {!user ? (
               <Link href="/login" className="link-button-secondary mt-6 inline-flex px-4 py-2 text-sm">
                 Teacher login
               </Link>
-            </CardContent>
-          ) : null}
+            ) : role === 'Teacher' ? (
+              <Link href="/teacher/dashboard" className="link-button-primary mt-6 inline-flex px-4 py-2 text-sm">
+                Go to Teacher Dashboard
+              </Link>
+            ) : null}
+          </CardContent>
         </Card>
 
         <Card variant="elevated" className="group flex h-full flex-col transition hover:-translate-y-0.5 hover:shadow-card-lg">
@@ -207,6 +220,10 @@ export default async function HomePage() {
             {!user ? (
               <Link href="/login?accountType=Parent" className="link-button-secondary mt-6 inline-flex px-4 py-2 text-sm">
                 Parent login
+              </Link>
+            ) : role === 'Parent' ? (
+              <Link href="/parent/dashboard" className="link-button-primary mt-6 inline-flex px-4 py-2 text-sm">
+                Go to Parent Dashboard
               </Link>
             ) : null}
           </CardContent>

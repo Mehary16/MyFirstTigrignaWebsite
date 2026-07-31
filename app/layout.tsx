@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8">
           <SiteHeader nav={<AuthNav />} />
 
-          <main id="main-content" className="flex-1 scroll-mt-24">
+          <main id="main-content" className="flex-1 scroll-mt-24 animate-fade-in">
             {children}
           </main>
 
