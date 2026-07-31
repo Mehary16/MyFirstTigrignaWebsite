@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '../lib/supabaseClient';
 import { dashboardPathForRole, type UserRole } from '../lib/routes';
@@ -46,6 +46,12 @@ export default function SettingsForm({ email, fullName: initialFullName, role, i
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const preferenceKeys = useMemo(() => preferencesForRole(role), [role]);
+
+  useEffect(() => {
+    if (window.location.hash !== '#password') return;
+    const section = document.getElementById('password');
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   const saveProfile = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -201,7 +207,7 @@ export default function SettingsForm({ email, fullName: initialFullName, role, i
         </CardContent>
       </Card>
 
-      <Card variant="elevated">
+      <Card id="password" variant="elevated" className="scroll-mt-28">
         <CardHeader>
           <CardTitle>Change password</CardTitle>
           <CardDescription>Set a new password for your account.</CardDescription>

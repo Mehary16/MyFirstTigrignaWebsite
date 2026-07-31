@@ -7,9 +7,10 @@ import Button from './ui/Button';
 type LogoutButtonProps = {
   className?: string;
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  fullWidth?: boolean;
 };
 
-export default function LogoutButton({ className, variant = 'secondary' }: LogoutButtonProps) {
+export default function LogoutButton({ className, variant = 'secondary', fullWidth = false }: LogoutButtonProps) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -20,7 +21,7 @@ export default function LogoutButton({ className, variant = 'secondary' }: Logou
   };
 
   return (
-    <Button type="button" variant={variant} onClick={handleLogout} className={className}>
+    <Button type="button" variant={variant} onClick={handleLogout} className={className} fullWidth={fullWidth}>
       Logout / ውጻእ
     </Button>
   );

@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { enforceRateLimit, rateLimitResponse } from '../../../../lib/apiRateLimit';
+import { writeAuditLog } from '../../../../lib/auditLog';
 import { createAdminSupabaseClient } from '../../../../lib/supabaseAdmin';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
 
@@ -10,6 +12,18 @@ export async function PATCH(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: 'You must be logged in.' }, { status: 401 });
+  }
+
+  const rateLimit = enforceRateLimit({
+    request,
+    scope: 'settings-profile',
+    userId: user.id,
+    limit: 30,
+    windowMs: 60_000
+  });
+
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
   }
 
   const body = (await request.json()) as { fullName?: string };
@@ -46,6 +60,12 @@ export async function PATCH(request: Request) {
       user_metadata: { ...user.user_metadata, full_name: fullName }
     });
   }
+
+  await writeAuditLog({
+    action: 'profile.updated',
+    actorId: user.id,
+    metadata: { fullName }
+  });
 
   return NextResponse.json({ success: true, fullName });
 }

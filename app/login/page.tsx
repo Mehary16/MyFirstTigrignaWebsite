@@ -12,6 +12,7 @@ import { getEmailConfirmRedirectUrl } from '../../lib/siteUrl';
 import { TIGRINYA_ALPHABET } from '../../lib/tigrinyaAlphabet';
 import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
+import SocialLoginButtons from '../../components/SocialLoginButtons';
 import { Card } from '../../components/ui/Card';
 import ClassGradeSelect from '../../components/ClassGradeSelect';
 import Input from '../../components/ui/Input';
@@ -631,6 +632,8 @@ export default function LoginPage() {
             <Button type="submit" disabled={loading} fullWidth size="lg">
               {loading ? copy.processing : mode === 'signUp' ? copy.signUp : copy.login}
             </Button>
+
+            {mode === 'signIn' ? <SocialLoginButtons disabled={loading} /> : null}
           </form>
 
           <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">

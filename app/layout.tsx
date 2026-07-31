@@ -2,6 +2,8 @@ import './globals.css';
 import type { Metadata } from 'next';
 import AuthNav from '../components/AuthNav';
 import AuthUrlErrorHandler from '../components/AuthUrlErrorHandler';
+import CookieConsent from '../components/CookieConsent';
+import SiteFooter from '../components/SiteFooter';
 import SiteHeader from '../components/SiteHeader';
 import { notoEthiopic, notoSerifEthiopic, plusJakarta } from './fonts';
 
@@ -17,27 +19,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ti" className={`${plusJakarta.variable} ${notoEthiopic.variable} ${notoSerifEthiopic.variable}`}>
       <body className="min-h-screen font-sans text-slate-900 antialiased">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-brand-900 focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg focus:outline-none"
+        >
+          Skip to main content
+        </a>
         <AuthUrlErrorHandler />
         <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8">
           <SiteHeader nav={<AuthNav />} />
 
-          <main className="flex-1">{children}</main>
+          <main id="main-content" className="flex-1 scroll-mt-24">
+            {children}
+          </main>
 
-          <footer className="mt-12 border-t border-slate-200/80 pt-4 text-sm text-slate-500">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Contact us</p>
-            <p className="mt-2 font-ethiopic text-slate-600">ትምህርቲ ቋንቋ ትግርኛ ፍረ ጥበብ</p>
-            <p className="font-ethiopic text-slate-600">መምህር መሓሪ ኣይንኣለም</p>
-            <p className="mt-1">
-              <span className="font-ethiopic">ኢሜል:</span>{' '}
-              <a
-                href="mailto:mehary.aynealem1@gmail.com"
-                className="text-slate-700 underline-offset-2 hover:text-brand-800 hover:underline"
-              >
-                mehary.aynealem1@gmail.com
-              </a>
-            </p>
-          </footer>
+          <SiteFooter />
         </div>
+        <CookieConsent />
       </body>
     </html>
   );
