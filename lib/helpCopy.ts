@@ -14,12 +14,12 @@ export type HelpSection = {
 export const HELP_SECTIONS: HelpSection[] = [
   {
     title: 'Getting started',
-    description: 'Account setup for students, parents, and teachers.',
+    description: 'Account setup for students and parents.',
     faqs: [
       {
         question: 'How do I create an account?',
         answer:
-          'Go to Login and choose Create account. Students and parents can sign up directly. Teachers use the email configured as ADMIN_EMAIL in the portal settings.'
+          'Go to Login and choose Create account. Students and parents can sign up directly.'
       },
       {
         question: 'I did not receive my confirmation email.',

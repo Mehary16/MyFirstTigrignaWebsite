@@ -58,7 +58,7 @@ export const ABOUT_COPY: Record<AboutLocale, AboutCopy> = {
     ctaSectionTitle: 'Start learning today',
     ctaSectionDescription: 'Choose a path that fits you — every button opens the next step in your journey.',
     modulesTitle: 'Beginner Course Modules',
-    modulesDescription: 'A structured path from your first letter to your first real conversation.',
+    modulesDescription: 'A structured path from your first letter to family conversations — then advanced storytelling, translation, and interpretation.',
     learnLabel: 'What you will learn',
     milestonesLabel: 'The milestones',
     footerReady: 'Ready to begin? Create a student account and start Module 1 today.',
@@ -99,15 +99,15 @@ export const ABOUT_COPY: Record<AboutLocale, AboutCopy> = {
           'Master the core building blocks of the language. This module removes the intimidation of learning a new alphabet and gets you reading immediately.',
         learn: [
           'The basic Tigrinya alphabet (Fidäl)',
-          'Standard vowel forms',
-          'Flawless pronunciation of unique explosive consonants'
+          'How to read and write the Alphabets',
+          'Flawless pronunciation of Alphabets'
         ],
         milestones: ['Read your first written Tigrinya words', 'Write your own name in script']
       },
       {
         number: 2,
         title: 'The Art of the Coffee Ceremony',
-        titleTi: 'ባህሊ & ሰላምታ',
+        titleTi: 'ባህልን ሰላምታን',
         summary:
           'Step out of the classroom and into social confidence. Learn the foundational grammar and vocabulary needed to navigate any traditional family gathering.',
         learn: [
@@ -123,7 +123,7 @@ export const ABOUT_COPY: Record<AboutLocale, AboutCopy> = {
       {
         number: 3,
         title: 'Everyday Connections',
-        titleTi: 'ድሕረ-ባይታ & ስድራቤት',
+        titleTi: 'ዝርርብ ምስ ስድራቤት',
         summary:
           'Connect deeply with the people who matter most. This module shifts focus onto family structures, daily life, and the home.',
         learn: [
@@ -133,6 +133,24 @@ export const ABOUT_COPY: Record<AboutLocale, AboutCopy> = {
         ],
         milestones: [
           'Speak with your parents or grandparents about family history without relying on English'
+        ]
+      },
+      {
+        number: 4,
+        title: 'Stories, Translation & Interpretation',
+        titleTi: 'ጽሑፋት፣ ትርጉምን ትርجምን',
+        summary:
+          'An advanced module for learners ready to go beyond conversation. Create stories in Tigrinya, move between languages with confidence, and help others connect across English and Tigrinya.',
+        learn: [
+          'Writing original stories in Tigrinya',
+          'Translating Tigrinya stories into English',
+          'Interpreting between English and Tigrinya (both directions)',
+          'Supporting family and friends with bilingual storytelling and conversation'
+        ],
+        milestones: [
+          'Write and share a short story in Tigrinya',
+          'Translate a Tigrinya story into English',
+          'Help interpret a conversation between English and Tigrinya speakers'
         ]
       }
     ]
@@ -156,7 +174,7 @@ export const ABOUT_COPY: Record<AboutLocale, AboutCopy> = {
     ctaSectionTitle: 'ሎምሲ ክትምሃር ጀምር',
     ctaSectionDescription: 'ንኻ ዝግብኦ መንገዲ ምረጽ — ነቲ ዝቕጽል ስጉምትኻ ንኹሉ ቁልፊ ይኸፍት።',
     modulesTitle: 'መደብ ኮርስ ንዝጀምሩ',
-    modulesDescription: 'ካብ መጀመርታ ፊደል ክሳብ ቀዳማይ ሓቀኛ ዘረባኻ ዝኣንድ ተዳላይ መንገዲ።',
+    modulesDescription: 'ካብ መጀመርታ ፊደል ክሳብ ስድራቤታዊ ዘረባ — ከምኡ’ውን ድሕሪት ደረጃ ጽሑፋት፣ ትርጉምን ትርجምን ዝኣንድ ተዳላይ መንገዲ።',
     learnLabel: 'እንታይ ክትምሃር እኹም',
     milestonesLabel: 'መደረኻት',
     footerReady: 'ክትጅምር ድሉው ዲኻ? ናይ ተማሃራይ ኣካውንት ፈጠር ኣብ መጀመርታ መደብ 1 ሎምሲ ጀምር።',
@@ -205,7 +223,7 @@ export const ABOUT_COPY: Record<AboutLocale, AboutCopy> = {
       {
         number: 2,
         title: 'ስነ-ጥበብ ስነ-ባህሊ ቡን',
-        titleTi: 'ባህሊ & ሰላምታ',
+        titleTi: 'ባህልን ሰላምታን',
         summary:
           'ካብ ክፍሊ ወጻእ ብማሕበራዊ ሓይሊ ተማሃር። ኣብ ኣብያተ ስድራቤት ንምእታው ዘድሊ መሰረታዊ ፍልጠትን ቃላትን ተማሃር።',
         learn: [
@@ -221,7 +239,7 @@ export const ABOUT_COPY: Record<AboutLocale, AboutCopy> = {
       {
         number: 3,
         title: 'መዓልታዊ ርክብ',
-        titleTi: 'ድሕረ-ባይታ & ስድራቤት',
+        titleTi: 'ዝርርብ ምስ ስድራቤት',
         summary:
           'ምስቲ ዝጠቅም ህዝቢ ብዘይካ ጥልቀት ተራኸብ። እዚ መደብ ኣብ ስድራቤት፣ መዓልታዊ ህይወትን ገዛን ይትከል።',
         learn: [
@@ -230,6 +248,24 @@ export const ABOUT_COPY: Record<AboutLocale, AboutCopy> = {
           'መዓልታዊ ስራሕካ ምግለጽን ኣንፈትካ ምክፋልን'
         ],
         milestones: ['ምስ ወለድካ ወይ ኣቦ/ኣደ ስድራቤት ብዘይ እንግሊዝኛ ብዛዕባ ታሪኽ ስድራቤት ምዕራብ']
+      },
+      {
+        number: 4,
+        title: 'ጽሑፋት፣ ትርጉምን ትርجምን',
+        titleTi: 'ጽሑፋት፣ ትርጉምን ትርجምን',
+        summary:
+          'ንዘረባ ክሳብ ዝወጽኡ ተማሃሮ ዝኸውን ድሕሪት ደረጃ መደብ። ብትግርኛ ጽሑፋት ጽሓፍ፣ ካብ ቋንቋ ናብ ቋንቋ ብኽብሪ ኣልዕል፣ ከምኡ’ውን ካብ እንግሊዝኛ ናብ ትግርኛ (ንጹር ተሞክሮ) ንኻልኦት ምርዳእ ሓግዝ።',
+        learn: [
+          'ብትግርኛ ናይ ገዛእ ርእስኻ ጽሑፋት ምጽሓፍ',
+          'ጽሑፋት ትግርኛ ናብ እንግሊዝኛ ምትርጓም',
+          'ካብ እንግሊዝኛ ናብ ትግርኛን ካብ ትግርኛ ናብ እንግሊዝኛን ምትርጓም',
+          'ብሁለት ቋንቋ ጽሑፋትን ዘረባን ስድራቤትን ኣዳላይታት ምሕጋዝ'
+        ],
+        milestones: [
+          'ቐጺሉ ጽሑፍ ብትግርኛ ጽሓፍን ኣካፍልን',
+          'ጽሑፍ ትግርኛ ናብ እንግሊዝኛ ትርጉም',
+          'ኣብ መንጎ እንግሊዝኛን ትግርኛን ዘረባ ምትርጓም/ምርዳእ ምሕጋዝ'
+        ]
       }
     ]
   }
