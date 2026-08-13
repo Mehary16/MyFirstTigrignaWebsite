@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { writeAuditLog } from '../../../../lib/auditLog';
 import { enforceRateLimit, rateLimitResponse } from '../../../../lib/apiRateLimit';
+import { getUserRole } from '../../../../lib/roleAuth';
 import { createAdminSupabaseClient } from '../../../../lib/supabaseAdmin';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
 
@@ -12,6 +13,14 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: 'You must be logged in.' }, { status: 401 });
+  }
+
+  const role = await getUserRole(supabase, user);
+  if (role === 'Student') {
+    return NextResponse.json(
+      { error: 'Student accounts must be removed by your teacher. Ask your teacher if you need your account deleted.' },
+      { status: 403 }
+    );
   }
 
   const rateLimit = enforceRateLimit({

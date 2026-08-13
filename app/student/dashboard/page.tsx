@@ -210,7 +210,7 @@ export default async function StudentDashboardPage() {
 
         {!classGrade ? (
           <Alert variant="info" title="Class grade not assigned yet">
-            Ask your teacher to assign you to Grade 1, Grade 2, or Grade 3 so you can see your class lessons and homework.
+            Your teacher must assign you to your Grade level. Content is filtered by class grade. Contact your teacher if you are missing anything in your grade.
           </Alert>
         ) : null}
 

@@ -39,7 +39,7 @@ export const HELP_SECTIONS: HelpSection[] = [
       {
         question: 'Why can’t I see lessons or homework?',
         answer:
-          'Your teacher must assign you to Grade 1, Grade 2, or Grade 3. Content is filtered by class grade. Contact your teacher if your grade is missing.'
+          'Your teacher must assign you to your Grade level. Content is filtered by class grade. Contact your teacher if you are missing anything in your grade.'
       },
       {
         question: 'How do I submit homework?',
@@ -85,7 +85,8 @@ export const HELP_SECTIONS: HelpSection[] = [
       },
       {
         question: 'How do I delete my account?',
-        answer: 'Go to Settings → Delete account, type DELETE to confirm, and submit. This permanently removes your login access.'
+        answer:
+          'Students cannot delete their own accounts. Ask your teacher to remove your account — teachers can do this from Teacher Dashboard → Students. Parents and teachers can delete their own account from Settings → Delete account: type DELETE to confirm and submit. This permanently removes login access.'
       }
     ]
   },

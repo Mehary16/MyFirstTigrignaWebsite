@@ -273,29 +273,38 @@ export default function SettingsForm({ email, fullName: initialFullName, role, i
         </CardContent>
       </Card>
 
-      <Card variant="elevated" className="border-red-100">
+      <Card variant="elevated" className={role === 'Student' ? 'border-slate-200' : 'border-red-100'}>
         <CardHeader>
-          <CardTitle className="text-red-800">Delete account</CardTitle>
-          <CardDescription>
-            Permanently remove your account and sign out. This cannot be undone.
-            {role === 'Teacher' ? ' As the teacher account, this will remove your admin access.' : null}
-          </CardDescription>
+          <CardTitle className={role === 'Student' ? undefined : 'text-red-800'}>Delete account</CardTitle>
+          {role === 'Student' ? (
+            <CardDescription>
+              Student accounts cannot be deleted here. If you need your account removed, ask your teacher. They can
+              delete your account from Teacher Dashboard → Students if they approve the request.
+            </CardDescription>
+          ) : (
+            <CardDescription>
+              Permanently remove your account and sign out. This cannot be undone.
+              {role === 'Teacher' ? ' As the teacher account, this will remove your admin access.' : null}
+            </CardDescription>
+          )}
         </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={deleteAccount}>
-            <Input
-              label='Type "DELETE" to confirm'
-              value={deleteConfirmation}
-              onChange={(event) => setDeleteConfirmation(event.currentTarget.value)}
-              placeholder="DELETE"
-              autoComplete="off"
-            />
-            {deleteError ? <Alert variant="error">{deleteError}</Alert> : null}
-            <Button type="submit" variant="danger" disabled={deleteBusy}>
-              {deleteBusy ? 'Deleting...' : 'Delete my account'}
-            </Button>
-          </form>
-        </CardContent>
+        {role !== 'Student' ? (
+          <CardContent>
+            <form className="space-y-4" onSubmit={deleteAccount}>
+              <Input
+                label='Type "DELETE" to confirm'
+                value={deleteConfirmation}
+                onChange={(event) => setDeleteConfirmation(event.currentTarget.value)}
+                placeholder="DELETE"
+                autoComplete="off"
+              />
+              {deleteError ? <Alert variant="error">{deleteError}</Alert> : null}
+              <Button type="submit" variant="danger" disabled={deleteBusy}>
+                {deleteBusy ? 'Deleting...' : 'Delete my account'}
+              </Button>
+            </form>
+          </CardContent>
+        ) : null}
       </Card>
 
       <div className="flex justify-end">
