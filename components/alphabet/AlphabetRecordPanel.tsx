@@ -1,0 +1,182 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { Mic, Square, Upload } from 'lucide-react';
+import type { AlphabetFamily } from '../../lib/tigrinyaAlphabetFamilies';
+import { clearAlphabetAudioCache } from '../../lib/useAlphabetAudio';
+import Alert from '../ui/Alert';
+import Button from '../ui/Button';
+
+type AlphabetRecordPanelProps = {
+  family: AlphabetFamily;
+  formIndex: number;
+  formChar: string;
+  transliteration: string;
+};
+
+type RecordState = 'idle' | 'recording' | 'uploading' | 'done' | 'error';
+
+function extensionForMime(mime: string) {
+  if (mime.includes('webm')) return 'webm';
+  if (mime.includes('ogg')) return 'ogg';
+  if (mime.includes('wav')) return 'wav';
+  if (mime.includes('mpeg') || mime.includes('mp3')) return 'mp3';
+  return 'webm';
+}
+
+export default function AlphabetRecordPanel({
+  family,
+  formIndex,
+  formChar,
+  transliteration
+}: AlphabetRecordPanelProps) {
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const [state, setState] = useState<RecordState>('idle');
+  const [message, setMessage] = useState<string | null>(null);
+  const [scope, setScope] = useState<'form' | 'family'>('form');
+
+  useEffect(() => {
+    return () => {
+      mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
+
+  if (!family.audioSlug) {
+    return null;
+  }
+
+  const targetFilename =
+    scope === 'form'
+      ? `${family.audioSlug}-${formIndex}` // extension added on upload
+      : `${family.audioSlug}`;
+
+  const startRecording = async () => {
+    setMessage(null);
+    setState('idle');
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+      const recorder = new MediaRecorder(stream, { mimeType });
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) chunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType });
+        await uploadRecording(blob, recorder.mimeType);
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setState('recording');
+    } catch {
+      setState('error');
+      setMessage('Microphone access was blocked. Allow the mic in your browser settings and try again.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+  };
+
+  const uploadRecording = async (blob: Blob, mimeType: string) => {
+    setState('uploading');
+    const ext = extensionForMime(mimeType);
+    const filename = `${targetFilename}.${ext}`;
+    const formData = new FormData();
+    formData.append('file', blob, filename);
+    formData.append('filename', filename);
+
+    try {
+      const response = await fetch('/api/alphabet/audio', { method: 'POST', body: formData });
+      const payload = (await response.json()) as { error?: string; publicPath?: string };
+
+      if (!response.ok) {
+        setState('error');
+        setMessage(payload.error ?? 'Upload failed.');
+        return;
+      }
+
+      if (payload.publicPath) clearAlphabetAudioCache(payload.publicPath);
+      setState('done');
+      setMessage(`Saved ${filename}. Tap the speaker to hear your recording for ${formChar} (${transliteration}).`);
+    } catch {
+      setState('error');
+      setMessage('Could not upload the recording. Check your connection and try again.');
+    }
+  };
+
+  return (
+    <div className="rounded-[1.75rem] border border-violet-200 bg-violet-50/60 p-4">
+      <p className="text-sm font-semibold text-violet-950">Teacher: record pronunciation</p>
+      <p className="mt-1 text-xs text-violet-800">
+        Say <strong>{transliteration}</strong> for <span className="font-ethiopic text-lg">{formChar}</span> — the browser
+        will ask to use your microphone.
+      </p>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <label className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-900">
+          <input
+            type="radio"
+            name="record-scope"
+            checked={scope === 'form'}
+            onChange={() => setScope('form')}
+            className="h-3.5 w-3.5"
+          />
+          This letter only ({family.audioSlug}-{formIndex})
+        </label>
+        <label className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-900">
+          <input
+            type="radio"
+            name="record-scope"
+            checked={scope === 'family'}
+            onChange={() => setScope('family')}
+            className="h-3.5 w-3.5"
+          />
+          Whole {family.name} family ({family.audioSlug})
+        </label>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {state !== 'recording' ? (
+          <Button type="button" size="sm" onClick={startRecording} disabled={state === 'uploading'}>
+            <Mic className="h-4 w-4" />
+            {state === 'uploading' ? 'Saving...' : 'Start recording'}
+          </Button>
+        ) : (
+          <Button type="button" size="sm" variant="danger" onClick={stopRecording}>
+            <Square className="h-4 w-4" />
+            Stop &amp; save
+          </Button>
+        )}
+      </div>
+
+      {state === 'recording' ? (
+        <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-red-700">
+          <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-red-500" />
+          Recording… say “{transliteration}” clearly, then click Stop &amp; save.
+        </p>
+      ) : null}
+
+      {message ? (
+        <Alert variant={state === 'error' ? 'error' : 'success'} className="mt-3">
+          {message}
+        </Alert>
+      ) : null}
+
+      <p className="mt-3 flex items-start gap-2 text-[11px] text-violet-700">
+        <Upload className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+        File saves to <code className="rounded bg-white/80 px-1">public/alphabet/{targetFilename}.webm</code>
+      </p>
+    </div>
+  );
+}

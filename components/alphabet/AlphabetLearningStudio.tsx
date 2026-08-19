@@ -11,6 +11,7 @@ import {
   TIGRINYA_ALPHABET_FAMILIES,
   audioPathForFamily,
   audioPathForForm,
+  audioPathsForForm,
   type AlphabetFamily,
   type AlphabetForm
 } from '../../lib/tigrinyaAlphabetFamilies';
@@ -22,7 +23,9 @@ import Button from '../ui/Button';
 import AlphabetAudioNotice from './AlphabetAudioNotice';
 import AlphabetProgressCard from './AlphabetProgressCard';
 import AlphabetQuizMode from './AlphabetQuizMode';
+import AlphabetRecordPanel from './AlphabetRecordPanel';
 import AlphabetTracePad from './AlphabetTracePad';
+import { useIsTeacher } from '../../lib/useIsTeacher';
 
 type ViewMode = 'learn' | 'quiz' | 'reference';
 
@@ -76,6 +79,7 @@ function FormButton({
 export default function AlphabetLearningStudio() {
   const { play } = useAlphabetAudio();
   const { progress, saveProgress, ready } = useAlphabetProgress();
+  const { isTeacher, ready: teacherReady } = useIsTeacher();
   const [familyIndex, setFamilyIndex] = useState(0);
   const [formIndex, setFormIndex] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('learn');
@@ -97,10 +101,12 @@ export default function AlphabetLearningStudio() {
   const playForm = async (form: AlphabetForm, index: number, familyEntry: AlphabetFamily) => {
     const key = `${familyEntry.id}-${index}`;
     setPlayingKey(key);
+    const paths = audioPathsForForm(familyEntry, index);
     await play({
       char: form.char,
       transliteration: form.transliteration,
-      audioPath: audioPathForForm(familyEntry, index) ?? audioPathForFamily(familyEntry)
+      audioPath: paths[0],
+      audioFallbackPaths: paths.slice(1)
     });
     setTimeout(() => setPlayingKey((current) => (current === key ? null : current)), 600);
   };
@@ -206,6 +212,15 @@ export default function AlphabetLearningStudio() {
                     {family.exampleTransliteration} · {family.exampleMeaning}
                   </p>
                 </div>
+
+                {teacherReady && isTeacher ? (
+                  <AlphabetRecordPanel
+                    family={family}
+                    formIndex={formIndex}
+                    formChar={selectedForm.char}
+                    transliteration={selectedForm.transliteration}
+                  />
+                ) : null}
 
                 <div>
                   <p className="mb-2 text-sm font-semibold text-slate-700">Tap any letter to hear it</p>

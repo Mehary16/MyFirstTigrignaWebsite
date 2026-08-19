@@ -1,0 +1,42 @@
+Tigrinya alphabet audio — drop MP3 files here.
+
+BE (በ) — first letter in the Be family
+  Save your recording as either:
+    ba.mp3      → plays for the whole Be family (በ ቡ ቢ ባ ቤ ብ ቦ)
+    ba-0.mp3    → plays only for በ (be)
+
+What to say:  "be"  (Tigrinya, NOT English letter "B")
+Format:        MP3, about 1–2 seconds, clear and quiet background
+Letter shown:  በ
+
+All family filenames (for when you record more):
+  ba.mp3   Be    (በ)    beles example: በለስ
+  sa.mp3   Se    (ሰ)
+  sha.mp3  She   (ሸ)
+  ka.mp3   Ke    (ከ)
+  la.mp3   Le    (ለ)
+  a.mp3    Ae    (አ)
+  za.mp3   Ze    (ዘ)
+  tsa2.mp3 Tse   (ጸ)
+  da.mp3   De    (ደ)
+  ja.mp3   Je    (ጀ)
+  hha.mp3  H'e   (ሐ)
+  tsa.mp3  T'e   (ጠ)
+  ca.mp3   Che   (ጨ)
+  ta.mp3   Te    (ተ)
+  qa.mp3   Qe    (ቀ)
+  ga.mp3   Ge    (ገ)
+  na.mp3   Ne    (ነ)
+  ya.mp3   Ye    (የ)
+  ra.mp3   Re    (ረ)
+  fa.mp3   Fe    (ፈ)
+  ha.mp3   He    (ሀ)
+  wa.mp3   We    (ወ)
+  ma.mp3   Me    (መ)
+  pha.mp3  Pe    (ፐ)
+  cha.mp3  Che   (ቸ)
+  pa.mp3   P'e   (ጰ)
+
+Per-form clips (optional):  ba-0.mp3, ba-1.mp3, … ba-6.mp3  for each vowel form.
+
+After adding ba.mp3, refresh the alphabet page and tap በ — your voice should play.

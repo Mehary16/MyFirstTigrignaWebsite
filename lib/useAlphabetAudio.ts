@@ -64,6 +64,8 @@ export type AlphabetAudioPayload = {
   char: string;
   transliteration: string;
   audioPath?: string;
+  /** Extra paths to try when audioPath is missing (e.g. family fallback). */
+  audioFallbackPaths?: string[];
 };
 
 export type AlphabetAudioResult = 'mp3' | 'ethiopic-voice' | 'english-fallback' | 'unavailable';
@@ -72,21 +74,25 @@ export function useAlphabetAudio() {
   const playingRef = useRef<string | null>(null);
 
   const play = useCallback(async (payload: AlphabetAudioPayload): Promise<AlphabetAudioResult> => {
-    const key = payload.audioPath ?? `${payload.char}-${payload.transliteration}`;
+    const paths = [payload.audioPath, ...(payload.audioFallbackPaths ?? [])].filter(
+      (path): path is string => Boolean(path)
+    );
+    const key = paths[0] ?? `${payload.char}-${payload.transliteration}`;
     playingRef.current = key;
 
-    if (payload.audioPath) {
+    for (const audioPath of paths) {
+      if (playingRef.current !== key) return 'unavailable';
       try {
-        let audio = audioCache.get(payload.audioPath);
+        let audio = audioCache.get(audioPath);
         if (!audio) {
-          audio = new Audio(payload.audioPath);
-          audioCache.set(payload.audioPath, audio);
+          audio = new Audio(audioPath);
+          audioCache.set(audioPath, audio);
         }
         audio.currentTime = 0;
         await audio.play();
         if (playingRef.current === key) return 'mp3';
       } catch {
-        // Fall through when MP3 is missing or autoplay blocked.
+        // Try next path when this clip is missing or autoplay blocked.
       }
     }
 
@@ -97,6 +103,13 @@ export function useAlphabetAudio() {
   return { play };
 }
 
-/** True when no native MP3 folder is populated yet (client-side hint only). */
+export function clearAlphabetAudioCache(publicPath?: string) {
+  if (publicPath) {
+    audioCache.delete(publicPath);
+    return;
+  }
+  audioCache.clear();
+}
+
 export const ALPHABET_AUDIO_NOTE =
   'Browser voices often read letters with an English accent. For correct Tigrinya pronunciation, add native-speaker MP3 files or connect a Tigrinya text-to-speech service.';
