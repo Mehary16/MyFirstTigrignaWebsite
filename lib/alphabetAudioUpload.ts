@@ -1,15 +1,6 @@
-import { TIGRINYA_ALPHABET_FAMILIES } from './tigrinyaAlphabetFamilies';
-
-const SLUGS = new Set(
-  TIGRINYA_ALPHABET_FAMILIES.map((family) => family.audioSlug).filter((slug): slug is string => Boolean(slug))
-);
-
-/** Validates filenames like ba.mp3, ba-0.webm */
+/** Validates filenames like ba.mp3, ba-0.webm — no import from alphabet data (avoids circular deps). */
 export function isAllowedAlphabetAudioFilename(filename: string) {
-  const match = /^([a-z0-9]+)(?:-([0-6]))?\.(mp3|webm|wav|ogg)$/.exec(filename.toLowerCase());
-  if (!match) return false;
-  const [, slug] = match;
-  return SLUGS.has(slug!);
+  return /^[a-z0-9]+(?:-[0-6])?\.(mp3|webm|wav|ogg)$/.test(filename.toLowerCase());
 }
 
 export function alphabetAudioPathsForSlug(slug: string, formIndex?: number) {

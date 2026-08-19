@@ -596,8 +596,6 @@ export const LABIALIZED_FORMS: AlphabetForm[] = [
   { char: 'ቍ', transliteration: 'qw' }
 ];
 
-import { alphabetAudioPathsForSlug } from './alphabetAudioUpload';
-
 export function audioPathForFamily(family: AlphabetFamily) {
   if (!family.audioSlug) return undefined;
   return `/alphabet/${family.audioSlug}.mp3`;
@@ -611,5 +609,13 @@ export function audioPathForForm(family: AlphabetFamily, formIndex: number) {
 /** Try form clip first, then the whole family clip (multiple formats). */
 export function audioPathsForForm(family: AlphabetFamily, formIndex: number) {
   if (!family.audioSlug) return [];
-  return alphabetAudioPathsForSlug(family.audioSlug, formIndex);
+  const extensions = ['mp3', 'webm', 'wav', 'ogg'] as const;
+  const paths: string[] = [];
+  for (const ext of extensions) {
+    paths.push(`/alphabet/${family.audioSlug}-${formIndex}.${ext}`);
+  }
+  for (const ext of extensions) {
+    paths.push(`/alphabet/${family.audioSlug}.${ext}`);
+  }
+  return paths;
 }
