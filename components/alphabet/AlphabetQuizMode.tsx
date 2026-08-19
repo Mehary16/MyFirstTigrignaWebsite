@@ -11,7 +11,7 @@ import {
   type AlphabetFormRef,
   type AlphabetProgress
 } from '../../lib/alphabetProgress';
-import { audioPathForFamily, audioPathForForm } from '../../lib/tigrinyaAlphabetFamilies';
+import { audioPathsForForm } from '../../lib/tigrinyaAlphabetFamilies';
 import { useAlphabetAudio } from '../../lib/useAlphabetAudio';
 import { cn } from '../../lib/cn';
 import Alert from '../ui/Alert';
@@ -49,10 +49,12 @@ export default function AlphabetQuizMode({ progress, onProgressChange, familyId 
     if (!question) return;
     const family = getFamilyById(question.correct.familyId);
     if (!family) return;
+    const paths = audioPathsForForm(family, question.correct.formIndex);
     void play({
       char: question.correct.char,
       transliteration: question.correct.transliteration,
-      audioPath: audioPathForForm(family, question.correct.formIndex) ?? audioPathForFamily(family)
+      audioPath: paths[0],
+      audioFallbackPaths: paths.slice(1)
     });
   }, [question, play]);
 
@@ -60,10 +62,12 @@ export default function AlphabetQuizMode({ progress, onProgressChange, familyId 
     if (!question) return;
     const family = getFamilyById(question.correct.familyId);
     if (!family) return;
+    const paths = audioPathsForForm(family, question.correct.formIndex);
     void play({
       char: question.correct.char,
       transliteration: question.correct.transliteration,
-      audioPath: audioPathForForm(family, question.correct.formIndex) ?? audioPathForFamily(family)
+      audioPath: paths[0],
+      audioFallbackPaths: paths.slice(1)
     });
   };
 
