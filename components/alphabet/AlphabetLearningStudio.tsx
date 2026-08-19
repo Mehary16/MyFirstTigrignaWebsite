@@ -19,6 +19,7 @@ import { useAlphabetProgress } from '../../lib/useAlphabetProgress';
 import { cn } from '../../lib/cn';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
+import AlphabetAudioNotice from './AlphabetAudioNotice';
 import AlphabetProgressCard from './AlphabetProgressCard';
 import AlphabetQuizMode from './AlphabetQuizMode';
 import AlphabetTracePad from './AlphabetTracePad';
@@ -96,7 +97,11 @@ export default function AlphabetLearningStudio() {
   const playForm = async (form: AlphabetForm, index: number, familyEntry: AlphabetFamily) => {
     const key = `${familyEntry.id}-${index}`;
     setPlayingKey(key);
-    await play(form.transliteration, audioPathForForm(familyEntry, index) ?? audioPathForFamily(familyEntry));
+    await play({
+      char: form.char,
+      transliteration: form.transliteration,
+      audioPath: audioPathForForm(familyEntry, index) ?? audioPathForFamily(familyEntry)
+    });
     setTimeout(() => setPlayingKey((current) => (current === key ? null : current)), 600);
   };
 
@@ -135,6 +140,8 @@ export default function AlphabetLearningStudio() {
   return (
     <div className="space-y-6">
       {ready ? <AlphabetProgressCard progress={progress} activeFamilyId={family.id} /> : null}
+
+      <AlphabetAudioNotice />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
@@ -255,7 +262,11 @@ export default function AlphabetLearningStudio() {
                   type="button"
                   onClick={() => {
                     selectFamily(index);
-                    play(entry.forms[0]!.transliteration, audioPathForFamily(entry));
+                    play({
+                      char: entry.forms[0]!.char,
+                      transliteration: entry.forms[0]!.transliteration,
+                      audioPath: audioPathForFamily(entry)
+                    });
                   }}
                   className={cn(
                     'rounded-2xl border px-2 py-3 transition hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
@@ -341,7 +352,12 @@ export default function AlphabetLearningStudio() {
                   <td key={form.char} className="px-2 py-3 text-center">
                     <button
                       type="button"
-                      onClick={() => play(form.transliteration)}
+                      onClick={() =>
+                        play({
+                          char: form.char,
+                          transliteration: form.transliteration
+                        })
+                      }
                       className="font-ethiopic inline-flex min-w-[2.5rem] flex-col items-center rounded-xl px-1 py-1 text-xl transition hover:bg-amber-50"
                     >
                       {form.char}

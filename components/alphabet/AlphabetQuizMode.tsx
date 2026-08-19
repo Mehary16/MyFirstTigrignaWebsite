@@ -49,20 +49,22 @@ export default function AlphabetQuizMode({ progress, onProgressChange, familyId 
     if (!question) return;
     const family = getFamilyById(question.correct.familyId);
     if (!family) return;
-    void play(
-      question.correct.transliteration,
-      audioPathForForm(family, question.correct.formIndex) ?? audioPathForFamily(family)
-    );
+    void play({
+      char: question.correct.char,
+      transliteration: question.correct.transliteration,
+      audioPath: audioPathForForm(family, question.correct.formIndex) ?? audioPathForFamily(family)
+    });
   }, [question, play]);
 
   const replaySound = () => {
     if (!question) return;
     const family = getFamilyById(question.correct.familyId);
     if (!family) return;
-    void play(
-      question.correct.transliteration,
-      audioPathForForm(family, question.correct.formIndex) ?? audioPathForFamily(family)
-    );
+    void play({
+      char: question.correct.char,
+      transliteration: question.correct.transliteration,
+      audioPath: audioPathForForm(family, question.correct.formIndex) ?? audioPathForFamily(family)
+    });
   };
 
   const handleAnswer = (choice: AlphabetFormRef) => {
