@@ -84,6 +84,7 @@ export default function AlphabetRecordPanel({
 
   const stopRecording = () => {
     if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.requestData();
       mediaRecorderRef.current.stop();
     }
   };
@@ -98,11 +99,17 @@ export default function AlphabetRecordPanel({
 
     try {
       const response = await fetch('/api/alphabet/audio', { method: 'POST', body: formData });
-      const payload = (await response.json()) as { error?: string; publicPath?: string };
+      let payload: { error?: string; publicPath?: string } = {};
+
+      try {
+        payload = (await response.json()) as { error?: string; publicPath?: string };
+      } catch {
+        payload = {};
+      }
 
       if (!response.ok) {
         setState('error');
-        setMessage(payload.error ?? 'Upload failed.');
+        setMessage(payload.error ?? `Upload failed (${response.status}). Please try again.`);
         return;
       }
 
@@ -175,7 +182,7 @@ export default function AlphabetRecordPanel({
 
       <p className="mt-3 flex items-start gap-2 text-[11px] text-violet-700">
         <Upload className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-        File saves to <code className="rounded bg-white/80 px-1">public/alphabet/{targetFilename}.webm</code>
+        Recording saves to Supabase storage as <code className="rounded bg-white/80 px-1">{targetFilename}.webm</code>
       </p>
     </div>
   );

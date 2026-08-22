@@ -1,3 +1,5 @@
+import { alphabetAudioPathsForSlug } from './alphabetAudioUpload';
+
 export type AlphabetForm = {
   char: string;
   transliteration: string;
@@ -598,24 +600,16 @@ export const LABIALIZED_FORMS: AlphabetForm[] = [
 
 export function audioPathForFamily(family: AlphabetFamily) {
   if (!family.audioSlug) return undefined;
-  return `/alphabet/${family.audioSlug}.mp3`;
+  return alphabetAudioPathsForSlug(family.audioSlug)[0];
 }
 
 export function audioPathForForm(family: AlphabetFamily, formIndex: number) {
   if (!family.audioSlug) return undefined;
-  return `/alphabet/${family.audioSlug}-${formIndex}.mp3`;
+  return alphabetAudioPathsForSlug(family.audioSlug, formIndex)[0];
 }
 
 /** Try form clip first, then the whole family clip (multiple formats). */
 export function audioPathsForForm(family: AlphabetFamily, formIndex: number) {
   if (!family.audioSlug) return [];
-  const extensions = ['mp3', 'webm', 'wav', 'ogg'] as const;
-  const paths: string[] = [];
-  for (const ext of extensions) {
-    paths.push(`/alphabet/${family.audioSlug}-${formIndex}.${ext}`);
-  }
-  for (const ext of extensions) {
-    paths.push(`/alphabet/${family.audioSlug}.${ext}`);
-  }
-  return paths;
+  return alphabetAudioPathsForSlug(family.audioSlug, formIndex);
 }
