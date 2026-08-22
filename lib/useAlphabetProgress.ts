@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   EMPTY_ALPHABET_PROGRESS,
   readAlphabetProgress,
@@ -13,6 +13,18 @@ export function useAlphabetProgress() {
   const [userId, setUserId] = useState<string | null>(null);
   const [progress, setProgress] = useState<AlphabetProgress>(EMPTY_ALPHABET_PROGRESS);
   const [ready, setReady] = useState(false);
+  const syncTimerRef = useRef<number | null>(null);
+
+  const syncToServer = useCallback((next: AlphabetProgress) => {
+    if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = window.setTimeout(() => {
+      void fetch('/api/alphabet/progress', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ progress: next })
+      });
+    }, 400);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -24,9 +36,28 @@ export function useAlphabetProgress() {
           data: { user }
         } = await supabase.auth.getUser();
         if (!active) return;
+
         const id = user?.id ?? null;
         setUserId(id);
-        setProgress(readAlphabetProgress(id));
+
+        if (!id) {
+          setProgress(EMPTY_ALPHABET_PROGRESS);
+          return;
+        }
+
+        const response = await fetch('/api/alphabet/progress');
+        if (response.ok) {
+          const payload = (await response.json()) as { progress?: AlphabetProgress };
+          if (payload.progress) {
+            setProgress(payload.progress);
+            writeAlphabetProgress(id, payload.progress);
+            return;
+          }
+        }
+
+        const local = readAlphabetProgress(id);
+        setProgress(local);
+        syncToServer(local);
       } catch {
         if (!active) return;
         setProgress(readAlphabetProgress(null));
@@ -38,18 +69,20 @@ export function useAlphabetProgress() {
     void load();
     return () => {
       active = false;
+      if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
     };
-  }, []);
+  }, [syncToServer]);
 
   const saveProgress = useCallback(
     (updater: (current: AlphabetProgress) => AlphabetProgress) => {
       setProgress((current) => {
         const next = updater(current);
         writeAlphabetProgress(userId, next);
+        if (userId) syncToServer(next);
         return next;
       });
     },
-    [userId]
+    [syncToServer, userId]
   );
 
   return { progress, saveProgress, ready, userId };

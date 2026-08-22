@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import type { MaterialRow } from '../../../lib/teacherMaterials';
+import DashboardAlphabetCard from '../../../components/DashboardAlphabetCard';
 import DashboardScrollTarget from '../../../components/DashboardScrollTarget';
 import type { StudentListItem } from '../../../lib/studentList';
 import { toStudentListItem } from '../../../lib/studentList';
@@ -157,6 +158,8 @@ export default async function TeacherDashboardPage({
               : undefined
         }
       />
+
+      <DashboardAlphabetCard href="/teacher/alphabet" roleLabel="Teacher" />
 
       <TeacherDashboardShell
         studentList={studentList}

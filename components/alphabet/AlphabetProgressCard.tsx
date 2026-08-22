@@ -35,7 +35,7 @@ export default function AlphabetProgressCard({ progress, activeFamilyId }: Alpha
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-slate-900">Your alphabet progress</p>
-          <p className="text-xs text-slate-500">Saved on this device{progress.updatedAt ? '' : ''} while you learn.</p>
+          <p className="text-xs text-slate-500">Saved to your account while you learn.</p>
         </div>
         <Badge variant="brand">{masteredPct}% mastered</Badge>
       </div>

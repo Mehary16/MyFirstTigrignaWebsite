@@ -3,11 +3,14 @@
 import Link from 'next/link';
 import LogoutButton from './LogoutButton';
 import { cn } from '../lib/cn';
+import type { UserRole } from '../lib/routes';
 
 export type AuthNavLinksProps = {
   isLoggedIn: boolean;
+  role?: UserRole;
   dashboardHref?: string;
   dashboardLabel?: string;
+  alphabetHref?: string;
   pathname: string;
   layout?: 'inline' | 'stacked';
 };
@@ -21,14 +24,16 @@ function navLinkClass(layout: 'inline' | 'stacked') {
 
 export default function AuthNavLinks({
   isLoggedIn,
+  role,
   dashboardHref,
   dashboardLabel,
+  alphabetHref,
   pathname,
   layout = 'inline'
 }: AuthNavLinksProps) {
   const onLoginPage = pathname === '/login';
   const onAboutPage = pathname === '/about';
-  const onAlphabetPage = pathname === '/resources/alphabet';
+  const onAlphabetPage = pathname === '/student/alphabet' || pathname === '/teacher/alphabet';
   const onHelpPage = pathname === '/help';
   const onSettingsPage = pathname === '/settings';
   const onDashboard = Boolean(dashboardHref && pathname.startsWith(dashboardHref));
@@ -44,8 +49,8 @@ export default function AuthNavLinks({
           About Us
         </Link>
       ) : null}
-      {!onAlphabetPage ? (
-        <Link href="/resources/alphabet" className={linkClass}>
+      {!onAlphabetPage && alphabetHref && (role === 'Student' || role === 'Teacher') ? (
+        <Link href={alphabetHref} className={linkClass}>
           Alphabet / ፊደል
         </Link>
       ) : null}

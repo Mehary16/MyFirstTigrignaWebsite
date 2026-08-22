@@ -78,7 +78,7 @@ export const ABOUT_COPY: Record<AboutLocale, AboutCopy> = {
         variant: 'secondary'
       },
       {
-        href: '/resources/alphabet',
+        href: '/login?next=/student/alphabet',
         primary: 'Unlock the Script Now',
         secondary: 'ታሪኽካ ባዕልኻ ኣንብቦ',
         variant: 'secondary'
@@ -194,7 +194,7 @@ export const ABOUT_COPY: Record<AboutLocale, AboutCopy> = {
         variant: 'secondary'
       },
       {
-        href: '/resources/alphabet',
+        href: '/login?next=/student/alphabet',
         primary: 'ታሪኽካ ባዕልኻ ኣንብቦ',
         secondary: 'Unlock the Script Now',
         variant: 'secondary'

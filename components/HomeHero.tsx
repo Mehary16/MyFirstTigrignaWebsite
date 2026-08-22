@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, GraduationCap, HelpCircle, Languages, Sparkles, Users } from 'lucide-react';
+import { BookOpen, GraduationCap, HelpCircle, Sparkles, Users } from 'lucide-react';
 
 type HomeHeroProps = {
   dashboardHref?: string;
@@ -43,13 +43,6 @@ export default function HomeHero({ dashboardHref, dashboardLabel, isLoggedIn }: 
             )}
             <Link href="/login?mode=signup&accountType=Student" className="link-button-secondary px-6 py-3.5 text-base">
               Create account
-            </Link>
-            <Link
-              href="/resources/alphabet"
-              className="link-button-secondary inline-flex items-center gap-2 px-6 py-3.5 text-base"
-            >
-              <Languages className="h-4 w-4" aria-hidden />
-              Explore alphabet
             </Link>
           </div>
 

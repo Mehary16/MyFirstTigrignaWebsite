@@ -10,3 +10,14 @@ export function dashboardPathForRole(role: string | undefined | null) {
       return '/student/dashboard';
   }
 }
+
+export function alphabetPathForRole(role: string | undefined | null) {
+  switch (role) {
+    case 'Teacher':
+      return '/teacher/alphabet';
+    case 'Student':
+      return '/student/alphabet';
+    default:
+      return '/parent/dashboard';
+  }
+}
