@@ -17,8 +17,8 @@ export default function NotFound() {
         <Link href="/login" className="link-button-secondary px-6 py-3 text-sm">
           Login
         </Link>
-        <Link href="/resources/alphabet" className="link-button-secondary px-6 py-3 text-sm">
-          Explore alphabet
+        <Link href="/help" className="link-button-secondary px-6 py-3 text-sm">
+          Help &amp; FAQ
         </Link>
       </div>
     </section>

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import HomeworkSubmissionForm from '../../../components/StudentHomeworkForm';
+import DashboardAlphabetCard from '../../../components/DashboardAlphabetCard';
 import DashboardScrollTarget from '../../../components/DashboardScrollTarget';
 import StudentSubmissionList from '../../../components/StudentSubmissionList';
 import LogoutButton from '../../../components/LogoutButton';
@@ -182,6 +183,8 @@ export default async function StudentDashboardPage() {
             />
           }
         />
+
+        <DashboardAlphabetCard href="/student/alphabet" roleLabel="Student" />
 
         <DashboardSectionNav
           links={[

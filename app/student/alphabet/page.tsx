@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
-import { alphabetPathForRole } from '../../../lib/routes';
+import AlphabetPageShell from '../../../components/alphabet/AlphabetPageShell';
 import { getUserRole } from '../../../lib/roleAuth';
 import { createServerSupabaseClient } from '../../../lib/supabaseServer';
 
-export default async function LegacyAlphabetRedirectPage() {
+export default async function StudentAlphabetPage() {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user }
@@ -13,6 +13,14 @@ export default async function LegacyAlphabetRedirectPage() {
     redirect('/login?next=/student/alphabet');
   }
 
+  if (user.user_metadata?.force_password_change) {
+    redirect('/change-password');
+  }
+
   const role = await getUserRole(supabase, user);
-  redirect(alphabetPathForRole(role));
+  if (role !== 'Student') {
+    redirect(role === 'Teacher' ? '/teacher/alphabet' : '/login');
+  }
+
+  return <AlphabetPageShell role="Student" dashboardHref="/student/dashboard" />;
 }

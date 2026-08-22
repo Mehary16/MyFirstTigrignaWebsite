@@ -1,8 +1,7 @@
 import Link from 'next/link';
-import { BookOpen, HelpCircle, Info, Languages } from 'lucide-react';
+import { BookOpen, HelpCircle, Info } from 'lucide-react';
 
 const LINKS = [
-  { href: '/resources/alphabet', label: 'Alphabet', icon: Languages },
   { href: '/help', label: 'Help & FAQ', icon: HelpCircle },
   { href: '/about', label: 'About', icon: Info }
 ] as const;

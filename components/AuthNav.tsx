@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '../lib/supabaseServer';
 import { getUserRole } from '../lib/roleAuth';
-import { dashboardPathForRole } from '../lib/routes';
+import { alphabetPathForRole, dashboardPathForRole } from '../lib/routes';
 import AuthNavClient from './AuthNavClient';
 
 export default async function AuthNav() {
@@ -18,8 +18,10 @@ export default async function AuthNav() {
   return (
     <AuthNavClient
       isLoggedIn
+      role={role}
       dashboardHref={dashboardPathForRole(role)}
       dashboardLabel={role === 'Teacher' ? 'Teacher Dashboard' : role === 'Parent' ? 'Parent Dashboard' : 'Student Dashboard'}
+      alphabetHref={role === 'Teacher' || role === 'Student' ? alphabetPathForRole(role) : undefined}
     />
   );
 }

@@ -242,10 +242,6 @@ export default function AboutPage() {
             <Link href="/login?mode=signup&accountType=Student" className="link-button-primary px-6 py-3 text-sm">
               {copy.signUpFree}
             </Link>
-            <Link href="/resources/alphabet" className="link-button-secondary px-6 py-3 text-sm">
-              <BookOpen className="mr-2 inline h-4 w-4" aria-hidden />
-              {copy.exploreAlphabet}
-            </Link>
           </div>
         </div>
       </Card>

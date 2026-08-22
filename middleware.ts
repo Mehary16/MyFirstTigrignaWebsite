@@ -4,9 +4,14 @@ import { dashboardPathForRole } from './lib/routes';
 import { fetchProfileRole, resolveRoleFromAuth } from './lib/roleAuth';
 
 const PROTECTED_PREFIXES = ['/teacher', '/parent', '/student'] as const;
+const ALPHABET_PATHS = ['/student/alphabet', '/teacher/alphabet', '/resources/alphabet'] as const;
 
 function isProtectedPath(pathname: string) {
   return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function isAlphabetPath(pathname: string) {
+  return ALPHABET_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
 function dashboardForRole(role: string) {
@@ -77,7 +82,7 @@ export async function middleware(request: NextRequest) {
     data: { user }
   } = await supabase.auth.getUser();
 
-  if (!user && (isProtectedPath(pathname) || pathname === '/settings')) {
+  if (!user && (isProtectedPath(pathname) || pathname === '/settings' || isAlphabetPath(pathname))) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.search = '';
@@ -164,5 +169,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/login', '/reset-password', '/change-password', '/settings', '/student/:path*', '/parent/:path*', '/teacher/:path*', '/suspended']
+  matcher: ['/', '/login', '/reset-password', '/change-password', '/settings', '/resources/alphabet', '/student/:path*', '/parent/:path*', '/teacher/:path*', '/suspended']
 };

@@ -13,6 +13,7 @@ import {
 } from '../../lib/alphabetProgress';
 import { audioPathsForForm } from '../../lib/tigrinyaAlphabetFamilies';
 import { useAlphabetAudio } from '../../lib/useAlphabetAudio';
+import { logAlphabetActivity } from '../../lib/logAlphabetActivity';
 import { cn } from '../../lib/cn';
 import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
@@ -83,6 +84,14 @@ export default function AlphabetQuizMode({ progress, onProgressChange, familyId 
       let next = recordQuizAnswer(current, question.correct.key, isCorrect);
       if (isCorrect) next = markFormPracticed(next, question.correct.key);
       return next;
+    });
+
+    void logAlphabetActivity({
+      activityType: 'quiz_answer',
+      formKey: question.correct.key,
+      familyId: question.correct.familyId,
+      correct: isCorrect,
+      metadata: { chosen: choice.char, answer: question.correct.char }
     });
   };
 

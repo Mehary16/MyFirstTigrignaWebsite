@@ -446,16 +446,10 @@ export default function LoginPage() {
                   </p>
                   <p className="mt-1 text-sm text-white/75">
                     {locale === 'ti'
-                      ? 'ንምምሃር ዝሕግዙ መበገሲ ፊደላት'
-                      : 'Starter fidel letters shown in Tigrinya script.'}
+                      ? 'ኣብ ምስ ተመዝገብካ ኣብ ዳሽቦርድካ ፊደል ክትምሃር ትኽእል'
+                      : 'Sign in to practice the full alphabet from your dashboard.'}
                   </p>
                 </div>
-                <Link
-                  href="/resources/alphabet"
-                  className="text-xs font-semibold text-amber-200 hover:text-white hover:underline"
-                >
-                  {copy.exploreAlphabet}
-                </Link>
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">

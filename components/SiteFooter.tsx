@@ -26,8 +26,8 @@ export default function SiteFooter() {
             <Link href="/about" className="text-slate-600 hover:text-brand-800 hover:underline">
               About Us
             </Link>
-            <Link href="/resources/alphabet" className="text-slate-600 hover:text-brand-800 hover:underline">
-              Tigrinya Alphabet
+            <Link href="/help" className="text-slate-600 hover:text-brand-800 hover:underline">
+              Help &amp; FAQ
             </Link>
             <Link href="/login" className="text-slate-600 hover:text-brand-800 hover:underline">
               Login

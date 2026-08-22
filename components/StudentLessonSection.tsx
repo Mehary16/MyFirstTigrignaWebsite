@@ -75,7 +75,7 @@ export default function StudentLessonSection({ lessons, viewedLessonIds, gradeLa
           <h2 className="text-2xl font-semibold text-slate-950">Video Lessons</h2>
           {gradeLabel ? <p className="mt-1 text-sm text-amber-800">{gradeLabel} lessons only</p> : null}
         </div>
-        <a href="/resources/alphabet" className="text-sm font-semibold text-amber-800 hover:underline">
+        <a href="/student/alphabet" className="text-sm font-semibold text-amber-800 hover:underline">
           Practice Tigrinya Alphabet →
         </a>
       </div>

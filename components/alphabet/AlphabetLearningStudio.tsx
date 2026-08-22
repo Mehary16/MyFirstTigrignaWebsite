@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Volume2 } from 'lucide-react';
 import {
   formKey,
@@ -17,6 +17,7 @@ import {
 } from '../../lib/tigrinyaAlphabetFamilies';
 import { useAlphabetAudio } from '../../lib/useAlphabetAudio';
 import { useAlphabetProgress } from '../../lib/useAlphabetProgress';
+import { logAlphabetActivity } from '../../lib/logAlphabetActivity';
 import { cn } from '../../lib/cn';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
@@ -25,9 +26,12 @@ import AlphabetProgressCard from './AlphabetProgressCard';
 import AlphabetQuizMode from './AlphabetQuizMode';
 import AlphabetRecordPanel from './AlphabetRecordPanel';
 import AlphabetTracePad from './AlphabetTracePad';
-import { useIsTeacher } from '../../lib/useIsTeacher';
 
 type ViewMode = 'learn' | 'quiz' | 'reference';
+
+type AlphabetLearningStudioProps = {
+  showTeacherTools?: boolean;
+};
 
 function FormButton({
   form,
@@ -76,10 +80,9 @@ function FormButton({
   );
 }
 
-export default function AlphabetLearningStudio() {
+export default function AlphabetLearningStudio({ showTeacherTools = false }: AlphabetLearningStudioProps) {
   const { play } = useAlphabetAudio();
   const { progress, saveProgress, ready } = useAlphabetProgress();
-  const { isTeacher, ready: teacherReady } = useIsTeacher();
   const [familyIndex, setFamilyIndex] = useState(0);
   const [formIndex, setFormIndex] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('learn');
@@ -117,7 +120,35 @@ export default function AlphabetLearningStudio() {
   };
 
   const markCurrentFormPracticed = () => {
+    const alreadyPracticed = Boolean(progress.practiced[selectedFormKey]);
     saveProgress((current) => markFormPracticed(current, selectedFormKey));
+    if (!alreadyPracticed) {
+      void logAlphabetActivity({
+        activityType: 'trace',
+        formKey: selectedFormKey,
+        familyId: family.id,
+        metadata: { char: selectedForm.char, transliteration: selectedForm.transliteration }
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (viewMode !== 'learn') return;
+    void logAlphabetActivity({
+      activityType: 'learn',
+      formKey: selectedFormKey,
+      familyId: family.id,
+      metadata: { char: selectedForm.char, transliteration: selectedForm.transliteration }
+    });
+  }, [viewMode, selectedFormKey, family.id, selectedForm.char, selectedForm.transliteration]);
+
+  const openQuiz = () => {
+    setViewMode('quiz');
+    void logAlphabetActivity({
+      activityType: 'quiz_start',
+      familyId: quizScopeFamily ? family.id : undefined,
+      metadata: { scope: quizScopeFamily ? 'family' : 'full' }
+    });
   };
 
   const goPrev = () => {
@@ -163,7 +194,7 @@ export default function AlphabetLearningStudio() {
             type="button"
             size="sm"
             variant={viewMode === 'quiz' ? 'primary' : 'secondary'}
-            onClick={() => setViewMode('quiz')}
+            onClick={openQuiz}
           >
             Quiz
           </Button>
@@ -213,7 +244,7 @@ export default function AlphabetLearningStudio() {
                   </p>
                 </div>
 
-                {teacherReady && isTeacher ? (
+                {showTeacherTools ? (
                   <AlphabetRecordPanel
                     family={family}
                     formIndex={formIndex}
@@ -388,9 +419,7 @@ export default function AlphabetLearningStudio() {
       ) : null}
 
       <p className="text-xs text-slate-500">
-        Click any letter to hear its sound. Progress is saved on this device for signed-in students and guests separately.
-        Add MP3 files under <code className="rounded bg-slate-100 px-1 py-0.5">public/alphabet/</code> for native-speaker
-        audio.
+        Progress is saved to your account for students and teachers.
       </p>
     </div>
   );
