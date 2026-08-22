@@ -48,13 +48,21 @@ export async function ensureLessonMaterialsBucket() {
   });
 }
 
+export async function ensureAlphabetAudioBucket() {
+  return ensureBucket({
+    id: STORAGE_BUCKETS.alphabetAudio,
+    fileSizeLimit: 2 * 1024 * 1024
+  });
+}
+
 export async function ensureAllStorageBuckets() {
-  const [studentBucket, lessonBucket] = await Promise.all([
+  const [studentBucket, lessonBucket, alphabetBucket] = await Promise.all([
     ensureStudentSubmissionsBucket(),
-    ensureLessonMaterialsBucket()
+    ensureLessonMaterialsBucket(),
+    ensureAlphabetAudioBucket()
   ]);
 
-  return studentBucket && lessonBucket;
+  return studentBucket && lessonBucket && alphabetBucket;
 }
 
 export const BUCKET_SETUP_MESSAGE =
