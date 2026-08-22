@@ -3,6 +3,7 @@ import { isAllowedAlphabetAudioFilename } from '../../../../lib/alphabetAudioUpl
 import { isTeacherUser } from '../../../../lib/auth';
 import { BUCKET_SETUP_MESSAGE, ensureAlphabetAudioBucket } from '../../../../lib/ensureStorageBucket';
 import { STORAGE_BUCKETS } from '../../../../lib/storageBuckets';
+import { createAdminSupabaseClient } from '../../../../lib/supabaseAdmin';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
 
 const EXTENSION_TO_CONTENT_TYPE: Record<string, string> = {
@@ -57,8 +58,10 @@ export async function POST(request: Request) {
 
     const extension = filename.split('.').pop()?.toLowerCase() ?? 'webm';
     const contentType = file.type || EXTENSION_TO_CONTENT_TYPE[extension] || 'application/octet-stream';
+    const admin = createAdminSupabaseClient();
+    const storageClient = admin ?? supabase;
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await storageClient.storage
       .from(STORAGE_BUCKETS.alphabetAudio)
       .upload(filename, file, {
         cacheControl: '3600',
@@ -67,11 +70,16 @@ export async function POST(request: Request) {
       });
 
     if (uploadError) {
-      const message = uploadError.message.includes('Bucket not found') ? BUCKET_SETUP_MESSAGE : uploadError.message;
+      const isRlsError = uploadError.message.toLowerCase().includes('row-level security');
+      const message = uploadError.message.includes('Bucket not found')
+        ? BUCKET_SETUP_MESSAGE
+        : isRlsError
+          ? 'Storage permission denied. Run supabase/FIX_ALPHABET_AUDIO_STORAGE.sql in the Supabase SQL Editor, then try again.'
+          : uploadError.message;
       return NextResponse.json({ error: message }, { status: 500 });
     }
 
-    const { data: publicData } = supabase.storage.from(STORAGE_BUCKETS.alphabetAudio).getPublicUrl(uploadData.path);
+    const { data: publicData } = storageClient.storage.from(STORAGE_BUCKETS.alphabetAudio).getPublicUrl(uploadData.path);
 
     return NextResponse.json({
       success: true,
