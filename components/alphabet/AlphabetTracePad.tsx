@@ -11,16 +11,36 @@ type AlphabetTracePadProps = {
 };
 
 type Point = { x: number; y: number };
+type Stroke = Point[];
 
 export default function AlphabetTracePad({ character, transliteration, accent, onPracticed }: AlphabetTracePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
-  const lastPointRef = useRef<Point | null>(null);
+  const strokesRef = useRef<Stroke[]>([]);
+  const currentStrokeRef = useRef<Stroke | null>(null);
   const [strokeCount, setStrokeCount] = useState(0);
   const [hasDrawn, setHasDrawn] = useState(false);
   const practicedRef = useRef(false);
 
-  const drawGuide = useCallback(() => {
+  const drawStrokePath = useCallback(
+    (ctx: CanvasRenderingContext2D, stroke: Stroke, lineWidth: number) => {
+      if (stroke.length === 0) return;
+
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(stroke[0].x, stroke[0].y);
+      for (let i = 1; i < stroke.length; i += 1) {
+        ctx.lineTo(stroke[i].x, stroke[i].y);
+      }
+      ctx.stroke();
+    },
+    [accent]
+  );
+
+  const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -49,20 +69,30 @@ export default function AlphabetTracePad({ character, transliteration, accent, o
     ctx.textBaseline = 'middle';
     ctx.fillStyle = 'rgba(148, 163, 184, 0.35)';
     ctx.fillText(character, size / 2, size / 2 + size * 0.03);
-  }, [character]);
+
+    const lineWidth = Math.max(4, size * 0.018);
+    for (const stroke of strokesRef.current) {
+      drawStrokePath(ctx, stroke, lineWidth);
+    }
+    if (currentStrokeRef.current) {
+      drawStrokePath(ctx, currentStrokeRef.current, lineWidth);
+    }
+  }, [character, drawStrokePath]);
 
   useEffect(() => {
-    drawGuide();
+    strokesRef.current = [];
+    currentStrokeRef.current = null;
+    redrawCanvas();
     setStrokeCount(0);
     setHasDrawn(false);
     practicedRef.current = false;
-  }, [character, drawGuide]);
+  }, [character, redrawCanvas]);
 
   useEffect(() => {
-    const onResize = () => drawGuide();
+    const onResize = () => redrawCanvas();
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [drawGuide]);
+  }, [redrawCanvas]);
 
   const getPoint = (event: React.PointerEvent<HTMLCanvasElement>): Point => {
     const canvas = canvasRef.current!;
@@ -76,30 +106,17 @@ export default function AlphabetTracePad({ character, transliteration, accent, o
   const startDraw = (event: React.PointerEvent<HTMLCanvasElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     drawingRef.current = true;
-    lastPointRef.current = getPoint(event);
+    const point = getPoint(event);
+    currentStrokeRef.current = [point];
     setStrokeCount((count) => count + 1);
   };
 
   const draw = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!drawingRef.current) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
+    if (!drawingRef.current || !currentStrokeRef.current) return;
 
     const point = getPoint(event);
-    const last = lastPointRef.current ?? point;
-
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = Math.max(4, canvas.clientWidth * 0.018);
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(last.x, last.y);
-    ctx.lineTo(point.x, point.y);
-    ctx.stroke();
-
-    lastPointRef.current = point;
+    currentStrokeRef.current.push(point);
+    redrawCanvas();
     setHasDrawn(true);
 
     if (!practicedRef.current) {
@@ -109,12 +126,42 @@ export default function AlphabetTracePad({ character, transliteration, accent, o
   };
 
   const endDraw = () => {
+    if (currentStrokeRef.current && currentStrokeRef.current.length > 0) {
+      strokesRef.current.push(currentStrokeRef.current);
+    }
+    currentStrokeRef.current = null;
     drawingRef.current = false;
-    lastPointRef.current = null;
+  };
+
+  const undoLastStroke = () => {
+    if (drawingRef.current) {
+      currentStrokeRef.current = null;
+      drawingRef.current = false;
+      redrawCanvas();
+      setStrokeCount((count) => Math.max(0, count - 1));
+      setHasDrawn(strokesRef.current.length > 0);
+      if (strokesRef.current.length === 0) {
+        practicedRef.current = false;
+      }
+      return;
+    }
+
+    if (strokesRef.current.length === 0) return;
+
+    strokesRef.current.pop();
+    redrawCanvas();
+    setStrokeCount((count) => Math.max(0, count - 1));
+    setHasDrawn(strokesRef.current.length > 0);
+
+    if (strokesRef.current.length === 0) {
+      practicedRef.current = false;
+    }
   };
 
   const clear = () => {
-    drawGuide();
+    strokesRef.current = [];
+    currentStrokeRef.current = null;
+    redrawCanvas();
     setStrokeCount(0);
     setHasDrawn(false);
     practicedRef.current = false;
@@ -130,9 +177,20 @@ export default function AlphabetTracePad({ character, transliteration, accent, o
             ({transliteration})
           </p>
         </div>
-        <Button type="button" variant="secondary" size="sm" onClick={clear}>
-          Clear
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={undoLastStroke}
+            disabled={strokeCount === 0}
+          >
+            Undo
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={clear} disabled={strokeCount === 0}>
+            Clear all
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
