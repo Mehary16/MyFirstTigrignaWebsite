@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Mic, Square, Upload } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Mic, RotateCcw, Square, Upload, Volume2 } from 'lucide-react';
+import { alphabetAudioPathsForTarget, findAlphabetRecordingUrl } from '../../lib/alphabetAudioUpload';
 import type { AlphabetFamily } from '../../lib/tigrinyaAlphabetFamilies';
 import { clearAlphabetAudioCache } from '../../lib/useAlphabetAudio';
 import Alert from '../ui/Alert';
@@ -30,30 +31,54 @@ export default function AlphabetRecordPanel({
   formChar,
   transliteration
 }: AlphabetRecordPanelProps) {
+  const audioSlug = family.audioSlug;
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const [state, setState] = useState<RecordState>('idle');
   const [message, setMessage] = useState<string | null>(null);
   const [scope, setScope] = useState<'form' | 'family'>('form');
+  const [existingRecording, setExistingRecording] = useState<string | null>(null);
+  const [checkingRecording, setCheckingRecording] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
 
   useEffect(() => {
     return () => {
       mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+      previewAudioRef.current?.pause();
     };
   }, []);
 
-  if (!family.audioSlug) {
+  const targetFilename =
+    scope === 'form' ? `${audioSlug ?? 'clip'}-${formIndex}` : `${audioSlug ?? 'clip'}`;
+
+  const refreshExistingRecording = useCallback(async () => {
+    if (!audioSlug) {
+      setExistingRecording(null);
+      return null;
+    }
+
+    setCheckingRecording(true);
+    const found = await findAlphabetRecordingUrl(alphabetAudioPathsForTarget(audioSlug, scope, formIndex));
+    setExistingRecording(found);
+    setCheckingRecording(false);
+    return found;
+  }, [audioSlug, formIndex, scope]);
+
+  useEffect(() => {
+    if (!audioSlug) return;
+
+    setMessage(null);
+    setState('idle');
+    void refreshExistingRecording();
+  }, [audioSlug, refreshExistingRecording]);
+
+  if (!audioSlug) {
     return null;
   }
 
-  const targetFilename =
-    scope === 'form'
-      ? `${family.audioSlug}-${formIndex}` // extension added on upload
-      : `${family.audioSlug}`;
-
   const startRecording = async () => {
     setMessage(null);
-    setState('idle');
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -89,8 +114,28 @@ export default function AlphabetRecordPanel({
     }
   };
 
+  const previewRecording = async () => {
+    if (!existingRecording) return;
+
+    previewAudioRef.current?.pause();
+    const audio = new Audio(`${existingRecording}${existingRecording.includes('?') ? '&' : '?'}v=${Date.now()}`);
+    previewAudioRef.current = audio;
+    setPreviewing(true);
+
+    try {
+      await audio.play();
+    } catch {
+      setMessage('Could not play the saved recording. Try recording again.');
+      setState('error');
+    } finally {
+      audio.onended = () => setPreviewing(false);
+      audio.onerror = () => setPreviewing(false);
+    }
+  };
+
   const uploadRecording = async (blob: Blob, mimeType: string) => {
     setState('uploading');
+    const replacingExisting = Boolean(existingRecording);
     const ext = extensionForMime(mimeType);
     const filename = `${targetFilename}.${ext}`;
     const formData = new FormData();
@@ -113,9 +158,18 @@ export default function AlphabetRecordPanel({
         return;
       }
 
-      if (payload.publicPath) clearAlphabetAudioCache(payload.publicPath);
+      clearAlphabetAudioCache(payload.publicPath);
+      const savedPath = payload.publicPath
+        ? `${payload.publicPath}?v=${Date.now()}`
+        : await refreshExistingRecording();
+      if (savedPath) setExistingRecording(savedPath);
+
       setState('done');
-      setMessage(`Saved ${filename}. Tap the speaker to hear your recording for ${formChar} (${transliteration}).`);
+      setMessage(
+        replacingExisting
+          ? `Updated ${filename}. Your new recording replaced the previous clip for ${formChar} (${transliteration}).`
+          : `Saved ${filename}. Tap Preview or the speaker to hear your recording for ${formChar} (${transliteration}).`
+      );
     } catch {
       setState('error');
       setMessage('Could not upload the recording. Check your connection and try again.');
@@ -139,7 +193,7 @@ export default function AlphabetRecordPanel({
             onChange={() => setScope('form')}
             className="h-3.5 w-3.5"
           />
-          This letter only ({family.audioSlug}-{formIndex})
+          This letter only ({audioSlug}-{formIndex})
         </label>
         <label className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-900">
           <input
@@ -149,16 +203,37 @@ export default function AlphabetRecordPanel({
             onChange={() => setScope('family')}
             className="h-3.5 w-3.5"
           />
-          Whole {family.name} family ({family.audioSlug})
+          Whole {family.name} family ({audioSlug})
         </label>
       </div>
 
+      {checkingRecording ? (
+        <p className="mt-3 text-xs text-violet-700">Checking for a saved recording…</p>
+      ) : existingRecording ? (
+        <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-3 py-2.5">
+          <p className="text-xs font-semibold text-emerald-900">
+            Recording saved for <code className="rounded bg-white/80 px-1">{targetFilename}</code>
+          </p>
+          <p className="mt-1 text-[11px] text-emerald-800">
+            Record again anytime — the new clip replaces this one.
+          </p>
+        </div>
+      ) : null}
+
       <div className="mt-4 flex flex-wrap gap-2">
         {state !== 'recording' ? (
-          <Button type="button" size="sm" onClick={startRecording} disabled={state === 'uploading'}>
-            <Mic className="h-4 w-4" />
-            {state === 'uploading' ? 'Saving...' : 'Start recording'}
-          </Button>
+          <>
+            <Button type="button" size="sm" onClick={startRecording} disabled={state === 'uploading'}>
+              {existingRecording ? <RotateCcw className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              {state === 'uploading' ? 'Saving...' : existingRecording ? 'Re-record' : 'Start recording'}
+            </Button>
+            {existingRecording ? (
+              <Button type="button" size="sm" variant="secondary" onClick={previewRecording} disabled={previewing}>
+                <Volume2 className="h-4 w-4" />
+                {previewing ? 'Playing...' : 'Preview saved'}
+              </Button>
+            ) : null}
+          </>
         ) : (
           <Button type="button" size="sm" variant="danger" onClick={stopRecording}>
             <Square className="h-4 w-4" />
