@@ -36,3 +36,26 @@ export function alphabetAudioPathsForSlug(slug: string, formIndex?: number) {
 
   return paths;
 }
+
+export function alphabetAudioPathsForTarget(slug: string, scope: 'form' | 'family', formIndex: number) {
+  const extensions = ['webm', 'mp3', 'wav', 'ogg'] as const;
+  const filenames =
+    scope === 'form'
+      ? extensions.map((ext) => `${slug}-${formIndex}.${ext}`)
+      : extensions.map((ext) => `${slug}.${ext}`);
+
+  return filenames.flatMap((filename) => alphabetAudioCandidatePaths(filename));
+}
+
+export async function findAlphabetRecordingUrl(paths: string[]) {
+  for (const path of paths) {
+    try {
+      const response = await fetch(path, { method: 'HEAD' });
+      if (response.ok) return path;
+    } catch {
+      // Try the next path.
+    }
+  }
+
+  return null;
+}

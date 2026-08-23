@@ -3,7 +3,18 @@
 import { useCallback, useRef } from 'react';
 
 const audioCache = new Map<string, HTMLAudioElement>();
+const cacheBustByPath = new Map<string, number>();
 let voicesLoaded = false;
+
+function normalizeAudioPath(path: string) {
+  return path.split('?')[0] ?? path;
+}
+
+function resolvedAudioSrc(path: string) {
+  const basePath = normalizeAudioPath(path);
+  const cacheBust = cacheBustByPath.get(basePath);
+  return cacheBust ? `${basePath}?v=${cacheBust}` : basePath;
+}
 
 function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return Promise.resolve([]);
@@ -82,11 +93,14 @@ export function useAlphabetAudio() {
 
     for (const audioPath of paths) {
       if (playingRef.current !== key) return 'unavailable';
+      const basePath = normalizeAudioPath(audioPath);
       try {
-        let audio = audioCache.get(audioPath);
+        let audio = audioCache.get(basePath);
         if (!audio) {
-          audio = new Audio(audioPath);
-          audioCache.set(audioPath, audio);
+          audio = new Audio(resolvedAudioSrc(basePath));
+          audioCache.set(basePath, audio);
+        } else {
+          audio.src = resolvedAudioSrc(basePath);
         }
         audio.currentTime = 0;
         await audio.play();
@@ -105,10 +119,14 @@ export function useAlphabetAudio() {
 
 export function clearAlphabetAudioCache(publicPath?: string) {
   if (publicPath) {
-    audioCache.delete(publicPath);
+    const basePath = normalizeAudioPath(publicPath);
+    audioCache.delete(basePath);
+    cacheBustByPath.set(basePath, Date.now());
     return;
   }
+
   audioCache.clear();
+  cacheBustByPath.clear();
 }
 
 export const ALPHABET_AUDIO_NOTE =
