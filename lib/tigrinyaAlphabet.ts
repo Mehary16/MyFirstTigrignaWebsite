@@ -1,4 +1,4 @@
-import { TIGRINYA_ALPHABET_FAMILIES } from './tigrinyaAlphabetFamilies';
+import { getFamilyAudioSlug, TIGRINYA_ALPHABET_FAMILIES } from './tigrinyaAlphabetFamilies';
 
 export type AlphabetEntry = {
   char: string;
@@ -12,5 +12,5 @@ export const TIGRINYA_ALPHABET: AlphabetEntry[] = TIGRINYA_ALPHABET_FAMILIES.map
   char: family.forms[0]!.char,
   transliteration: family.forms[0]!.transliteration,
   name: family.name,
-  audioPath: family.audioSlug ? `/alphabet/${family.audioSlug}.mp3` : undefined
+  audioPath: `/alphabet/${getFamilyAudioSlug(family)}.mp3`
 }));

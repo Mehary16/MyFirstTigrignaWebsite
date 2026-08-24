@@ -97,6 +97,7 @@ export const TIGRINYA_ALPHABET_FAMILIES: AlphabetFamily[] = [
     exampleWord: 'ሓኸኸ',
     exampleTransliteration: 'Hakheke',
     exampleMeaning: 'Laughter',
+    audioSlug: 'khe',
     forms: [
       { char: 'ኸ', transliteration: 'khe' },
       { char: 'ኹ', transliteration: 'khu' },
@@ -330,6 +331,7 @@ export const TIGRINYA_ALPHABET_FAMILIES: AlphabetFamily[] = [
     exampleWord: 'መቐስ',
     exampleTransliteration: 'Meqhes',
     exampleMeaning: 'Scissors',
+    audioSlug: 'qhe',
     forms: [
       { char: 'ቐ', transliteration: 'qhe' },
       { char: 'ቑ', transliteration: 'qhu' },
@@ -455,6 +457,7 @@ export const TIGRINYA_ALPHABET_FAMILIES: AlphabetFamily[] = [
     exampleWord: 'ዓይነት',
     exampleTransliteration: 'Aynet',
     exampleMeaning: 'Eye',
+    audioSlug: 'aem',
     forms: [
       { char: 'ዐ', transliteration: 'aem' },
       { char: 'ዑ', transliteration: 'u' },
@@ -526,6 +529,7 @@ export const TIGRINYA_ALPHABET_FAMILIES: AlphabetFamily[] = [
     exampleWord: 'ኛው',
     exampleTransliteration: 'Nyaw',
     exampleMeaning: 'Kitten',
+    audioSlug: 'nye',
     forms: [
       { char: 'ኘ', transliteration: 'nye' },
       { char: 'ኙ', transliteration: 'nyu' },
@@ -543,6 +547,7 @@ export const TIGRINYA_ALPHABET_FAMILIES: AlphabetFamily[] = [
     exampleWord: 'ቪድዮ',
     exampleTransliteration: 'Vidyo',
     exampleMeaning: 'Video',
+    audioSlug: 've',
     forms: [
       { char: 'ቨ', transliteration: 've' },
       { char: 'ቩ', transliteration: 'vu' },
@@ -578,6 +583,7 @@ export const TIGRINYA_ALPHABET_FAMILIES: AlphabetFamily[] = [
     exampleWord: 'ቲሌቪዥን',
     exampleTransliteration: 'Televizhn',
     exampleMeaning: 'Television',
+    audioSlug: 'zhe',
     forms: [
       { char: 'ዠ', transliteration: 'zhe' },
       { char: 'ዡ', transliteration: 'zhu' },
@@ -590,6 +596,10 @@ export const TIGRINYA_ALPHABET_FAMILIES: AlphabetFamily[] = [
   }
 ];
 
+export function getFamilyAudioSlug(family: Pick<AlphabetFamily, 'id' | 'audioSlug'>) {
+  return family.audioSlug ?? family.id;
+}
+
 export const LABIALIZED_FORMS: AlphabetForm[] = [
   { char: 'ቈ', transliteration: 'qwe' },
   { char: 'ቊ', transliteration: 'qwi' },
@@ -599,17 +609,14 @@ export const LABIALIZED_FORMS: AlphabetForm[] = [
 ];
 
 export function audioPathForFamily(family: AlphabetFamily) {
-  if (!family.audioSlug) return undefined;
-  return alphabetAudioPathsForSlug(family.audioSlug)[0];
+  return alphabetAudioPathsForSlug(getFamilyAudioSlug(family))[0];
 }
 
 export function audioPathForForm(family: AlphabetFamily, formIndex: number) {
-  if (!family.audioSlug) return undefined;
-  return alphabetAudioPathsForSlug(family.audioSlug, formIndex)[0];
+  return alphabetAudioPathsForSlug(getFamilyAudioSlug(family), formIndex)[0];
 }
 
 /** Try form clip first, then the whole family clip (multiple formats). */
 export function audioPathsForForm(family: AlphabetFamily, formIndex: number) {
-  if (!family.audioSlug) return [];
-  return alphabetAudioPathsForSlug(family.audioSlug, formIndex);
+  return alphabetAudioPathsForSlug(getFamilyAudioSlug(family), formIndex);
 }
