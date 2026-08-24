@@ -189,8 +189,8 @@ export default function TeacherAlphabetActivity() {
     setError(null);
 
     try {
-      const response = await fetch('/api/alphabet/activity', {
-        method: 'DELETE',
+      const response = await fetch('/api/alphabet/activity/bulk-delete', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids })
       });
