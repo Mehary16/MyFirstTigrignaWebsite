@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pencil, Trash2, X } from 'lucide-react';
 import { activityLabel, type AlphabetActivityRow, type AlphabetActivityType } from '../../lib/alphabetProgressDb';
 import Badge from '../ui/Badge';
@@ -43,6 +43,9 @@ export default function TeacherAlphabetActivity() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   const loadActivities = useCallback(async () => {
     setLoading(true);
@@ -56,6 +59,7 @@ export default function TeacherAlphabetActivity() {
         return;
       }
       setActivities(payload.activities ?? []);
+      setSelectedIds(new Set());
     } catch {
       setError('Could not load alphabet activity.');
     } finally {
@@ -66,6 +70,29 @@ export default function TeacherAlphabetActivity() {
   useEffect(() => {
     void loadActivities();
   }, [loadActivities]);
+
+  const selectableIds = activities.map((item) => item.id);
+  const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id));
+  const someSelected = selectableIds.some((id) => selectedIds.has(id));
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someSelected && !allSelected;
+    }
+  }, [someSelected, allSelected]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds(allSelected ? new Set() : new Set(selectableIds));
+  };
 
   const startEdit = (item: AlphabetActivityRow) => {
     setEditingId(item.id);
@@ -137,11 +164,50 @@ export default function TeacherAlphabetActivity() {
       }
 
       setActivities((current) => current.filter((entry) => entry.id !== item.id));
+      setSelectedIds((current) => {
+        const next = new Set(current);
+        next.delete(item.id);
+        return next;
+      });
       if (editingId === item.id) cancelEdit();
     } catch {
       setError('Could not remove activity entry.');
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const removeSelected = async () => {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+
+    if (!window.confirm(`Remove ${ids.length} selected activit${ids.length === 1 ? 'y' : 'ies'}?`)) {
+      return;
+    }
+
+    setBulkBusy(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/alphabet/activity', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+      });
+      const payload = (await response.json()) as { deletedIds?: string[]; error?: string };
+      if (!response.ok) {
+        setError(payload.error ?? 'Could not remove selected activities.');
+        return;
+      }
+
+      const deleted = new Set(payload.deletedIds ?? ids);
+      setActivities((current) => current.filter((entry) => !deleted.has(entry.id)));
+      setSelectedIds(new Set());
+      if (editingId && deleted.has(editingId)) cancelEdit();
+    } catch {
+      setError('Could not remove selected activities.');
+    } finally {
+      setBulkBusy(false);
     }
   };
 
@@ -170,6 +236,23 @@ export default function TeacherAlphabetActivity() {
 
       {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
 
+      {selectedIds.size > 0 ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-100 bg-red-50/70 px-4 py-3">
+          <p className="text-sm font-semibold text-red-900">
+            {selectedIds.size} activit{selectedIds.size === 1 ? 'y' : 'ies'} selected
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="secondary" onClick={() => setSelectedIds(new Set())} disabled={bulkBusy}>
+              Clear selection
+            </Button>
+            <Button type="button" size="sm" variant="danger" onClick={removeSelected} disabled={bulkBusy}>
+              <Trash2 className="h-4 w-4" />
+              {bulkBusy ? 'Removing...' : `Remove selected (${selectedIds.size})`}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {loading ? (
         <p className="mt-4 text-sm text-slate-500">Loading activity…</p>
       ) : activities.length ? (
@@ -177,6 +260,16 @@ export default function TeacherAlphabetActivity() {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                <th className="w-10 px-3 py-2">
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all activities"
+                    className="h-4 w-4 rounded border-slate-300 text-brand-900 focus:ring-brand-700/20"
+                  />
+                </th>
                 <th className="px-3 py-2">Student / user</th>
                 <th className="px-3 py-2">Activity</th>
                 <th className="px-3 py-2">Details</th>
@@ -192,6 +285,18 @@ export default function TeacherAlphabetActivity() {
 
                 return (
                   <tr key={item.id} className="border-b border-slate-100 align-top">
+                    <td className="px-3 py-3">
+                      {!isEditing ? (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(item.id)}
+                          onChange={() => toggleSelected(item.id)}
+                          disabled={bulkBusy || Boolean(busyId)}
+                          aria-label={`Select activity for ${item.profiles?.full_name ?? 'user'}`}
+                          className="h-4 w-4 rounded border-slate-300 text-brand-900 focus:ring-brand-700/20"
+                        />
+                      ) : null}
+                    </td>
                     <td className="px-3 py-3">
                       <p className="font-semibold text-slate-900">{item.profiles?.full_name ?? 'User'}</p>
                       <p className="text-xs text-slate-500">
