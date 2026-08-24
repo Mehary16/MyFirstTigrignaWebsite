@@ -183,21 +183,35 @@ export async function DELETE(request: Request) {
   if ('error' in access && access.error) return access.error;
 
   const { supabase } = access;
-  const id = new URL(request.url).searchParams.get('id')?.trim();
+  const url = new URL(request.url);
+  const singleId = url.searchParams.get('id')?.trim();
+  let ids: string[] = singleId ? [singleId] : [];
 
-  if (!id) {
-    return NextResponse.json({ error: 'Activity id is required.' }, { status: 400 });
+  if (!ids.length) {
+    try {
+      const body = (await request.json()) as { ids?: string[] };
+      ids = (body.ids ?? []).map((id) => id.trim()).filter(Boolean);
+    } catch {
+      ids = [];
+    }
   }
 
-  const { data, error } = await supabase.from('alphabet_activity').delete().eq('id', id).select('id').maybeSingle();
+  if (!ids.length) {
+    return NextResponse.json({ error: 'At least one activity id is required.' }, { status: 400 });
+  }
+
+  const uniqueIds = [...new Set(ids)];
+  const { data, error } = await supabase.from('alphabet_activity').delete().in('id', uniqueIds).select('id');
 
   if (error) {
     return NextResponse.json({ error: formatDatabaseError(error.message) }, { status: 500 });
   }
 
-  if (!data) {
-    return NextResponse.json({ error: 'Activity entry not found.' }, { status: 404 });
+  const deletedIds = (data ?? []).map((row) => row.id);
+
+  if (!deletedIds.length) {
+    return NextResponse.json({ error: 'No activity entries were found to remove.' }, { status: 404 });
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, deletedCount: deletedIds.length, deletedIds });
 }
