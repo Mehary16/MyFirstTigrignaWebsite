@@ -1,42 +1,149 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { activityLabel, type AlphabetActivityRow } from '../../lib/alphabetProgressDb';
+import { useCallback, useEffect, useState } from 'react';
+import { Pencil, Trash2, X } from 'lucide-react';
+import { activityLabel, type AlphabetActivityRow, type AlphabetActivityType } from '../../lib/alphabetProgressDb';
 import Badge from '../ui/Badge';
+import Button from '../ui/Button';
+
+const ACTIVITY_OPTIONS: AlphabetActivityType[] = ['learn', 'trace', 'quiz_start', 'quiz_answer'];
+
+type EditDraft = {
+  activityType: AlphabetActivityType;
+  formKey: string;
+  familyId: string;
+  correct: '' | 'true' | 'false';
+};
+
+function draftFromActivity(item: AlphabetActivityRow): EditDraft {
+  return {
+    activityType: item.activity_type,
+    formKey: item.form_key ?? '',
+    familyId: item.family_id ?? '',
+    correct: item.correct === true ? 'true' : item.correct === false ? 'false' : ''
+  };
+}
+
+function formatDetails(item: AlphabetActivityRow) {
+  const char = typeof item.metadata?.char === 'string' ? item.metadata.char : null;
+  const transliteration = typeof item.metadata?.transliteration === 'string' ? item.metadata.transliteration : null;
+
+  if (item.form_key && char) {
+    return `${char}${transliteration ? ` (${transliteration})` : ''} · ${item.form_key}`;
+  }
+
+  return item.form_key ?? item.family_id ?? '—';
+}
 
 export default function TeacherAlphabetActivity() {
   const [activities, setActivities] = useState<AlphabetActivityRow[]>([]);
   const [filter, setFilter] = useState<'all' | 'learn' | 'trace' | 'quiz_answer' | 'quiz_start'>('all');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const loadActivities = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const query = filter === 'all' ? '' : `?type=${filter}&limit=100`;
+      const response = await fetch(`/api/alphabet/activity${query}`);
+      const payload = (await response.json()) as { activities?: AlphabetActivityRow[]; error?: string };
+      if (!response.ok) {
+        setError(payload.error ?? 'Could not load alphabet activity.');
+        return;
+      }
+      setActivities(payload.activities ?? []);
+    } catch {
+      setError('Could not load alphabet activity.');
+    } finally {
+      setLoading(false);
+    }
+  }, [filter]);
 
   useEffect(() => {
-    let active = true;
+    void loadActivities();
+  }, [loadActivities]);
 
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const query = filter === 'all' ? '' : `?type=${filter}&limit=100`;
-        const response = await fetch(`/api/alphabet/activity${query}`);
-        const payload = (await response.json()) as { activities?: AlphabetActivityRow[]; error?: string };
-        if (!response.ok) {
-          if (active) setError(payload.error ?? 'Could not load alphabet activity.');
-          return;
-        }
-        if (active) setActivities(payload.activities ?? []);
-      } catch {
-        if (active) setError('Could not load alphabet activity.');
-      } finally {
-        if (active) setLoading(false);
+  const startEdit = (item: AlphabetActivityRow) => {
+    setEditingId(item.id);
+    setEditDraft(draftFromActivity(item));
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditDraft(null);
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editDraft) return;
+
+    setBusyId(id);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/alphabet/activity', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id,
+          activityType: editDraft.activityType,
+          formKey: editDraft.formKey,
+          familyId: editDraft.familyId,
+          correct:
+            editDraft.activityType === 'quiz_answer' && editDraft.correct
+              ? editDraft.correct === 'true'
+              : null
+        })
+      });
+
+      const payload = (await response.json()) as { activity?: AlphabetActivityRow; error?: string };
+      if (!response.ok) {
+        setError(payload.error ?? 'Could not save changes.');
+        return;
       }
-    };
 
-    void load();
-    return () => {
-      active = false;
-    };
-  }, [filter]);
+      if (payload.activity) {
+        setActivities((current) => current.map((item) => (item.id === id ? payload.activity! : item)));
+      } else {
+        await loadActivities();
+      }
+
+      cancelEdit();
+    } catch {
+      setError('Could not save changes.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const removeActivity = async (item: AlphabetActivityRow) => {
+    const name = item.profiles?.full_name ?? 'this user';
+    if (!window.confirm(`Remove this ${activityLabel(item.activity_type).toLowerCase()} entry for ${name}?`)) {
+      return;
+    }
+
+    setBusyId(item.id);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/alphabet/activity?id=${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(payload.error ?? 'Could not remove activity entry.');
+        return;
+      }
+
+      setActivities((current) => current.filter((entry) => entry.id !== item.id));
+      if (editingId === item.id) cancelEdit();
+    } catch {
+      setError('Could not remove activity entry.');
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
@@ -75,36 +182,142 @@ export default function TeacherAlphabetActivity() {
                 <th className="px-3 py-2">Details</th>
                 <th className="px-3 py-2">Result</th>
                 <th className="px-3 py-2">When</th>
+                <th className="px-3 py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {activities.map((item) => (
-                <tr key={item.id} className="border-b border-slate-100">
-                  <td className="px-3 py-3">
-                    <p className="font-semibold text-slate-900">{item.profiles?.full_name ?? 'User'}</p>
-                    <p className="text-xs text-slate-500">
-                      {item.profiles?.class_grade ? `${item.profiles.class_grade} · ` : ''}
-                      {item.profiles?.email ?? item.user_id.slice(0, 8)}
-                    </p>
-                  </td>
-                  <td className="px-3 py-3">
-                    <Badge variant={item.activity_type.startsWith('quiz') ? 'brand' : 'info'}>
-                      {activityLabel(item.activity_type)}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-3 text-slate-600">
-                    {item.form_key ?? item.family_id ?? '—'}
-                  </td>
-                  <td className="px-3 py-3 text-slate-600">
-                    {item.activity_type === 'quiz_answer'
-                      ? item.correct
-                        ? 'Correct'
-                        : 'Wrong'
-                      : '—'}
-                  </td>
-                  <td className="px-3 py-3 text-xs text-slate-500">{new Date(item.created_at).toLocaleString()}</td>
-                </tr>
-              ))}
+              {activities.map((item) => {
+                const isEditing = editingId === item.id;
+                const isBusy = busyId === item.id;
+
+                return (
+                  <tr key={item.id} className="border-b border-slate-100 align-top">
+                    <td className="px-3 py-3">
+                      <p className="font-semibold text-slate-900">{item.profiles?.full_name ?? 'User'}</p>
+                      <p className="text-xs text-slate-500">
+                        {item.profiles?.class_grade ? `${item.profiles.class_grade} · ` : ''}
+                        {item.profiles?.email ?? item.user_id.slice(0, 8)}
+                      </p>
+                    </td>
+
+                    {isEditing && editDraft ? (
+                      <>
+                        <td className="px-3 py-3">
+                          <select
+                            value={editDraft.activityType}
+                            onChange={(event) =>
+                              setEditDraft((current) =>
+                                current ? { ...current, activityType: event.target.value as AlphabetActivityType } : current
+                              )
+                            }
+                            className="w-full rounded-xl border border-slate-200 px-2 py-1.5 text-sm"
+                          >
+                            {ACTIVITY_OPTIONS.map((option) => (
+                              <option key={option} value={option}>
+                                {activityLabel(option)}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="space-y-2">
+                            <input
+                              value={editDraft.formKey}
+                              onChange={(event) =>
+                                setEditDraft((current) => (current ? { ...current, formKey: event.target.value } : current))
+                              }
+                              placeholder="Form key (e.g. be:0)"
+                              className="w-full rounded-xl border border-slate-200 px-2 py-1.5 text-sm"
+                            />
+                            <input
+                              value={editDraft.familyId}
+                              onChange={(event) =>
+                                setEditDraft((current) => (current ? { ...current, familyId: event.target.value } : current))
+                              }
+                              placeholder="Family id (optional)"
+                              className="w-full rounded-xl border border-slate-200 px-2 py-1.5 text-sm"
+                            />
+                          </div>
+                        </td>
+                        <td className="px-3 py-3">
+                          {editDraft.activityType === 'quiz_answer' ? (
+                            <select
+                              value={editDraft.correct}
+                              onChange={(event) =>
+                                setEditDraft((current) =>
+                                  current ? { ...current, correct: event.target.value as EditDraft['correct'] } : current
+                                )
+                              }
+                              className="w-full rounded-xl border border-slate-200 px-2 py-1.5 text-sm"
+                            >
+                              <option value="">No result</option>
+                              <option value="true">Correct</option>
+                              <option value="false">Wrong</option>
+                            </select>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-xs text-slate-500">{new Date(item.created_at).toLocaleString()}</td>
+                        <td className="px-3 py-3">
+                          <div className="flex justify-end gap-2">
+                            <Button type="button" size="sm" onClick={() => saveEdit(item.id)} disabled={isBusy}>
+                              Save
+                            </Button>
+                            <Button type="button" size="sm" variant="secondary" onClick={cancelEdit} disabled={isBusy}>
+                              <X className="h-4 w-4" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-3 py-3">
+                          <Badge variant={item.activity_type.startsWith('quiz') ? 'brand' : 'info'}>
+                            {activityLabel(item.activity_type)}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-3 text-slate-600">{formatDetails(item)}</td>
+                        <td className="px-3 py-3 text-slate-600">
+                          {item.activity_type === 'quiz_answer'
+                            ? item.correct
+                              ? 'Correct'
+                              : 'Wrong'
+                            : '—'}
+                        </td>
+                        <td className="px-3 py-3 text-xs text-slate-500">{new Date(item.created_at).toLocaleString()}</td>
+                        <td className="px-3 py-3">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => startEdit(item)}
+                              disabled={isBusy}
+                              aria-label="Edit activity entry"
+                            >
+                              <Pencil className="h-4 w-4" />
+                              Edit
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="danger"
+                              onClick={() => removeActivity(item)}
+                              disabled={isBusy}
+                              aria-label="Remove activity entry"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Remove
+                            </Button>
+                          </div>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -113,7 +326,8 @@ export default function TeacherAlphabetActivity() {
       )}
 
       <p className="mt-3 text-xs text-slate-500">
-        Run <code className="rounded bg-slate-100 px-1">supabase/FIX_ALPHABET_PROGRESS.sql</code> if this section shows a database error.
+        Run <code className="rounded bg-slate-100 px-1">supabase/FIX_ALPHABET_ACTIVITY_MANAGE.sql</code> once if edit or
+        remove shows a permission error.
       </p>
     </div>
   );
