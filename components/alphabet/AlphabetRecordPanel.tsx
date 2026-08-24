@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Mic, RotateCcw, Square, Upload, Volume2 } from 'lucide-react';
 import { alphabetAudioPathsForTarget, findAlphabetRecordingUrl } from '../../lib/alphabetAudioUpload';
-import type { AlphabetFamily } from '../../lib/tigrinyaAlphabetFamilies';
+import { getFamilyAudioSlug, type AlphabetFamily } from '../../lib/tigrinyaAlphabetFamilies';
 import { clearAlphabetAudioCache } from '../../lib/useAlphabetAudio';
 import Alert from '../ui/Alert';
 import Button from '../ui/Button';
@@ -31,7 +31,7 @@ export default function AlphabetRecordPanel({
   formChar,
   transliteration
 }: AlphabetRecordPanelProps) {
-  const audioSlug = family.audioSlug;
+  const audioSlug = getFamilyAudioSlug(family);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -53,11 +53,6 @@ export default function AlphabetRecordPanel({
     scope === 'form' ? `${audioSlug ?? 'clip'}-${formIndex}` : `${audioSlug ?? 'clip'}`;
 
   const refreshExistingRecording = useCallback(async () => {
-    if (!audioSlug) {
-      setExistingRecording(null);
-      return null;
-    }
-
     setCheckingRecording(true);
     const found = await findAlphabetRecordingUrl(alphabetAudioPathsForTarget(audioSlug, scope, formIndex));
     setExistingRecording(found);
@@ -66,16 +61,10 @@ export default function AlphabetRecordPanel({
   }, [audioSlug, formIndex, scope]);
 
   useEffect(() => {
-    if (!audioSlug) return;
-
     setMessage(null);
     setState('idle');
     void refreshExistingRecording();
-  }, [audioSlug, refreshExistingRecording]);
-
-  if (!audioSlug) {
-    return null;
-  }
+  }, [refreshExistingRecording]);
 
   const startRecording = async () => {
     setMessage(null);
