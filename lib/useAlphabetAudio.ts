@@ -16,6 +16,48 @@ function resolvedAudioSrc(path: string) {
   return cacheBust ? `${basePath}?v=${cacheBust}` : basePath;
 }
 
+function tryPlayPath(basePath: string) {
+  const src = resolvedAudioSrc(basePath);
+
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const finish = (result: boolean) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      resolve(result);
+    };
+
+    const timeout = window.setTimeout(() => finish(false), 3000);
+    const cached = audioCache.get(basePath);
+
+    if (cached) {
+      cached.src = src;
+      cached.currentTime = 0;
+      cached
+        .play()
+        .then(() => finish(true))
+        .catch(() => finish(false));
+      return;
+    }
+
+    const audio = new Audio();
+    audio.preload = 'auto';
+
+    audio.oncanplaythrough = () => {
+      audioCache.set(basePath, audio);
+      audio
+        .play()
+        .then(() => finish(true))
+        .catch(() => finish(false));
+    };
+
+    audio.onerror = () => finish(false);
+    audio.src = src;
+    audio.load();
+  });
+}
+
 function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return Promise.resolve([]);
 
@@ -61,7 +103,6 @@ async function speakFallback(char: string, transliteration: string) {
   if (ethiopicVoice) {
     utterance.voice = ethiopicVoice;
   } else {
-    // Last resort: spell transliteration slowly — still English, but less misleading than default voice.
     utterance.text = transliteration;
     utterance.lang = 'en-US';
     utterance.rate = 0.65;
@@ -94,20 +135,8 @@ export function useAlphabetAudio() {
     for (const audioPath of paths) {
       if (playingRef.current !== key) return 'unavailable';
       const basePath = normalizeAudioPath(audioPath);
-      try {
-        let audio = audioCache.get(basePath);
-        if (!audio) {
-          audio = new Audio(resolvedAudioSrc(basePath));
-          audioCache.set(basePath, audio);
-        } else {
-          audio.src = resolvedAudioSrc(basePath);
-        }
-        audio.currentTime = 0;
-        await audio.play();
-        if (playingRef.current === key) return 'mp3';
-      } catch {
-        // Try next path when this clip is missing or autoplay blocked.
-      }
+      const played = await tryPlayPath(basePath);
+      if (played && playingRef.current === key) return 'mp3';
     }
 
     if (playingRef.current !== key) return 'unavailable';

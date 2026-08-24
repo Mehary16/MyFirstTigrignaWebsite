@@ -13,6 +13,28 @@ const EXTENSION_TO_CONTENT_TYPE: Record<string, string> = {
   mp3: 'audio/mpeg'
 };
 
+export async function GET() {
+  try {
+    const admin = createAdminSupabaseClient();
+    const supabase = admin ?? (await createServerSupabaseClient());
+
+    const { data, error } = await supabase.storage.from(STORAGE_BUCKETS.alphabetAudio).list('', { limit: 1000 });
+
+    if (error) {
+      return NextResponse.json({ files: [] });
+    }
+
+    const files = (data ?? [])
+      .map((entry) => entry.name)
+      .filter((name) => isAllowedAlphabetAudioFilename(name));
+
+    return NextResponse.json({ files });
+  } catch (error) {
+    console.error('Alphabet audio list failed:', error);
+    return NextResponse.json({ files: [] });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabaseClient();

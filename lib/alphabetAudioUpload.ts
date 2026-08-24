@@ -20,21 +20,47 @@ export function alphabetAudioCandidatePaths(filename: string) {
   return paths;
 }
 
-export function alphabetAudioPathsForSlug(slug: string, formIndex?: number) {
-  const extensions = ['mp3', 'webm', 'wav', 'ogg'] as const;
+export function alphabetAudioPathsForSlug(slug: string, formIndex?: number, knownFiles?: Set<string>) {
+  const extensions = ['webm', 'mp3', 'wav', 'ogg'] as const;
   const paths: string[] = [];
+
+  const addFilename = (filename: string) => {
+    if (knownFiles && knownFiles.size > 0 && !knownFiles.has(filename.toLowerCase())) {
+      return;
+    }
+    paths.push(...alphabetAudioCandidatePaths(filename));
+  };
 
   if (formIndex !== undefined) {
     for (const ext of extensions) {
-      paths.push(...alphabetAudioCandidatePaths(`${slug}-${formIndex}.${ext}`));
+      addFilename(`${slug}-${formIndex}.${ext}`);
     }
   }
 
   for (const ext of extensions) {
-    paths.push(...alphabetAudioCandidatePaths(`${slug}.${ext}`));
+    addFilename(`${slug}.${ext}`);
+  }
+
+  if (knownFiles && knownFiles.size > 0 && paths.length === 0) {
+    return alphabetAudioPathsForSlug(slug, formIndex);
   }
 
   return paths;
+}
+
+export function familyHasAlphabetRecording(slug: string, knownFiles: Set<string>) {
+  if (knownFiles.size === 0) return false;
+
+  const prefix = `${slug.toLowerCase()}.`;
+  const formPrefix = `${slug.toLowerCase()}-`;
+
+  for (const filename of knownFiles) {
+    if (filename.startsWith(prefix) || filename.startsWith(formPrefix)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export function alphabetAudioPathsForTarget(slug: string, scope: 'form' | 'family', formIndex: number) {

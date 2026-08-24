@@ -9,19 +9,22 @@ import {
 import {
   LABIALIZED_FORMS,
   TIGRINYA_ALPHABET_FAMILIES,
-  audioPathForFamily,
-  audioPathForForm,
   audioPathsForForm,
+  audioPathsForFamily,
+  getFamilyAudioSlug,
   type AlphabetFamily,
   type AlphabetForm
 } from '../../lib/tigrinyaAlphabetFamilies';
+import { familyHasAlphabetRecording } from '../../lib/alphabetAudioUpload';
 import { useAlphabetAudio } from '../../lib/useAlphabetAudio';
 import { useAlphabetProgress } from '../../lib/useAlphabetProgress';
+import { useAlphabetRecordingIndex } from '../../lib/useAlphabetRecordingIndex';
 import { logAlphabetActivity } from '../../lib/logAlphabetActivity';
 import { cn } from '../../lib/cn';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import AlphabetAudioNotice from './AlphabetAudioNotice';
+import Alert from '../ui/Alert';
 import AlphabetProgressCard from './AlphabetProgressCard';
 import AlphabetQuizMode from './AlphabetQuizMode';
 import AlphabetRecordPanel from './AlphabetRecordPanel';
@@ -83,6 +86,7 @@ function FormButton({
 export default function AlphabetLearningStudio({ showTeacherTools = false }: AlphabetLearningStudioProps) {
   const { play } = useAlphabetAudio();
   const { progress, saveProgress, ready } = useAlphabetProgress();
+  const { fileSet, refresh: refreshRecordingIndex } = useAlphabetRecordingIndex();
   const [familyIndex, setFamilyIndex] = useState(0);
   const [formIndex, setFormIndex] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('learn');
@@ -104,7 +108,7 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
   const playForm = async (form: AlphabetForm, index: number, familyEntry: AlphabetFamily) => {
     const key = `${familyEntry.id}-${index}`;
     setPlayingKey(key);
-    const paths = audioPathsForForm(familyEntry, index);
+    const paths = audioPathsForForm(familyEntry, index, fileSet);
     await play({
       char: form.char,
       transliteration: form.transliteration,
@@ -112,6 +116,16 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
       audioFallbackPaths: paths.slice(1)
     });
     setTimeout(() => setPlayingKey((current) => (current === key ? null : current)), 600);
+  };
+
+  const playFamily = async (familyEntry: AlphabetFamily) => {
+    const paths = audioPathsForFamily(familyEntry, fileSet);
+    await play({
+      char: familyEntry.forms[0]!.char,
+      transliteration: familyEntry.forms[0]!.transliteration,
+      audioPath: paths[0],
+      audioFallbackPaths: paths.slice(1)
+    });
   };
 
   const selectFamily = (index: number) => {
@@ -178,7 +192,14 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
     <div className="space-y-6">
       {ready ? <AlphabetProgressCard progress={progress} activeFamilyId={family.id} /> : null}
 
-      <AlphabetAudioNotice />
+      {fileSet.size > 0 ? (
+        <Alert variant="success" title="Teacher recordings active">
+          Your saved pronunciation clips play when students tap a letter, use quiz mode, or pick a family below. Green
+          dots mark families with a recording.
+        </Alert>
+      ) : (
+        <AlphabetAudioNotice />
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
@@ -250,6 +271,7 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
                     formIndex={formIndex}
                     formChar={selectedForm.char}
                     transliteration={selectedForm.transliteration}
+                    onRecordingSaved={refreshRecordingIndex}
                   />
                 ) : null}
 
@@ -302,33 +324,42 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
           <div>
             <p className="mb-3 text-sm font-semibold text-slate-700">Pick a letter family</p>
             <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-11">
-              {TIGRINYA_ALPHABET_FAMILIES.map((entry, index) => (
+              {TIGRINYA_ALPHABET_FAMILIES.map((entry, index) => {
+                const hasRecording = familyHasAlphabetRecording(getFamilyAudioSlug(entry), fileSet);
+
+                return (
                 <button
                   key={entry.id}
                   type="button"
                   onClick={() => {
                     selectFamily(index);
-                    play({
-                      char: entry.forms[0]!.char,
-                      transliteration: entry.forms[0]!.transliteration,
-                      audioPath: audioPathForFamily(entry)
-                    });
+                    void playFamily(entry);
                   }}
                   className={cn(
-                    'rounded-2xl border px-2 py-3 transition hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+                    'relative rounded-2xl border px-2 py-3 transition hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                     familyIndex === index
                       ? 'border-brand-900 bg-brand-900 text-white shadow-md'
                       : 'border-slate-200 bg-white text-slate-900 hover:border-slate-300'
                   )}
-                  aria-label={`${entry.name} family`}
+                  aria-label={`${entry.name} family${hasRecording ? ', teacher recording available' : ''}`}
                   aria-current={familyIndex === index}
                 >
+                  {hasRecording ? (
+                    <span
+                      className={cn(
+                        'absolute right-1.5 top-1.5 h-2 w-2 rounded-full ring-2',
+                        familyIndex === index ? 'bg-amber-300 ring-brand-900' : 'bg-emerald-500 ring-white'
+                      )}
+                      aria-hidden
+                    />
+                  ) : null}
                   <span className="font-ethiopic-display block text-2xl leading-none">{entry.forms[0]?.char}</span>
                   <span className={cn('mt-1 block text-[10px] font-semibold', familyIndex === index ? 'text-amber-100' : 'text-slate-500')}>
                     {entry.name}
                   </span>
                 </button>
-              ))}
+              );
+              })}
             </div>
           </div>
         </>
@@ -349,6 +380,7 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
             progress={progress}
             onProgressChange={saveProgress}
             familyId={quizScopeFamily ? family.id : undefined}
+            recordingFiles={fileSet}
           />
         </div>
       ) : null}

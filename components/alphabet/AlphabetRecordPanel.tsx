@@ -13,6 +13,7 @@ type AlphabetRecordPanelProps = {
   formIndex: number;
   formChar: string;
   transliteration: string;
+  onRecordingSaved?: () => void;
 };
 
 type RecordState = 'idle' | 'recording' | 'uploading' | 'done' | 'error';
@@ -29,7 +30,8 @@ export default function AlphabetRecordPanel({
   family,
   formIndex,
   formChar,
-  transliteration
+  transliteration,
+  onRecordingSaved
 }: AlphabetRecordPanelProps) {
   const audioSlug = getFamilyAudioSlug(family);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -152,6 +154,7 @@ export default function AlphabetRecordPanel({
         ? `${payload.publicPath}?v=${Date.now()}`
         : await refreshExistingRecording();
       if (savedPath) setExistingRecording(savedPath);
+      onRecordingSaved?.();
 
       setState('done');
       setMessage(
