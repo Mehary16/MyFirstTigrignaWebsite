@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+import { deleteAlphabetActivities } from '../../../../lib/alphabetActivityManage';
 import type { AlphabetActivityType } from '../../../../lib/alphabetProgressDb';
 import { isTeacherUser } from '../../../../lib/auth';
 import { getUserRole } from '../../../../lib/roleAuth';
 import { formatDatabaseError } from '../../../../lib/supabaseErrors';
+import { createAdminSupabaseClient } from '../../../../lib/supabaseAdmin';
 import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
 
 const ACTIVITY_TYPES = new Set<AlphabetActivityType>(['learn', 'trace', 'quiz_answer', 'quiz_start']);
@@ -112,14 +114,14 @@ async function requireTeacherActivityAccess() {
     return { error: NextResponse.json({ error: 'Only teachers can manage alphabet activity.' }, { status: 403 }) };
   }
 
-  return { supabase, user };
+  return { supabase, db: createAdminSupabaseClient() ?? supabase, user };
 }
 
 export async function PATCH(request: Request) {
   const access = await requireTeacherActivityAccess();
   if ('error' in access && access.error) return access.error;
 
-  const { supabase } = access;
+  const { supabase, db } = access;
   const body = (await request.json()) as {
     id?: string;
     activityType?: AlphabetActivityType;
@@ -158,7 +160,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'No changes were provided.' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('alphabet_activity')
     .update(updates)
     .eq('id', id)
@@ -182,7 +184,7 @@ export async function DELETE(request: Request) {
   const access = await requireTeacherActivityAccess();
   if ('error' in access && access.error) return access.error;
 
-  const { supabase } = access;
+  const { db } = access;
   const url = new URL(request.url);
   const singleId = url.searchParams.get('id')?.trim();
   let ids: string[] = singleId ? [singleId] : [];
@@ -190,28 +192,17 @@ export async function DELETE(request: Request) {
   if (!ids.length) {
     try {
       const body = (await request.json()) as { ids?: string[] };
-      ids = (body.ids ?? []).map((id) => id.trim()).filter(Boolean);
+      ids = body.ids ?? [];
     } catch {
       ids = [];
     }
   }
 
-  if (!ids.length) {
-    return NextResponse.json({ error: 'At least one activity id is required.' }, { status: 400 });
+  const result = await deleteAlphabetActivities(db, ids);
+
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  const uniqueIds = [...new Set(ids)];
-  const { data, error } = await supabase.from('alphabet_activity').delete().in('id', uniqueIds).select('id');
-
-  if (error) {
-    return NextResponse.json({ error: formatDatabaseError(error.message) }, { status: 500 });
-  }
-
-  const deletedIds = (data ?? []).map((row) => row.id);
-
-  if (!deletedIds.length) {
-    return NextResponse.json({ error: 'No activity entries were found to remove.' }, { status: 404 });
-  }
-
-  return NextResponse.json({ success: true, deletedCount: deletedIds.length, deletedIds });
+  return NextResponse.json({ success: true, deletedCount: result.deletedCount, deletedIds: result.deletedIds });
 }
