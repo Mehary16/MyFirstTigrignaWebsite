@@ -608,15 +608,19 @@ export const LABIALIZED_FORMS: AlphabetForm[] = [
   { char: 'ቍ', transliteration: 'qw' }
 ];
 
-export function audioPathForFamily(family: AlphabetFamily) {
-  return alphabetAudioPathsForSlug(getFamilyAudioSlug(family))[0];
-}
-
-export function audioPathForForm(family: AlphabetFamily, formIndex: number) {
-  return alphabetAudioPathsForSlug(getFamilyAudioSlug(family), formIndex)[0];
-}
-
 /** Try form clip first, then the whole family clip (multiple formats). */
-export function audioPathsForForm(family: AlphabetFamily, formIndex: number) {
-  return alphabetAudioPathsForSlug(getFamilyAudioSlug(family), formIndex);
+export function audioPathsForForm(family: AlphabetFamily, formIndex: number, knownFiles?: Set<string>) {
+  return alphabetAudioPathsForSlug(getFamilyAudioSlug(family), formIndex, knownFiles);
+}
+
+export function audioPathsForFamily(family: AlphabetFamily, knownFiles?: Set<string>) {
+  return audioPathsForForm(family, 0, knownFiles);
+}
+
+export function audioPathForFamily(family: AlphabetFamily, knownFiles?: Set<string>) {
+  return audioPathsForFamily(family, knownFiles)[0];
+}
+
+export function audioPathForForm(family: AlphabetFamily, formIndex: number, knownFiles?: Set<string>) {
+  return audioPathsForForm(family, formIndex, knownFiles)[0];
 }

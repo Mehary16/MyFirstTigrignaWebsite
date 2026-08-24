@@ -25,9 +25,10 @@ type AlphabetQuizModeProps = {
   progress: AlphabetProgress;
   onProgressChange: (updater: (current: AlphabetProgress) => AlphabetProgress) => void;
   familyId?: string;
+  recordingFiles?: Set<string>;
 };
 
-export default function AlphabetQuizMode({ progress, onProgressChange, familyId }: AlphabetQuizModeProps) {
+export default function AlphabetQuizMode({ progress, onProgressChange, familyId, recordingFiles }: AlphabetQuizModeProps) {
   const { play } = useAlphabetAudio();
   const [question, setQuestion] = useState<{ correct: AlphabetFormRef; choices: AlphabetFormRef[] } | null>(null);
   const [feedback, setFeedback] = useState<QuizFeedback>('idle');
@@ -50,20 +51,20 @@ export default function AlphabetQuizMode({ progress, onProgressChange, familyId 
     if (!question) return;
     const family = getFamilyById(question.correct.familyId);
     if (!family) return;
-    const paths = audioPathsForForm(family, question.correct.formIndex);
+    const paths = audioPathsForForm(family, question.correct.formIndex, recordingFiles);
     void play({
       char: question.correct.char,
       transliteration: question.correct.transliteration,
       audioPath: paths[0],
       audioFallbackPaths: paths.slice(1)
     });
-  }, [question, play]);
+  }, [question, play, recordingFiles]);
 
   const replaySound = () => {
     if (!question) return;
     const family = getFamilyById(question.correct.familyId);
     if (!family) return;
-    const paths = audioPathsForForm(family, question.correct.formIndex);
+    const paths = audioPathsForForm(family, question.correct.formIndex, recordingFiles);
     void play({
       char: question.correct.char,
       transliteration: question.correct.transliteration,
