@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Volume2 } from 'lucide-react';
 import {
   formKey,
@@ -9,6 +9,7 @@ import {
 import {
   LABIALIZED_FORMS,
   TIGRINYA_ALPHABET_FAMILIES,
+  audioPathsForExampleWord,
   audioPathsForForm,
   audioPathsForFamily,
   getFamilyAudioSlug,
@@ -92,6 +93,7 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
   const [viewMode, setViewMode] = useState<ViewMode>('learn');
   const [playingKey, setPlayingKey] = useState<string | null>(null);
   const [quizScopeFamily, setQuizScopeFamily] = useState(false);
+  const skipInitialWordAudio = useRef(true);
 
   const family = TIGRINYA_ALPHABET_FAMILIES[familyIndex]!;
   const selectedForm = family.forms[formIndex]!;
@@ -128,6 +130,19 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
     });
   };
 
+  const playExampleWord = async (familyEntry: AlphabetFamily) => {
+    const key = `${familyEntry.id}-word`;
+    setPlayingKey(key);
+    const paths = audioPathsForExampleWord(familyEntry, fileSet);
+    await play({
+      char: familyEntry.exampleWord,
+      transliteration: familyEntry.exampleTransliteration,
+      audioPath: paths[0],
+      audioFallbackPaths: paths.slice(1)
+    });
+    setTimeout(() => setPlayingKey((current) => (current === key ? null : current)), 800);
+  };
+
   const selectFamily = (index: number) => {
     setFamilyIndex(index);
     setFormIndex(0);
@@ -155,6 +170,15 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
       metadata: { char: selectedForm.char, transliteration: selectedForm.transliteration }
     });
   }, [viewMode, selectedFormKey, family.id, selectedForm.char, selectedForm.transliteration]);
+
+  useEffect(() => {
+    if (viewMode !== 'learn') return;
+    if (skipInitialWordAudio.current) {
+      skipInitialWordAudio.current = false;
+      return;
+    }
+    void playExampleWord(family);
+  }, [familyIndex, viewMode]);
 
   const openQuiz = () => {
     setViewMode('quiz');
@@ -194,8 +218,8 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
 
       {fileSet.size > 0 ? (
         <Alert variant="success" title="Teacher recordings active">
-          Your saved pronunciation clips play when students tap a letter, use quiz mode, or pick a family below. Green
-          dots mark families with a recording.
+          Your saved pronunciation clips play when students tap a letter, hear an example word, use quiz mode, or pick a
+          family below. Green dots mark families with a recording.
         </Alert>
       ) : (
         <AlphabetAudioNotice />
@@ -257,13 +281,29 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
                   </button>
                 </div>
 
-                <div className="rounded-2xl border border-amber-100 bg-amber-50/70 px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Example word</p>
-                  <p className="mt-1 font-ethiopic text-2xl text-slate-900">{family.exampleWord}</p>
-                  <p className="text-sm text-slate-600">
-                    {family.exampleTransliteration} · {family.exampleMeaning}
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => playExampleWord(family)}
+                  className="w-full rounded-2xl border border-amber-100 bg-amber-50/70 px-4 py-3 text-left transition hover:border-amber-200 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                  aria-label={`Play example word ${family.exampleWord}, ${family.exampleTransliteration}, ${family.exampleMeaning}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Example word</p>
+                      <p className="mt-1 font-ethiopic text-2xl text-slate-900">{family.exampleWord}</p>
+                      <p className="text-sm text-slate-600">
+                        {family.exampleTransliteration} · {family.exampleMeaning}
+                      </p>
+                    </div>
+                    <Volume2
+                      className={cn(
+                        'mt-1 h-5 w-5 shrink-0 text-amber-800',
+                        playingKey === `${family.id}-word` && 'animate-pulse'
+                      )}
+                      aria-hidden
+                    />
+                  </div>
+                </button>
 
                 {showTeacherTools ? (
                   <AlphabetRecordPanel
@@ -404,8 +444,15 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
                 <tr key={entry.id} className="hover:bg-slate-50/80">
                   <td className="px-4 py-3 font-semibold text-slate-800">{entry.name}</td>
                   <td className="px-4 py-3">
-                    <span className="font-ethiopic text-lg">{entry.exampleWord}</span>
-                    <span className="mt-0.5 block text-xs text-slate-500">{entry.exampleMeaning}</span>
+                    <button
+                      type="button"
+                      onClick={() => playExampleWord(entry)}
+                      className="group inline-flex flex-col items-start rounded-xl px-2 py-1 text-left transition hover:bg-amber-50"
+                      title={`Play ${entry.exampleTransliteration}`}
+                    >
+                      <span className="font-ethiopic text-lg">{entry.exampleWord}</span>
+                      <span className="mt-0.5 text-xs text-slate-500">{entry.exampleMeaning}</span>
+                    </button>
                   </td>
                   {entry.forms.map((form, index) => (
                     <td key={`${entry.id}-${form.char}`} className="px-2 py-3 text-center">

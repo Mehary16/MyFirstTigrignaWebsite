@@ -39,7 +39,7 @@ export default function AlphabetRecordPanel({
   const chunksRef = useRef<Blob[]>([]);
   const [state, setState] = useState<RecordState>('idle');
   const [message, setMessage] = useState<string | null>(null);
-  const [scope, setScope] = useState<'form' | 'family'>('form');
+  const [scope, setScope] = useState<'form' | 'family' | 'word'>('form');
   const [existingRecording, setExistingRecording] = useState<string | null>(null);
   const [checkingRecording, setCheckingRecording] = useState(false);
   const [previewing, setPreviewing] = useState(false);
@@ -52,7 +52,23 @@ export default function AlphabetRecordPanel({
   }, []);
 
   const targetFilename =
-    scope === 'form' ? `${audioSlug ?? 'clip'}-${formIndex}` : `${audioSlug ?? 'clip'}`;
+    scope === 'form'
+      ? `${audioSlug ?? 'clip'}-${formIndex}`
+      : scope === 'word'
+        ? `${audioSlug ?? 'clip'}-word`
+        : `${audioSlug ?? 'clip'}`;
+
+  const recordLabel =
+    scope === 'word'
+      ? family.exampleTransliteration
+      : transliteration;
+
+  const recordTarget =
+    scope === 'word' ? (
+      <span className="font-ethiopic text-lg">{family.exampleWord}</span>
+    ) : (
+      <span className="font-ethiopic text-lg">{formChar}</span>
+    );
 
   const refreshExistingRecording = useCallback(async () => {
     setCheckingRecording(true);
@@ -159,8 +175,8 @@ export default function AlphabetRecordPanel({
       setState('done');
       setMessage(
         replacingExisting
-          ? `Updated ${filename}. Your new recording replaced the previous clip for ${formChar} (${transliteration}).`
-          : `Saved ${filename}. Tap Preview or the speaker to hear your recording for ${formChar} (${transliteration}).`
+          ? `Updated ${filename}. Your new recording replaced the previous clip for ${scope === 'word' ? family.exampleWord : formChar} (${recordLabel}).`
+          : `Saved ${filename}. Tap Preview or the speaker to hear your recording for ${scope === 'word' ? family.exampleWord : formChar} (${recordLabel}).`
       );
     } catch {
       setState('error');
@@ -172,8 +188,7 @@ export default function AlphabetRecordPanel({
     <div className="rounded-[1.75rem] border border-violet-200 bg-violet-50/60 p-4">
       <p className="text-sm font-semibold text-violet-950">Teacher: record pronunciation</p>
       <p className="mt-1 text-xs text-violet-800">
-        Say <strong>{transliteration}</strong> for <span className="font-ethiopic text-lg">{formChar}</span> — the browser
-        will ask to use your microphone.
+        Say <strong>{recordLabel}</strong> for {recordTarget} — the browser will ask to use your microphone.
       </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -196,6 +211,16 @@ export default function AlphabetRecordPanel({
             className="h-3.5 w-3.5"
           />
           Whole {family.name} family ({audioSlug})
+        </label>
+        <label className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-900">
+          <input
+            type="radio"
+            name="record-scope"
+            checked={scope === 'word'}
+            onChange={() => setScope('word')}
+            className="h-3.5 w-3.5"
+          />
+          Example word ({audioSlug}-word)
         </label>
       </div>
 
@@ -237,7 +262,7 @@ export default function AlphabetRecordPanel({
       {state === 'recording' ? (
         <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-red-700">
           <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-red-500" />
-          Recording… say “{transliteration}” clearly, then click Stop &amp; save.
+          Recording… say “{recordLabel}” clearly, then click Stop &amp; save.
         </p>
       ) : null}
 
