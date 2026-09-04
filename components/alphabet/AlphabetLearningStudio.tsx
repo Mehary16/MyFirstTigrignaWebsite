@@ -30,6 +30,7 @@ import AlphabetProgressCard from './AlphabetProgressCard';
 import AlphabetQuizMode from './AlphabetQuizMode';
 import AlphabetRecordPanel from './AlphabetRecordPanel';
 import AlphabetTracePad from './AlphabetTracePad';
+import AlphabetVocabularyPanel from './AlphabetVocabularyPanel';
 
 type ViewMode = 'learn' | 'quiz' | 'reference';
 
@@ -130,17 +131,24 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
     });
   };
 
-  const playExampleWord = async (familyEntry: AlphabetFamily) => {
-    const key = `${familyEntry.id}-word`;
+  const playWord = async (key: string, word: string, transliteration: string, paths: string[]) => {
     setPlayingKey(key);
-    const paths = audioPathsForExampleWord(familyEntry, fileSet);
     await play({
-      char: familyEntry.exampleWord,
-      transliteration: familyEntry.exampleTransliteration,
+      char: word,
+      transliteration,
       audioPath: paths[0],
       audioFallbackPaths: paths.slice(1)
     });
     setTimeout(() => setPlayingKey((current) => (current === key ? null : current)), 800);
+  };
+
+  const playExampleWord = async (familyEntry: AlphabetFamily) => {
+    await playWord(
+      `${familyEntry.id}-word`,
+      familyEntry.exampleWord,
+      familyEntry.exampleTransliteration,
+      audioPathsForExampleWord(familyEntry, fileSet)
+    );
   };
 
   const selectFamily = (index: number) => {
@@ -281,29 +289,13 @@ export default function AlphabetLearningStudio({ showTeacherTools = false }: Alp
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => playExampleWord(family)}
-                  className="w-full rounded-2xl border border-amber-100 bg-amber-50/70 px-4 py-3 text-left transition hover:border-amber-200 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-                  aria-label={`Play example word ${family.exampleWord}, ${family.exampleTransliteration}, ${family.exampleMeaning}`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Example word</p>
-                      <p className="mt-1 font-ethiopic text-2xl text-slate-900">{family.exampleWord}</p>
-                      <p className="text-sm text-slate-600">
-                        {family.exampleTransliteration} · {family.exampleMeaning}
-                      </p>
-                    </div>
-                    <Volume2
-                      className={cn(
-                        'mt-1 h-5 w-5 shrink-0 text-amber-800',
-                        playingKey === `${family.id}-word` && 'animate-pulse'
-                      )}
-                      aria-hidden
-                    />
-                  </div>
-                </button>
+                <AlphabetVocabularyPanel
+                  family={family}
+                  showTeacherTools={showTeacherTools}
+                  playingKey={playingKey}
+                  onPlay={playWord}
+                  onRecordingSaved={refreshRecordingIndex}
+                />
 
                 {showTeacherTools ? (
                   <AlphabetRecordPanel

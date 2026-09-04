@@ -40,6 +40,7 @@ All family filenames (for when you record more):
 Per-form clips (optional):  ba-0.mp3, ba-1.mp3, … ba-6.mp3  for each vowel form.
 
 Example word clips (optional):  ba-word.mp3  for the family example word (e.g. በለስ for Be).
+Extra practice words:  ka-v-a1b2c3d4.webm  (added by teachers in the app).
 
 After adding ba.mp3, refresh the alphabet page and tap በ — your voice should play.
 After adding aem-word.mp3, tap the example word card — ዓይነት should play.

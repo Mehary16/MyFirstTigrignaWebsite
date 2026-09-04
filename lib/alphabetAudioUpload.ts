@@ -1,8 +1,12 @@
 import { STORAGE_BUCKETS } from './storageBuckets';
 
-/** Validates filenames like ba.mp3, ba-0.webm, aem-word.mp3 — no import from alphabet data (avoids circular deps). */
+/** Validates filenames like ba.mp3, ba-0.webm, aem-word.mp3, ka-v-a1b2c3d4.webm */
 export function isAllowedAlphabetAudioFilename(filename: string) {
-  return /^[a-z0-9]+(?:-(?:[0-6]|word))?\.(mp3|webm|wav|ogg)$/.test(filename.toLowerCase());
+  const lower = filename.toLowerCase();
+  return (
+    /^[a-z0-9]+(?:-(?:[0-6]|word))?\.(mp3|webm|wav|ogg)$/.test(lower) ||
+    /^[a-z0-9]+-v-[a-z0-9]{8,32}\.(mp3|webm|wav|ogg)$/.test(lower)
+  );
 }
 
 export function alphabetAudioPublicUrl(filename: string) {

@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     const filename = typeof filenameRaw === 'string' ? filenameRaw.trim().toLowerCase() : '';
     if (!isAllowedAlphabetAudioFilename(filename)) {
       return NextResponse.json(
-        { error: 'Invalid filename. Use names like ba.mp3, ba-0.webm, aem-word.mp3, etc.' },
+        { error: 'Invalid filename. Use names like ba.mp3, ba-0.webm, aem-word.mp3, ka-v-a1b2c3d4.webm, etc.' },
         { status: 400 }
       );
     }
