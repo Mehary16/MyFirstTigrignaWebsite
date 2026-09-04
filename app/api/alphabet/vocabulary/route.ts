@@ -10,8 +10,17 @@ import { createServerSupabaseClient } from '../../../../lib/supabaseServer';
 
 const FAMILY_IDS = new Set(TIGRINYA_ALPHABET_FAMILIES.map((family) => family.id));
 
+function vocabularySetupMessage() {
+  return 'Run supabase/FIX_ALPHABET_VOCABULARY.sql in the Supabase SQL Editor, then refresh and try again.';
+}
+
 function isMissingVocabularyTable(message: string) {
-  return message.includes('alphabet_vocabulary') && message.includes('does not exist');
+  return (
+    message.includes('alphabet_vocabulary') &&
+    (message.includes('does not exist') ||
+      message.includes('Could not find the table') ||
+      message.includes('schema cache'))
+  );
 }
 
 export async function GET(request: Request) {
@@ -39,7 +48,7 @@ export async function GET(request: Request) {
   if (error) {
     if (isMissingVocabularyTable(error.message)) {
       return NextResponse.json({
-        error: 'Run supabase/FIX_ALPHABET_VOCABULARY.sql in the Supabase SQL Editor, then refresh.',
+        error: vocabularySetupMessage(),
         words: []
       });
     }
@@ -109,10 +118,7 @@ export async function POST(request: Request) {
 
   if (error) {
     if (isMissingVocabularyTable(error.message)) {
-      return NextResponse.json(
-        { error: 'Run supabase/FIX_ALPHABET_VOCABULARY.sql in the Supabase SQL Editor, then try again.' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: vocabularySetupMessage() }, { status: 500 });
     }
     return NextResponse.json({ error: formatDatabaseError(error.message) }, { status: 500 });
   }
@@ -164,6 +170,9 @@ export async function PATCH(request: Request) {
     .maybeSingle();
 
   if (error) {
+    if (isMissingVocabularyTable(error.message)) {
+      return NextResponse.json({ error: vocabularySetupMessage() }, { status: 500 });
+    }
     return NextResponse.json({ error: formatDatabaseError(error.message) }, { status: 500 });
   }
 
@@ -194,6 +203,9 @@ export async function DELETE(request: Request) {
   const { error } = await db.from('alphabet_vocabulary').delete().eq('id', id);
 
   if (error) {
+    if (isMissingVocabularyTable(error.message)) {
+      return NextResponse.json({ error: vocabularySetupMessage() }, { status: 500 });
+    }
     return NextResponse.json({ error: formatDatabaseError(error.message) }, { status: 500 });
   }
 

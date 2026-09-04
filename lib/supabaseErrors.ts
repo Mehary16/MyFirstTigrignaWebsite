@@ -3,6 +3,10 @@ export function formatDatabaseError(message: string | null | undefined) {
     return 'An unexpected database error occurred. Check your Supabase connection and try again.';
   }
 
+  if (message.includes('alphabet_vocabulary')) {
+    return 'Run supabase/FIX_ALPHABET_VOCABULARY.sql in the Supabase SQL Editor, then refresh and try again.';
+  }
+
   if (
     message.includes('Could not find the table') ||
     (message.includes('relation') && message.includes('does not exist')) ||
