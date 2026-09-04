@@ -1,8 +1,8 @@
 import { STORAGE_BUCKETS } from './storageBuckets';
 
-/** Validates filenames like ba.mp3, ba-0.webm — no import from alphabet data (avoids circular deps). */
+/** Validates filenames like ba.mp3, ba-0.webm, aem-word.mp3 — no import from alphabet data (avoids circular deps). */
 export function isAllowedAlphabetAudioFilename(filename: string) {
-  return /^[a-z0-9]+(?:-[0-6])?\.(mp3|webm|wav|ogg)$/.test(filename.toLowerCase());
+  return /^[a-z0-9]+(?:-(?:[0-6]|word))?\.(mp3|webm|wav|ogg)$/.test(filename.toLowerCase());
 }
 
 export function alphabetAudioPublicUrl(filename: string) {
@@ -63,12 +63,33 @@ export function familyHasAlphabetRecording(slug: string, knownFiles: Set<string>
   return false;
 }
 
-export function alphabetAudioPathsForTarget(slug: string, scope: 'form' | 'family', formIndex: number) {
+export function alphabetAudioPathsForExampleWord(slug: string, knownFiles?: Set<string>) {
+  const extensions = ['webm', 'mp3', 'wav', 'ogg'] as const;
+  const paths: string[] = [];
+
+  for (const ext of extensions) {
+    const filename = `${slug}-word.${ext}`;
+    if (knownFiles && knownFiles.size > 0 && !knownFiles.has(filename.toLowerCase())) {
+      continue;
+    }
+    paths.push(...alphabetAudioCandidatePaths(filename));
+  }
+
+  if (knownFiles && knownFiles.size > 0 && paths.length === 0) {
+    return alphabetAudioPathsForExampleWord(slug);
+  }
+
+  return paths;
+}
+
+export function alphabetAudioPathsForTarget(slug: string, scope: 'form' | 'family' | 'word', formIndex: number) {
   const extensions = ['webm', 'mp3', 'wav', 'ogg'] as const;
   const filenames =
     scope === 'form'
       ? extensions.map((ext) => `${slug}-${formIndex}.${ext}`)
-      : extensions.map((ext) => `${slug}.${ext}`);
+      : scope === 'word'
+        ? extensions.map((ext) => `${slug}-word.${ext}`)
+        : extensions.map((ext) => `${slug}.${ext}`);
 
   return filenames.flatMap((filename) => alphabetAudioCandidatePaths(filename));
 }

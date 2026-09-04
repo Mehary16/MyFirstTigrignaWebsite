@@ -1,4 +1,4 @@
-import { alphabetAudioPathsForSlug } from './alphabetAudioUpload';
+import { alphabetAudioPathsForExampleWord, alphabetAudioPathsForSlug } from './alphabetAudioUpload';
 
 export type AlphabetForm = {
   char: string;
@@ -623,4 +623,9 @@ export function audioPathForFamily(family: AlphabetFamily, knownFiles?: Set<stri
 
 export function audioPathForForm(family: AlphabetFamily, formIndex: number, knownFiles?: Set<string>) {
   return audioPathsForForm(family, formIndex, knownFiles)[0];
+}
+
+/** Example word clip, e.g. aem-word.mp3 for ዓይነት. */
+export function audioPathsForExampleWord(family: AlphabetFamily, knownFiles?: Set<string>) {
+  return alphabetAudioPathsForExampleWord(getFamilyAudioSlug(family), knownFiles);
 }
