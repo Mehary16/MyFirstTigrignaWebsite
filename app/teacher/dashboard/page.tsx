@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import type { MaterialRow } from '../../../lib/teacherMaterials';
 import DashboardAlphabetCard from '../../../components/DashboardAlphabetCard';
+import DashboardKahootCard from '../../../components/DashboardKahootCard';
 import DashboardScrollTarget from '../../../components/DashboardScrollTarget';
 import type { StudentListItem } from '../../../lib/studentList';
 import { toStudentListItem } from '../../../lib/studentList';
@@ -160,6 +161,8 @@ export default async function TeacherDashboardPage({
       />
 
       <DashboardAlphabetCard href="/teacher/alphabet" roleLabel="Teacher" />
+
+      <DashboardKahootCard href="/teacher/kahoot" roleLabel="Teacher" />
 
       <TeacherDashboardShell
         studentList={studentList}
