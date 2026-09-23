@@ -7,6 +7,22 @@ export function formatDatabaseError(message: string | null | undefined) {
     return 'Run supabase/FIX_ALPHABET_VOCABULARY.sql in the Supabase SQL Editor, then refresh and try again.';
   }
 
+  if (message.includes('kahoot_session_questions') || message.includes('FIX_KAHOOT_QUESTIONS_PRIVATE')) {
+    return 'Run supabase/FIX_KAHOOT_QUESTIONS_PRIVATE.sql in the Supabase SQL Editor, then refresh and try again.';
+  }
+
+  if (message.includes('kahoot_live')) {
+    return 'Run supabase/FIX_KAHOOT_LIVE.sql in the Supabase SQL Editor, then refresh and try again.';
+  }
+
+  if (message.includes('SUPABASE_SERVICE_ROLE_KEY')) {
+    return 'Live quiz requires SUPABASE_SERVICE_ROLE_KEY in your server environment (e.g. .env.local). Add it from Supabase → Settings → API.';
+  }
+
+  if (message.includes('supabase_realtime') && message.includes('kahoot')) {
+    return 'Run supabase/FIX_KAHOOT_REALTIME.sql in the Supabase SQL Editor for instant live updates.';
+  }
+
   if (
     message.includes('Could not find the table') ||
     (message.includes('relation') && message.includes('does not exist')) ||
