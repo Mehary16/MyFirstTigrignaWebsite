@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react';
 import { createBrowserSupabaseClient } from '../../lib/supabaseClient';
 import { establishSessionFromAuthUrl } from '../../lib/authUrlSession';
 import { resolveDashboardPath } from '../../lib/resolveDashboard';
@@ -13,6 +14,8 @@ export default function ResetPasswordPage() {
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
@@ -89,28 +92,44 @@ export default function ResetPasswordPage() {
       <p className="mt-2 text-sm text-slate-600">Enter your new password below.</p>
 
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-        <div>
+        <div className="relative">
           <label className="block text-sm font-medium text-slate-700">New password</label>
           <input
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(event) => setPassword(event.currentTarget.value)}
             required
             minLength={8}
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 outline-none transition focus:border-slate-500"
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 pr-12 outline-none transition focus:border-slate-500"
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword((current) => !current)}
+            className="absolute right-3 top-[2.35rem] rounded-full p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+          </button>
         </div>
 
-        <div>
+        <div className="relative">
           <label className="block text-sm font-medium text-slate-700">Confirm password</label>
           <input
-            type="password"
+            type={showConfirmPassword ? 'text' : 'password'}
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.currentTarget.value)}
             required
             minLength={8}
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 outline-none transition focus:border-slate-500"
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 pr-12 outline-none transition focus:border-slate-500"
           />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword((current) => !current)}
+            className="absolute right-3 top-[2.35rem] rounded-full p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+          >
+            {showConfirmPassword ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+          </button>
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
